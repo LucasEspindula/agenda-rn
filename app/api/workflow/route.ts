@@ -1,0 +1,130 @@
+import { getSession, isManager } from "@/app/authz";
+import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
+
+type Appointment = Record<string, unknown> & { id: string; doctorId?: string; anesthetistId?: string | null; patientId?: string; date?: string; time?: string; duration?: number; status?: string };
+type AgendaState = Record<string, unknown> & { appointments?: Appointment[]; cancelledAppointments?: Appointment[]; patients?: Array<Record<string, unknown>>; professionals?: Array<Record<string, unknown>> };
+
+function allowed(session: NonNullable<Awaited<ReturnType<typeof getSession>>>, professionalId: string) {
+  return isManager(session.account.role) || session.agendaIds.includes(professionalId);
+}
+
+function appointmentProfessional(a: Appointment) { return String(a.doctorId || a.anesthetistId || ""); }
+function personName(state: AgendaState, key: "patients" | "professionals", id: unknown) {
+  return String(state[key]?.find((item) => String(item.id) === String(id))?.name || "");
+}
+function requestDescription(state: AgendaState, actor: string, action: string, proposed: Appointment | null, previous: Appointment | null) {
+  const a = proposed || previous;
+  const patient = personName(state, "patients", a?.patientId) || "paciente";
+  if (action === "delete") return `${actor} sugeriu desagendar ${patient} de ${a?.date || "—"} às ${a?.time || "—"}.`;
+  if (action === "update") return `${actor} sugeriu alterar ${patient} para ${a?.date || "—"} às ${a?.time || "—"}.`;
+  return `${actor} sugeriu agendar ${patient} para ${a?.date || "—"} às ${a?.time || "—"}.`;
+}
+function overlaps(a: Appointment, b: Appointment) {
+  if (a.id === b.id || a.status === "cancelled" || b.status === "cancelled" || a.doctorId !== b.doctorId || a.date !== b.date) return false;
+  const toMinutes = (value: unknown) => { const [h, m] = String(value || "00:00").split(":").map(Number); return h * 60 + m; };
+  const aStart = toMinutes(a.time), bStart = toMinutes(b.time);
+  return aStart < bStart + Number(b.duration || 60) && aStart + Number(a.duration || 60) > bStart;
+}
+
+export async function GET() {
+  const session = await getSession();
+  if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  const db = getSupabaseAdmin();
+  const [requestRows, userRows, notificationRows, auditRows] = await Promise.all([
+    db.from("agenda_requests").select("*").order("created_at", { ascending: false }).limit(200),
+    db.from("users").select("id,name,email"),
+    db.from("notifications").select("*").eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(100),
+    isManager(session.account.role) ? db.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(500) : Promise.resolve({ data: [], error: null }),
+  ]);
+  [requestRows, userRows, notificationRows, auditRows].forEach((result) => dbError(result.error, "Read workflow"));
+  // Supabase schema types are generated after the first production migration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>, audit = (auditRows.data || []) as Array<Record<string, any>>;
+  const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
+  const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null }]));
+  const visibleRequests = requests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id : allowed(session, row.professional_id));
+  return Response.json({
+    requests: visibleRequests.map((row) => ({ ...row, requestedBy: Number(row.requested_by), decidedBy: row.decided_by ? Number(row.decided_by) : null, professionalId: row.professional_id, appointmentId: row.appointment_id, createdAt: row.created_at, decidedAt: row.decided_at, decisionNote: row.decision_note, requesterName: names.get(Number(row.requested_by)), deciderName: row.decided_by ? names.get(Number(row.decided_by)) : null, proposed: row.proposed_payload || null, previous: row.previous_payload || null })),
+    notifications: notifications.map((row) => ({ ...row, readAt: row.read_at, createdAt: row.created_at, requestId: row.request_id })),
+    audit: audit.map((row) => {
+      const metadata = (row.metadata || {}) as Record<string, unknown>;
+      const linked = typeof metadata.requestId === "string" ? requestPayloads.get(metadata.requestId) : null;
+      return { ...row, actorName: row.actor_name, actorRole: row.actor_role, professionalId: row.professional_id, appointmentId: row.appointment_id, patientId: row.patient_id, createdAt: row.created_at, before: linked?.before ?? metadata.before ?? null, after: linked?.after ?? metadata.after ?? null };
+    }),
+  });
+}
+
+export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session?.account || session.account.role !== "doctor") return Response.json({ error: "Somente médicos enviam sugestões de agenda" }, { status: 403 });
+  const body = await request.json() as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
+  if (!body.action || !["create", "update", "delete"].includes(body.action)) return Response.json({ error: "Solicitação inválida" }, { status: 400 });
+  const db = getSupabaseAdmin();
+  const stateResult = await db.from("app_state").select("payload").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
+  if (!stateRow) return Response.json({ error: "Agenda indisponível" }, { status: 409 });
+  const state = stateRow.payload as AgendaState;
+  const previous = state.appointments?.find((item) => item.id === (body.appointmentId || body.appointment?.id)) || null;
+  const proposed = body.appointment || null;
+  const professionalId = appointmentProfessional(proposed || previous || { id: "" });
+  if (!professionalId || !allowed(session, professionalId)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
+  if (body.action !== "create" && !previous) return Response.json({ error: "Agendamento não encontrado" }, { status: 404 });
+  if (!proposed?.patientId || !proposed.date || !proposed.time) return Response.json({ error: "Preencha paciente, data e horário" }, { status: 400 });
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const actor = session.account.name || session.account.email;
+  const description = requestDescription(state, actor, body.action, proposed, previous);
+  const [createdRequest, createdNotification, createdAudit] = await Promise.all([
+    db.from("agenda_requests").insert({ id, professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, action: body.action, proposed_payload: proposed, previous_payload: previous, requested_by: session.account.id, created_at: now }),
+    db.from("notifications").insert({ id: crypto.randomUUID(), user_id: session.account.id, type: "request_sent", request_id: id, message: "Alteração de agenda enviada.", created_at: now }),
+    db.from("audit_logs").insert({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: "request_created", professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: id, requestAction: body.action }, created_at: now }),
+  ]); [createdRequest, createdNotification, createdAudit].forEach((result) => dbError(result.error, "Create workflow request"));
+  return Response.json({ ok: true, id, message: "Alteração de agenda enviada." });
+}
+
+export async function PATCH(request: Request) {
+  const session = await getSession();
+  if (!session?.account || session.account.role === "doctor") return Response.json({ error: "Sem permissão para decidir solicitações" }, { status: 403 });
+  const body = await request.json() as { id?: string; decision?: "accepted" | "denied"; note?: string };
+  if (!body.id || !["accepted", "denied"].includes(body.decision || "")) return Response.json({ error: "Decisão inválida" }, { status: 400 });
+  const db = getSupabaseAdmin();
+  const requestResult = await db.from("agenda_requests").select("*").eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
+  if (!row) return Response.json({ error: "Esta solicitação já foi decidida ou não existe" }, { status: 409 });
+  if (!allowed(session, row.professional_id)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
+  const stateResult = await db.from("app_state").select("payload").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
+  if (!stateRow) return Response.json({ error: "Agenda indisponível" }, { status: 409 });
+  const state = stateRow.payload as AgendaState;
+  const proposed = row.proposed_payload as Appointment | null;
+  const previous = row.previous_payload as Appointment | null;
+  const now = new Date().toISOString();
+  if (body.decision === "accepted") {
+    const current = state.appointments || [];
+    if (row.action !== "create" && !current.some((a) => a.id === row.appointment_id)) return Response.json({ error: "O agendamento original já foi alterado. Negue a solicitação e peça uma nova sugestão." }, { status: 409 });
+    if (proposed && current.some((a) => overlaps(proposed, a))) return Response.json({ error: "O horário ficou indisponível. A solicitação não foi aplicada." }, { status: 409 });
+    if (row.action === "delete") {
+      const archived = { ...(previous || proposed!), ...(proposed || {}), cancelledAt: String(proposed?.cancelledAt || now), cancelReason: String(proposed?.cancelReason || "Não informado") };
+      state.appointments = current.filter((a) => a.id !== row.appointment_id);
+      state.cancelledAppointments = [...(state.cancelledAppointments || []).filter((a) => a.id !== archived.id), archived];
+    }
+    else if (row.action === "update") state.appointments = current.map((a) => a.id === row.appointment_id ? proposed! : a);
+    else state.appointments = [...current, proposed!];
+  }
+  const actor = session.account.name || session.account.email;
+  const patient = personName(state, "patients", (proposed || previous)?.patientId) || "paciente";
+  const accepted = body.decision === "accepted";
+  const description = `${actor} ${accepted ? "aceitou" : "negou"} a sugestão de ${row.action === "delete" ? "desagendamento" : "alteração"} de ${patient}.`;
+  const operations = [
+    db.from("agenda_requests").update({ status: body.decision!, decided_by: session.account.id, decision_note: body.note?.trim() || null, decided_at: now }).eq("id", row.id).eq("status", "pending"),
+    db.from("notifications").insert({ id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", request_id: row.id, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.${body.note?.trim() ? ` ${body.note.trim()}` : ""}`, created_at: now }),
+    db.from("audit_logs").insert({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null }, created_at: now }),
+  ];
+  if (accepted) operations.unshift(db.from("app_state").update({ payload: state, updated_at: now }).eq("id", 1));
+  const results = await Promise.all(operations); results.forEach((result) => dbError(result.error, "Decide workflow request"));
+  return Response.json({ ok: true, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` });
+}
+
+export async function DELETE() {
+  const session = await getSession();
+  if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  const result = await getSupabaseAdmin().from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", session.account.id).is("read_at", null); dbError(result.error, "Mark notifications read");
+  return Response.json({ ok: true });
+}
