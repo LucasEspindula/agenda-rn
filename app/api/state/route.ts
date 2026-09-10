@@ -34,11 +34,25 @@ export async function PUT(request: Request) {
   const stateResult = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle();
   dbError(stateResult.error, "Read application state");
   const row = stateResult.data;
-  if (session.account.role === "doctor") return Response.json({ ok: true, ignored: true });
   const suppliedRevision = request.headers.get("if-match");
   if (row ? !suppliedRevision || Date.parse(suppliedRevision) !== Date.parse(row.updated_at) : suppliedRevision !== "new") return Response.json({ error: "A agenda foi atualizada por outra pessoa. Reabra o agendamento e tente novamente." }, { status: 409 });
   let next = proposed;
-  if (row && !isManager(session.account.role)) {
+  if (session.account.role === "doctor") {
+    if (!row) return Response.json({ error: "Agenda não disponível" }, { status: 409 });
+    const current = row.payload as AgendaState;
+    const allowed = new Set<string>(session.agendaIds);
+    const blocks = proposed.scheduleBlocks;
+    if (!Array.isArray(blocks)) return Response.json({ error: "Bloqueios inválidos" }, { status: 400 });
+    const retained = (current.scheduleBlocks ?? []).filter(b => !allowed.has(String(b.professionalId)));
+    const ids = new Set(retained.map(b => String(b.id)));
+    for (const b of blocks) {
+      if (!b || !allowed.has(String(b.professionalId)) || !b.id || ids.has(String(b.id)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(b.date)) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(b.start)) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(b.end)) || String(b.start) >= String(b.end) || !String(b.reason ?? "").trim()) return Response.json({ error: "Bloqueio inválido ou agenda sem permissão" }, { status: 400 });
+      ids.add(String(b.id));
+      const minutes = (v: unknown) => String(v).split(":").reduce((h, m) => h * 60 + Number(m), 0);
+      if ((current.appointments ?? []).some(a => (a.doctorId === b.professionalId || a.anesthetistId === b.professionalId) && a.date === b.date && a.status !== "cancelled" && minutes(b.start) < minutes(a.time) + Number(a.duration || 0) && minutes(b.end) > minutes(a.time))) return Response.json({ error: "Existe atendimento no horário do bloqueio" }, { status: 409 });
+    }
+    next = { ...current, scheduleBlocks: [...retained, ...blocks] };
+  } else if (row && !isManager(session.account.role)) {
     const current = row.payload as AgendaState;
     const allowed = new Set<string>(session.agendaIds);
     const retained = (current.appointments ?? []).filter((item) => !belongsToAgenda(item, allowed));

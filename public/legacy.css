@@ -205,6 +205,12 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(min-width:901px){.agenda-card{height:auto;max-height:none;overscroll-behavior:auto;scrollbar-gutter:auto}.agenda-card .day-head,.agenda-card .corner{top:0}}
 
 /* Keep agenda controls compact without reserving an empty heading row. */
+.agenda-print-btn{position:absolute;left:9px;top:50%;transform:translateY(-50%);z-index:2;display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;background:transparent;color:#168b91;border-radius:6px;cursor:pointer}
+.agenda-print-btn:hover{background:#dff3f3}.agenda-print-btn:focus-visible{outline:2px solid #168b91}
+.agenda-print-dialog{border:1px solid #dce6eb;border-radius:12px;padding:24px;width:min(380px,90vw)}
+.agenda-print-dialog::backdrop{background:#102f4470}.agenda-print-dialog label{display:grid;gap:6px;margin:14px 0}.print-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+.toolbar #newBlockBtn{order:6;white-space:nowrap;font-size:13px;padding:8px 10px;min-height:40px}
+.main .topbar{min-height:0;align-items:center;margin-bottom:8px}.agenda-report-row{align-items:center}.report-heading{display:flex;align-items:center}
 .topbar:not(:has(.dynamic-page-heading)):not(:has(#agendaReportBtn:not(.hidden))):not(:has(#newBlockBtn:not(.hidden))){display:none}
 .toolbar{align-items:center;flex-wrap:wrap;gap:12px}
 .toolbar .filters{flex:0 1 auto;width:auto;gap:8px;align-items:center;justify-content:flex-end}
