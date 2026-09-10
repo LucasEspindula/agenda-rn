@@ -161,6 +161,8 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(max-width:620px){.main{padding:12px}.topbar{display:grid;gap:12px}.top-actions,.date-wrap,.filters{width:100%;flex-wrap:wrap}.top-actions>*{flex:1}.agenda-report-row{width:100%}.agenda-report-row>*{flex:1}.date-copy{order:-1;width:100%}.filters select{flex:1}.modal{padding:8px}.modal-panel{max-height:96vh;border-radius:14px}.modal-head{padding:17px 16px 0}.appointment-detail,.appointment-main,.patient-side{padding-left:14px;padding-right:14px}.content-card{padding:14px}.section-head{align-items:flex-start;flex-direction:column}.section-head>button{width:100%}.workflow-actions{display:grid;grid-template-columns:1fr 1fr}.table{min-width:680px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
 
+.account-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 38px;width:38px;height:38px;padding:0;border-radius:10px;color:#dbe7ee;text-decoration:none;font-size:23px}
+.account-icon:hover,.account-icon:focus-visible{background:#ffffff20;color:#fff}
 /* Desktop navigation stays available while the agenda scrolls. */
 @media(min-width:901px){
  .app-shell{display:block}
@@ -171,10 +173,11 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .nav{flex-direction:row;gap:4px}.nav-item{white-space:nowrap;transition:background .18s ease}
  .nav-item:focus-visible{outline:2px solid #77ded7;outline-offset:2px}
  .sidebar-footer{margin:0 0 0 auto;display:flex;align-items:center;gap:12px}
- .sidebar-profile{margin:0;padding:0 0 0 12px;border:0;border-left:1px solid #ffffff25;max-width:245px}
+ .sidebar-profile{margin:0;padding:0 0 0 12px;border:0;border-left:1px solid #ffffff25;max-width:none;display:flex;gap:9px;min-width:170px;flex-shrink:0}.session-copy{min-width:130px}.sidebar-profile strong{white-space:normal;overflow-wrap:anywhere;max-width:240px}.sidebar-footer{flex-shrink:0}.sidebar .nav{flex-wrap:wrap}.sidebar{flex-wrap:wrap}.sidebar .settings-fixed{order:0}
  .main{padding-top:24px}
 }
 @media(min-width:901px) and (max-width:1200px){
  .sidebar{gap:10px;padding:12px}.brand span{display:none}.brand strong{font-size:14px}
- .nav-item{padding:9px 8px}.sidebar-footer{gap:8px}.sidebar-profile{max-width:190px;grid-template-columns:minmax(0,1fr) auto}.sidebar-profile .session-avatar{display:none}
+ .nav-item{padding:9px 8px}.sidebar-footer{gap:8px}.sidebar-profile{max-width:none}.sidebar-profile .session-avatar{display:none}
 }
+@media(min-width:901px){.agenda-card{max-height:calc(100dvh - var(--desktop-nav-height,100px) - 16px);overscroll-behavior:contain}.agenda-card .day-head,.agenda-card .corner{top:0}.agenda-card{scrollbar-gutter:stable}}

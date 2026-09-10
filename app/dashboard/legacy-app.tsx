@@ -13,19 +13,19 @@ export function LegacyApp() {
     Promise.all([fetch("/api/session"), fetch("/api/state")]).then(async ([sessionResponse, stateResponse]) => {
       if (!sessionResponse.ok || !stateResponse.ok) throw new Error("Não foi possível carregar sua agenda.");
       const session = await sessionResponse.json() as Session;
-      const state = await stateResponse.json() as { state: unknown };
+      const state = await stateResponse.json() as { state: unknown; revision: string | null };
+      (window as Window & { AgendaRevision?: string | null }).AgendaRevision = state.revision;
       if (state.state !== null) {
         localStorage.setItem("agendaRNData_v5", JSON.stringify(state.state));
       } else {
-        const existing = localStorage.getItem("agendaRNData_v5");
-        if (existing) await fetch("/api/state", { method: "PUT", headers: { "content-type": "application/json" }, body: existing });
+        localStorage.removeItem("agendaRNData_v5");
       }
       (window as Window & { AgendaAuth?: unknown }).AgendaAuth = session.user;
       if (cancelled) return;
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js";
+        script.src = "/legacy-app.js?v=live-20260910";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });

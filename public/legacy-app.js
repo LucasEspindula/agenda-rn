@@ -23,12 +23,32 @@ const Storage={
  load(){
   try{
    let raw=localStorage.getItem(this.key);
-   if(raw){const d=this.migrate(JSON.parse(raw));this.save(d);return d}
+   if(raw){const d=this.migrate(JSON.parse(raw));localStorage.setItem(this.key,JSON.stringify(d));return d}
    raw=localStorage.getItem("agendaRNData_v4")||localStorage.getItem("agendaRNData_v3")||localStorage.getItem("agendaRNData_v2")||localStorage.getItem("agendaClinicaData_v1");
-   const d=raw?this.migrate(JSON.parse(raw)):this.defaultData();this.save(d);return d
-  }catch{const d=this.defaultData();this.save(d);return d}
+   const d=raw?this.migrate(JSON.parse(raw)):this.defaultData();localStorage.setItem(this.key,JSON.stringify(d));return d
+  }catch{const d=this.defaultData();localStorage.setItem(this.key,JSON.stringify(d));return d}
  },
- save(d){localStorage.setItem(this.key,JSON.stringify(d));fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(d)}).then(response=>{if(!response.ok)throw new Error("sync")}).catch(()=>toast("Alteração salva neste dispositivo, mas ainda não sincronizada."))}
+ save(d){
+  localStorage.setItem(this.key,JSON.stringify(d));
+  this.pending=JSON.stringify(d);
+  this.flush();
+ },
+ async flush(){
+  if(this.saving||!this.pending)return;
+  this.saving=true;
+  const body=this.pending;this.pending=null;
+  try{
+   const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json","if-match":window.AgendaRevision||"new"},body});
+   const result=await response.json();
+   if(!response.ok)throw new Error(result.error||"Não foi possível salvar no servidor.");
+   if(result.revision)window.AgendaRevision=result.revision;
+  }catch(error){
+   this.pending=null;
+   await appNotice("Alteração não salva",error.message+" A agenda será recarregada. Confira os dados antes de repetir a alteração.");
+   const response=await fetch("/api/state",{cache:"no-store"});
+   if(response.ok){const snapshot=await response.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);localStorage.setItem(this.key,JSON.stringify(state));closeModals();renderAll()}
+  }finally{this.saving=false;if(this.pending)this.flush()}
+ }
 };
 let state=Storage.load(),calendarMode="week",currentDate=startOfWeek(new Date()),detailPatientId=null,workflowData={requests:[],notifications:[],audit:[]};
 const $=id=>document.getElementById(id),qsa=s=>[...document.querySelectorAll(s)];
@@ -250,7 +270,7 @@ function hist(pid,type,text,aid=null){if(!pid)return;state.patientHistory.push({
 function renderProfessionalOptions(){
  const sel=$("professionalFilter"),old=sel.value;
  const auth=window.AgendaAuth||{},allowed=auth.role==="general_manager"?state.professionals:state.professionals.filter(p=>(auth.agendaIds||[]).includes(p.id));
- sel.innerHTML=allowed.map(p=>`<option value="${p.id}">${esc(p.name)}${p.crm?` — CRM ${esc(p.crm)}`:""} — ${p.category==="anesthetist"?"Anestesista":"Cirurgião"}</option>`).join("");
+ sel.innerHTML=[["doctor","Cirurgiões"],["anesthetist","Anestesistas"]].map(([category,label])=>{const rows=allowed.filter(p=>p.category===category).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));return rows.length?`<optgroup label="${label}">${rows.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.crm?` — CRM ${esc(p.crm)}`:""}</option>`).join("")}</optgroup>`:""}).join("");
  sel.disabled=!allowed.length;sel.setAttribute("aria-label",allowed.length?"Agenda do profissional":"Nenhuma agenda disponível");
  if([...sel.options].some(o=>o.value===old))sel.value=old;else if(sel.options[0])sel.value=sel.options[0].value
 }
@@ -509,8 +529,8 @@ function renderAppointmentDetail(a){
  const p=patient(a.patientId),h=hospital(a.hospitalId),doctor=prof(a.doctorId),anesthetist=prof(a.anesthetistId),end=hhmm(mins(a.time)+Number(a.duration||0));
  const flags=[["OPME",a.opme],["Laudos",a.reports],["Exames",a.exams]].map(([label,on])=>`<span class="detail-flag ${on?"active":""}">${label}: ${on?"Sim":"Não"}</span>`).join("");
  const heroName=p?.name||doctor?.name||"Cirurgião não informado",heroLabel=p?"Paciente":"Cirurgião",heroMeta=p?`${esc(p.insurance||"Sem convênio")}${p.phone?` · ${esc(p.phone)}`:""}`:`Paciente ainda não informado · ${esc(a.insurance||"Convênio não informado")}`;
- $("appointmentDetailView").innerHTML=`<div class="appointment-detail-hero"><div class="detail-avatar">${esc(heroName.charAt(0))}</div><div><span class="detail-eyebrow">${heroLabel}</span><h4>${esc(heroName)}</h4><p>${heroMeta}</p></div><span class="detail-status ${esc(a.status)}">${appointmentStatusLabel(a.status)}</span></div><div class="appointment-detail-time"><div><span>Data e horário</span><strong>${parseDate(a.date).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</strong><b>${esc(a.time)} às ${esc(end)}</b></div><div><span>Hospital</span><strong>${esc(h?.name||"Hospital não informado")}</strong><b>${esc(a.procedure||"Procedimento")}</b></div></div><div class="appointment-detail-grid"><div class="detail-section"><span>Equipe</span><strong>${esc(doctor?.name||"Cirurgião não informado")}</strong><p>${anesthetist?`Anestesista: ${esc(anesthetist.name)}`:"Sem anestesista"}</p></div><div class="detail-section"><span>Financeiro</span><strong>${money(a.payment)}</strong><p>NF: ${esc(a.invoiceNumber||"Não informada")}</p></div><div class="detail-section"><span>Validade da guia</span><strong>${a.guideExpiry?parseDate(a.guideExpiry).toLocaleDateString("pt-BR"):"Não informada"}</strong><p>${a.careType==="inpatient"?"Internado":"Ambulatorial"}</p></div></div><div class="detail-docs">${flags}</div>${a.notes?`<div class="detail-notes"><span>Observações</span><p>${esc(a.notes)}</p></div>`:""}${renderRescheduleHistory(a)}<div class="appointment-status-editor"><label for="appointmentStatusSelect">Status do agendamento</label><div class="appointment-status-controls"><select id="appointmentStatusSelect" class="status-select ${esc(a.status)}">${appointmentStatusOptions(a.status)}</select><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button></div></div><div class="appointment-detail-actions"><button type="button" class="secondary-btn" data-close>Fechar</button><button id="appointmentDetailEditBtn" type="button" class="primary-btn">${(window.AgendaAuth||{}).role==="doctor"?"Sugerir alteração":"Editar agendamento"}</button></div>`;
- $("appointmentStatusSelect").onchange=e=>requestAppointmentStatus(a.id,e.target.value);$("rescheduleAppointmentBtn").onclick=()=>openReschedule(a.id);$("appointmentDetailEditBtn").onclick=enableAppointmentEdit;qsa("#appointmentDetailView [data-close]").forEach(b=>b.onclick=closeModals);
+ $("appointmentDetailView").innerHTML=`<div class="appointment-detail-hero"><div class="detail-avatar">${esc(heroName.charAt(0))}</div><div><span class="detail-eyebrow">${heroLabel}</span><h4>${esc(heroName)}</h4><p>${heroMeta}</p></div><span class="detail-status ${esc(a.status)}">${appointmentStatusLabel(a.status)}</span></div><div class="appointment-detail-time"><div><span>Data e horário</span><strong>${parseDate(a.date).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})}</strong><b>${esc(a.time)} às ${esc(end)}</b></div><div><span>Hospital</span><strong>${esc(h?.name||"Hospital não informado")}</strong><b>${esc(a.procedure||"Procedimento")}</b></div></div><div class="appointment-detail-grid"><div class="detail-section"><span>Equipe</span><strong>${esc(doctor?.name||"Cirurgião não informado")}</strong><p>${anesthetist?`Anestesista: ${esc(anesthetist.name)}`:"Sem anestesista"}</p></div><div class="detail-section"><span>Financeiro</span><strong>${money(a.payment)}</strong><p>NF: ${esc(a.invoiceNumber||"Não informada")}</p></div><div class="detail-section"><span>Validade da guia</span><strong>${a.guideExpiry?parseDate(a.guideExpiry).toLocaleDateString("pt-BR"):"Não informada"}</strong><p>${a.careType==="inpatient"?"Internado":"Ambulatorial"}</p></div></div><div class="detail-docs">${flags}</div>${a.notes?`<div class="detail-notes"><span>Observações</span><p>${esc(a.notes)}</p></div>`:""}${renderRescheduleHistory(a)}<div class="appointment-status-editor"><label for="appointmentStatusSelect">Status do agendamento</label><div class="appointment-status-controls"><select id="appointmentStatusSelect" class="status-select ${esc(a.status)}">${appointmentStatusOptions(a.status)}</select><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button></div></div><div class="appointment-detail-actions"><button type="button" class="secondary-btn" data-close>Fechar</button><button id="appointmentStatusSaveBtn" type="button" class="primary-btn" disabled>Salvar</button><button id="appointmentDetailEditBtn" type="button" class="primary-btn">${(window.AgendaAuth||{}).role==="doctor"?"Sugerir alteração":"Editar agendamento"}</button></div>`;
+ $("appointmentStatusSelect").onchange=()=>{$("appointmentStatusSaveBtn").disabled=$("appointmentStatusSelect").value===a.status};$("appointmentStatusSaveBtn").onclick=async()=>{const button=$("appointmentStatusSaveBtn");button.disabled=true;try{await applyAppointmentStatus(a.id,$("appointmentStatusSelect").value)}finally{if(button.isConnected)button.disabled=$("appointmentStatusSelect").value===a.status}};$("rescheduleAppointmentBtn").onclick=()=>openReschedule(a.id);$("appointmentDetailEditBtn").onclick=enableAppointmentEdit;qsa("#appointmentDetailView [data-close]").forEach(b=>b.onclick=closeModals);
 }
 function setAppointmentViewMode(viewing){$("appointmentModal").classList.toggle("appointment-view-mode",viewing);$("appointmentDetailView").classList.toggle("hidden",!viewing);document.querySelector("#appointmentForm > .appointment-layout").classList.toggle("hidden",viewing);qsa("#appointmentForm input:not(#appointmentId),#appointmentForm select:not(#appointmentStatusSelect),#appointmentForm textarea").forEach(el=>el.disabled=viewing);if($("appointmentStatusSelect"))$("appointmentStatusSelect").disabled=false;$("saveAppointmentBtn").classList.toggle("hidden",viewing);$("deleteAppointmentBtn").classList.toggle("hidden",viewing||!$("appointmentId").value);$("editAppointmentBtn").classList.add("hidden");$("appointmentModalTitle").textContent=viewing?"Detalhes do agendamento":($("appointmentId").value?"Editar agendamento":"Novo agendamento")}
 function enableAppointmentEdit(){setAppointmentViewMode(false);$("appointmentProcedure").focus()}
@@ -767,6 +787,41 @@ $("professionalFilter").addEventListener("change",()=>{renderAppointmentOptions(
 $("relatedProfessional").addEventListener("change",()=>{renderAppointmentOptions();updatePatientSide()});
 
 applyRoleRestrictions();renderAll();
+
+const menuSizeObserver=new ResizeObserver(entries=>{document.documentElement.style.setProperty("--desktop-nav-height",`${entries[0].target.getBoundingClientRect().height}px`)});
+menuSizeObserver.observe(document.querySelector(".sidebar"));
+const floatingDays=document.createElement("div");floatingDays.className="floating-calendar-days";floatingDays.setAttribute("aria-hidden","true");document.body.appendChild(floatingDays);
+function positionCalendarDays(){
+ const card=document.querySelector(".agenda-card"),grid=$("calendar").querySelector(".calendar-grid"),top=document.querySelector(".sidebar").getBoundingClientRect().bottom,bounds=card.getBoundingClientRect();
+ const visible=window.innerWidth>900&&$("agendaView").classList.contains("active")&&grid&&bounds.top<top&&bounds.bottom>top+80;
+ floatingDays.hidden=!visible;if(!visible)return;
+ floatingDays.style.cssText=`position:fixed;top:${top}px;left:${bounds.left}px;width:${card.clientWidth}px;overflow:hidden;z-index:17;pointer-events:none`;
+ const row=document.createElement("div");row.className=grid.className;row.style.width=`${grid.getBoundingClientRect().width}px`;row.style.transform=`translateX(${-card.scrollLeft}px)`;
+ grid.querySelectorAll(":scope > .corner,:scope > .day-head").forEach(cell=>row.appendChild(cell.cloneNode(true)));floatingDays.replaceChildren(row);
+}
+let calendarHeaderFrame=0;function scheduleCalendarHeader(){cancelAnimationFrame(calendarHeaderFrame);calendarHeaderFrame=requestAnimationFrame(positionCalendarDays)}
+document.addEventListener("scroll",scheduleCalendarHeader,true);window.addEventListener("resize",scheduleCalendarHeader);
+new MutationObserver(scheduleCalendarHeader).observe($("calendar"),{childList:true});
+scheduleCalendarHeader();
+let liveConnection=null;
+function connectLive(){
+ if(liveConnection||document.hidden)return;
+ liveConnection=new EventSource("/api/live");
+ liveConnection.addEventListener("unauthorized",()=>{liveConnection?.close();window.location.assign("/")});
+ liveConnection.onmessage=event=>{
+  const snapshot=JSON.parse(event.data);
+  workflowData=snapshot.workflow;renderWorkflow();
+  if(Storage.saving||Storage.pending)return;
+  if(snapshot.revision===window.AgendaRevision)return;
+  if(Date.parse(snapshot.revision)<Date.parse(window.AgendaRevision))return;
+  window.AgendaRevision=snapshot.revision;
+  state=Storage.migrate(snapshot.state);localStorage.setItem(Storage.key,JSON.stringify(state));
+  renderAll();
+ };
+}
+document.addEventListener("visibilitychange",()=>{if(document.hidden){liveConnection?.close();liveConnection=null}else connectLive()});
+window.addEventListener("pagehide",()=>{liveConnection?.close();menuSizeObserver.disconnect()});
+connectLive();
 
 let __lastRenderedMinute="";
 setInterval(()=>{

@@ -25,6 +25,7 @@ export async function POST(request: Request) {
   if (!email || !["general_manager", "secretary", "doctor"].includes(data.role ?? "")) return Response.json({ error: "Dados inválidos" }, { status: 400 });
   const db = getSupabaseAdmin();
   if (!data.id && (!data.password || data.password.length < 8)) return Response.json({ error: "Informe uma senha inicial com pelo menos 8 caracteres" }, { status: 400 });
+  if (data.id === session.account.id && data.role !== "general_manager") return Response.json({ error: "Para sua segurança, outro gerente deve alterar seu nível de acesso." }, { status: 400 });
   const password = data.password ? await hashPassword(data.password) : null;
   let account;
   if (data.id) { const result = await db.from("users").update({ email, name: data.name?.trim() ?? "", role: data.role!, updated_at: new Date().toISOString(), ...(password ? { password_hash: password.hash, password_salt: password.salt } : {}) }).eq("id", data.id).select("*").maybeSingle(); dbError(result.error, "Update user"); account = result.data; }

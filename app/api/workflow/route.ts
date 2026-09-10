@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   const body = await request.json() as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
   if (!body.action || !["create", "update", "delete"].includes(body.action)) return Response.json({ error: "Solicitação inválida" }, { status: 400 });
   const db = getSupabaseAdmin();
-  const stateResult = await db.from("app_state").select("payload").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
+  const stateResult = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
   if (!stateRow) return Response.json({ error: "Agenda indisponível" }, { status: 409 });
   const state = stateRow.payload as AgendaState;
   const previous = state.appointments?.find((item) => item.id === (body.appointmentId || body.appointment?.id)) || null;
@@ -117,7 +117,11 @@ export async function PATCH(request: Request) {
     db.from("notifications").insert({ id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", request_id: row.id, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.${body.note?.trim() ? ` ${body.note.trim()}` : ""}`, created_at: now }),
     db.from("audit_logs").insert({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null }, created_at: now }),
   ];
-  if (accepted) operations.unshift(db.from("app_state").update({ payload: state, updated_at: now }).eq("id", 1));
+  if (accepted) {
+    const saved = await db.from("app_state").update({ payload: state, updated_at: now }).eq("id", 1).eq("updated_at", stateRow.updated_at).select("id").maybeSingle();
+    dbError(saved.error, "Save approved request");
+    if (!saved.data) return Response.json({ error: "A agenda mudou durante a aprovação. Confira a solicitação e tente novamente." }, { status: 409 });
+  }
   const results = await Promise.all(operations); results.forEach((result) => dbError(result.error, "Decide workflow request"));
   return Response.json({ ok: true, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` });
 }

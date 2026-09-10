@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "Agenda RN",
   description: "Gestão segura de agendas médicas e atendimentos.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/agenda-rn-icon.jpg",
+    shortcut: "/agenda-rn-icon.jpg",
   },
 };
 
