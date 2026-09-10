@@ -2,6 +2,14 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+.login-scene { position:absolute; inset:0; overflow:hidden; pointer-events:none; --dx:0px; --dy:0px; --mx:50%; --my:50%; background:linear-gradient(135deg,#edf5ef,#e3efee 55%,#dbe9f1); }
+.login-orbit { position:absolute; width:65vw; height:65vw; border-radius:42%; border:1px solid rgba(255,255,255,.7); transform:translate(var(--dx),var(--dy)) rotate(-25deg); transition:transform 1.2s ease-out; }
+.orbit-one { top:-40vw; left:-12vw; background:linear-gradient(130deg,#9cddd1,#c4e9d5); box-shadow:0 35px 100px #7fbfa333; }
+.orbit-two { bottom:-43vw; right:-15vw; background:linear-gradient(130deg,#93c8d6,#b4d9cc); box-shadow:0 -30px 100px #5a9aaa22; }
+.orbit-three { width:44vw; height:44vw; left:-24vw; bottom:-10vw; border:45px solid #ffffff40; }
+.login-spotlight { position:absolute; inset:0; background:radial-gradient(450px circle at var(--mx) var(--my),#ffffff90,transparent 75%); }
+@media(prefers-reduced-motion:reduce) { .login-orbit { transform:rotate(-25deg); transition:none; } .login-spotlight { display:none; } }
+
 .zodiac-scene {
   --zodiac-x: 0px;
   --zodiac-y: 0px;

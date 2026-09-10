@@ -160,3 +160,21 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(max-width:900px){.app-shell{display:block}.sidebar{position:relative;height:auto;padding:14px}.brand{padding-bottom:10px}.agenda-owner{padding-bottom:12px}.nav{flex-direction:row;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}.nav-item{flex:0 0 auto}.nav-item.active{box-shadow:inset 0 -3px 0 #77ded7}.sidebar-footer{margin-top:10px;grid-template-columns:minmax(0,1fr);gap:7px}.settings-fixed{order:-2}.sidebar-profile{order:-1}.main{padding:18px}.topbar{align-items:flex-start}.toolbar{align-items:stretch;flex-direction:column}.date-wrap,.filters{justify-content:space-between}.agenda-owner-display{min-width:0}.content-card{padding:17px}}
 @media(max-width:620px){.main{padding:12px}.topbar{display:grid;gap:12px}.top-actions,.date-wrap,.filters{width:100%;flex-wrap:wrap}.top-actions>*{flex:1}.agenda-report-row{width:100%}.agenda-report-row>*{flex:1}.date-copy{order:-1;width:100%}.filters select{flex:1}.modal{padding:8px}.modal-panel{max-height:96vh;border-radius:14px}.modal-head{padding:17px 16px 0}.appointment-detail,.appointment-main,.patient-side{padding-left:14px;padding-right:14px}.content-card{padding:14px}.section-head{align-items:flex-start;flex-direction:column}.section-head>button{width:100%}.workflow-actions{display:grid;grid-template-columns:1fr 1fr}.table{min-width:680px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+
+/* Desktop navigation stays available while the agenda scrolls. */
+@media(min-width:901px){
+ .app-shell{display:block}
+ .sidebar{position:sticky;top:0;z-index:18;height:auto;min-height:82px;display:flex;flex-direction:row;align-items:center;gap:20px;padding:12px 24px;box-shadow:0 6px 24px #102f4415}
+ .sidebar:hover,.sidebar:focus-within{box-shadow:0 8px 28px #102f4430}
+ .brand{padding:0;flex-shrink:0}.brand-logo{width:42px;height:42px}
+ .agenda-owner{padding:0;flex:0 1 220px;min-width:150px}.agenda-owner select{margin-top:4px;padding:7px 10px}
+ .nav{flex-direction:row;gap:4px}.nav-item{white-space:nowrap;transition:background .18s ease}
+ .nav-item:focus-visible{outline:2px solid #77ded7;outline-offset:2px}
+ .sidebar-footer{margin:0 0 0 auto;display:flex;align-items:center;gap:12px}
+ .sidebar-profile{margin:0;padding:0 0 0 12px;border:0;border-left:1px solid #ffffff25;max-width:245px}
+ .main{padding-top:24px}
+}
+@media(min-width:901px) and (max-width:1200px){
+ .sidebar{gap:10px;padding:12px}.brand span{display:none}.brand strong{font-size:14px}
+ .nav-item{padding:9px 8px}.sidebar-footer{gap:8px}.sidebar-profile{max-width:190px;grid-template-columns:minmax(0,1fr) auto}.sidebar-profile .session-avatar{display:none}
+}
