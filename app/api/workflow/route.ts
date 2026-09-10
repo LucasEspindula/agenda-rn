@@ -69,12 +69,16 @@ export async function POST(request: Request) {
   if (!professionalId || !allowed(session, professionalId)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
   if (body.action !== "create" && !previous) return Response.json({ error: "Agendamento não encontrado" }, { status: 404 });
   if (!proposed?.patientId || !proposed.date || !proposed.time) return Response.json({ error: "Preencha paciente, data e horário" }, { status: 400 });
+  const targetAppointmentId = previous?.id || proposed?.id || null;
+  const duplicate = await db.from("agenda_requests").select("id").eq("requested_by", session.account.id).eq("action", body.action).eq("appointment_id", targetAppointmentId).eq("status", "pending").maybeSingle();
+  dbError(duplicate.error, "Check duplicate workflow request");
+  if (duplicate.data) return Response.json({ ok: true, id: duplicate.data.id, message: "Sugestão já enviada. Aguarde aprovação." });
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const actor = session.account.name || session.account.email;
   const description = requestDescription(state, actor, body.action, proposed, previous);
   const [createdRequest, createdNotification, createdAudit] = await Promise.all([
-    db.from("agenda_requests").insert({ id, professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, action: body.action, proposed_payload: proposed, previous_payload: previous, requested_by: session.account.id, created_at: now }),
+    db.from("agenda_requests").insert({ id, professional_id: professionalId, appointment_id: targetAppointmentId, action: body.action, proposed_payload: proposed, previous_payload: previous, requested_by: session.account.id, created_at: now }),
     db.from("notifications").insert({ id: crypto.randomUUID(), user_id: session.account.id, type: "request_sent", request_id: id, message: "Alteração de agenda enviada.", created_at: now }),
     db.from("audit_logs").insert({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: "request_created", professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: id, requestAction: body.action }, created_at: now }),
   ]); [createdRequest, createdNotification, createdAudit].forEach((result) => dbError(result.error, "Create workflow request"));
