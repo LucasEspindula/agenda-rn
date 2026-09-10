@@ -203,3 +203,19 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .nav-item{padding:9px 8px}.sidebar-footer{gap:8px}.sidebar-profile{max-width:none}.sidebar-profile .session-avatar{display:none}
 }
 @media(min-width:901px){.agenda-card{height:auto;max-height:none;overscroll-behavior:auto;scrollbar-gutter:auto}.agenda-card .day-head,.agenda-card .corner{top:0}}
+
+/* Keep agenda controls compact without reserving an empty heading row. */
+.topbar:not(:has(.dynamic-page-heading)):not(:has(#agendaReportBtn:not(.hidden))):not(:has(#newBlockBtn:not(.hidden))){display:none}
+.toolbar{align-items:center;flex-wrap:wrap;gap:12px}
+.toolbar .filters{flex:0 1 auto;width:auto;gap:8px;align-items:center;justify-content:flex-end}
+.toolbar #statusFilter{order:6;flex:0 0 148px;width:148px;min-width:0;max-width:148px;padding:8px 26px 8px 10px;font-size:13px;height:40px;min-height:40px}
+.toolbar .segmented{flex-shrink:0}
+.toolbar .agenda-owner-select-card{flex:1 1 260px;min-width:0;min-height:58px;padding:8px 38px;justify-content:center;text-align:center;align-self:center;box-shadow:none}
+.agenda-owner-card-copy{min-width:0;width:100%;overflow-wrap:anywhere}
+.agenda-owner-card-copy strong{font-size:15px;line-height:1.3}
+.agenda-owner-card-copy .crm{margin-left:0}
+.agenda-owner-card-copy .agenda-specialty{font-size:11px;line-height:1.3;margin-top:2px}
+.toolbar #conflictSummary:not(.hidden){flex-basis:100%}
+@media(min-width:901px){.main{padding-top:12px}.toolbar{padding:0;margin-bottom:14px}.toolbar .date-wrap{gap:8px}.toolbar .date-copy{min-width:150px}}
+@media(min-width:981px) and (max-width:1450px){.toolbar .agenda-owner-select-card{flex-basis:280px}.toolbar .filters{margin-left:auto}}
+@media(max-width:980px){.toolbar .agenda-owner-select-card{flex:0 0 auto;width:100%}.toolbar .filters{width:100%;justify-content:flex-start}.toolbar .date-wrap{flex-wrap:wrap}}
