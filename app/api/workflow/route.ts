@@ -90,7 +90,7 @@ export async function PATCH(request: Request) {
   const requestResult = await db.from("agenda_requests").select("*").eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
   if (!row) return Response.json({ error: "Esta solicitação já foi decidida ou não existe" }, { status: 409 });
   if (!allowed(session, row.professional_id)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
-  const stateResult = await db.from("app_state").select("payload").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
+  const stateResult = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
   if (!stateRow) return Response.json({ error: "Agenda indisponível" }, { status: 409 });
   const state = stateRow.payload as AgendaState;
   const proposed = row.proposed_payload as Appointment | null;

@@ -28,7 +28,14 @@ export async function POST(request: Request) {
   if (data.id === session.account.id && data.role !== "general_manager") return Response.json({ error: "Para sua segurança, outro gerente deve alterar seu nível de acesso." }, { status: 400 });
   const password = data.password ? await hashPassword(data.password) : null;
   let account;
-  if (data.id) { const result = await db.from("users").update({ email, name: data.name?.trim() ?? "", role: data.role!, updated_at: new Date().toISOString(), ...(password ? { password_hash: password.hash, password_salt: password.salt } : {}) }).eq("id", data.id).select("*").maybeSingle(); dbError(result.error, "Update user"); account = result.data; }
+  let accountId = data.id;
+  if (!accountId) {
+    const existing = await db.from("users").select("id").eq("email", email).maybeSingle();
+    dbError(existing.error, "Find existing user");
+    accountId = existing.data?.id ? Number(existing.data.id) : undefined;
+  }
+  if (accountId === session.account.id && data.role !== "general_manager") return Response.json({ error: "Para sua segurança, outro gerente deve alterar seu nível de acesso." }, { status: 400 });
+  if (accountId) { const result = await db.from("users").update({ email, name: data.name?.trim() ?? "", role: data.role!, updated_at: new Date().toISOString(), ...(password ? { password_hash: password.hash, password_salt: password.salt } : {}) }).eq("id", accountId).select("*").maybeSingle(); dbError(result.error, "Update user"); account = result.data; }
   else { const result = await db.from("users").insert({ email, name: data.name?.trim() ?? "", role: data.role!, password_hash: password!.hash, password_salt: password!.salt }).select("*").single(); dbError(result.error, "Create user"); account = result.data; }
   if (!account) return Response.json({ error: "Usuário não encontrado" }, { status: 404 });
   const removed = await db.from("agenda_access").delete().eq("user_id", account.id); dbError(removed.error, "Reset grants");
