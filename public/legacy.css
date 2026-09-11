@@ -205,6 +205,68 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(min-width:901px){.agenda-card{height:auto;max-height:none;overscroll-behavior:auto;scrollbar-gutter:auto}.agenda-card .day-head,.agenda-card .corner{top:0}}
 
 /* Keep agenda controls compact without reserving an empty heading row. */
+.appointment{overflow-y:auto;scrollbar-width:thin}
+.appointment .appointment-status-badge{position:static;align-self:flex-end;margin-top:2px!important;flex-shrink:0}
+.appointment .appointment-insurance{margin-top:2px}
+.doctor-history.accepted{border-color:#80c9a1;background:#f1faf5}
+.doctor-history.denied{border-color:#e5a2a2;background:#fff5f5}
+.doctor-history .workflow-heading{justify-content:space-between;align-items:flex-start}
+.decision-reason{color:#8b3030;overflow-wrap:anywhere}
+.mobile-app-header,.mobile-profile-home,.mobile-calendar,.mobile-menu-shade{display:none}
+@media(max-width:900px){
+ .mobile-app-header{display:flex;position:sticky;top:0;z-index:20;align-items:center;gap:14px;padding:12px 16px;background:#12384b;color:white;min-height:60px}
+ .mobile-app-header strong{font-size:18px;flex:1;min-width:0;line-height:1.3}
+ .mobile-app-header button{background:transparent;color:inherit;border:0;font-size:25px;width:36px;height:36px;flex-shrink:0}
+ .sidebar{display:none!important}
+ .mobile-menu-open .sidebar{display:flex!important;position:fixed;inset:60px 0 0 auto;width:min(340px,90vw);height:calc(100dvh - 60px);overflow-y:auto;z-index:30;flex-direction:column;padding:20px}
+ .mobile-menu-open .sidebar .nav{flex-direction:column;overflow:visible;flex-shrink:0}
+ .mobile-menu-open .sidebar-footer{display:flex;flex-wrap:wrap;margin-top:auto;gap:12px}
+ .mobile-menu-open .mobile-menu-shade{display:block;position:fixed;inset:60px 0 0;background:#0006;border:0;width:100%;height:100%;z-index:29}
+ .main{padding:12px;min-width:0}
+ .agenda-card,.floating-calendar-days{display:none!important}
+ .mobile-calendar{display:block;background:white;margin:12px -12px 0;padding:16px 12px;scroll-margin-top:64px}
+ .toolbar{display:flex;flex-direction:column;position:static;gap:10px}
+ .toolbar .agenda-owner-select-card{order:-2;width:100%;min-height:58px;flex:none;padding-left:42px;padding-right:38px}
+ .toolbar .date-wrap{order:2;width:100%;flex-direction:row;align-items:center;justify-content:space-between}
+ .toolbar .date-copy{display:none}.toolbar .date-controls #prevBtn,.toolbar .date-controls #nextBtn{display:none}
+ .toolbar .filters{width:100%;justify-content:flex-start;gap:6px}
+ .toolbar .filters>button{font-size:12px;padding:9px 10px}
+ .toolbar .filters .segmented{margin-left:auto}
+ .toolbar .filters #newAppointmentBtn{flex:1;white-space:normal}
+ .toolbar .filters #agendaNotifications{flex:none}
+ .topbar{margin-bottom:8px}.agenda-report-row{margin:0}
+ .mobile-month-nav,.mobile-year-nav{display:flex;align-items:center;justify-content:space-between;max-width:340px;margin:0 auto 10px;gap:12px;color:#184b65}
+ .mobile-month-nav strong{text-transform:capitalize;font-size:24px;font-weight:600}.mobile-year-nav strong{font-size:22px;font-weight:500}
+ .mobile-month-nav button,.mobile-year-nav button{width:38px;height:38px;border:1px solid #a8bcc7;border-radius:50%;background:white;color:#426377;font-size:30px;line-height:1;padding:0}
+ .mobile-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px 0}
+ .mobile-weekday{text-align:center;font-size:11px;color:#7d8b94;padding:12px 0 6px}
+ .mobile-date{position:relative;display:grid;place-items:center;border:0;background:transparent;height:46px;padding:0;color:#314a59;font-size:21px;min-width:0}
+ .mobile-date span{display:grid;place-items:center;width:36px;height:36px;border-radius:50%}
+ .mobile-date.selected span{background:#176d89;color:white}.mobile-date.outside{color:#a8b3ba}
+ .mobile-date i{position:absolute;bottom:0;width:5px;height:5px;background:#176d89;border-radius:50%}
+ .mobile-day-heading{display:flex;align-items:center;justify-content:space-between;margin:22px 4px 10px;color:#184b65}
+ .mobile-day-heading button{border:0;background:none;font-size:24px;color:inherit;padding:8px}
+ .mobile-appointment{display:grid;grid-template-columns:64px minmax(0,1fr) 12px;align-items:center;gap:12px;width:100%;padding:16px 2px;border:0;border-bottom:1px solid #dce5eb;background:white;text-align:left;color:#233f50}
+ .mobile-time{display:grid;gap:6px;text-align:center;border:1px solid #91aab7;border-radius:8px;padding:12px 3px;font-size:12px}
+ .mobile-time strong{font-size:16px}
+ .mobile-appointment-content{display:flex;flex-direction:column;gap:5px;min-width:0;overflow-wrap:anywhere}
+ .mobile-appointment-content>strong{font-size:11px;color:#647782}
+ .mobile-appointment-content .appointment-patient{font-size:15px!important;font-weight:650}
+ .mobile-appointment-content .appointment-procedure,.mobile-appointment-content .appointment-surgeon{font-size:13px!important}
+ .mobile-appointment-content .appointment-insurance{font-size:12px!important;color:#647782}
+ .mobile-appointment-content .appointment-status-badge{position:static;align-self:flex-end;font-size:10px!important;margin-top:3px!important}
+ .mobile-block{width:100%;white-space:normal;text-align:left;margin-top:10px}
+ .mobile-home .mobile-profile-home{display:flex;flex-direction:column;align-items:center;text-align:center;background:#12384b;color:white;margin:-12px -12px 0;padding:20px 16px 0}
+ .mobile-profile-home img{width:84px;height:84px;border-radius:50%;object-fit:contain;background:white}
+ .mobile-profile-home h1{font-size:20px;margin:16px 0 6px;overflow-wrap:anywhere}.mobile-profile-home p{margin:0 0 20px;color:#c1d7df}
+ .mobile-home-shortcuts{display:flex;background:white;width:calc(100% + 32px);border-bottom:1px solid #dce5eb}
+ .mobile-home-shortcuts button{flex:1;padding:16px 8px;background:white;border:0;color:#254e63;font-size:15px}
+ .mobile-home .content-card{box-shadow:none;border:0;border-radius:0;padding:16px 0}
+ .workflow-card{flex-direction:column;gap:12px}.workflow-card-main,.workflow-changes{min-width:0;width:100%}.workflow-actions{width:100%}.workflow-actions button{flex:1}
+ .workflow-heading{flex-wrap:wrap}.workflow-change{overflow-wrap:anywhere}.workflow-status{white-space:normal}
+ .notification-panel{position:fixed;top:65px;right:12px;left:12px;width:auto;max-width:none;max-height:calc(100dvh - 85px)}
+ .modal-panel{max-height:calc(100dvh - 24px)}
+}
 .appointment-view-mode #appointmentForm > .appointment-layout{display:none!important}
 .editable-flags{display:flex;flex-wrap:wrap;gap:10px}
 .detail-check{cursor:pointer;border-radius:8px;gap:10px}

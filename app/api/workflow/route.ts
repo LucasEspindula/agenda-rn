@@ -30,8 +30,11 @@ export async function GET() {
   const session = await getSession();
   if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const db = getSupabaseAdmin();
+  let requestQuery = db.from("agenda_requests").select("*");
+  if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id);
+  else if (!isManager(session.account.role)) requestQuery = requestQuery.in("professional_id", session.agendaIds);
   const [requestRows, userRows, notificationRows, auditRows] = await Promise.all([
-    db.from("agenda_requests").select("*").order("created_at", { ascending: false }).limit(200),
+    requestQuery.order("created_at", { ascending: false }).limit(200),
     db.from("users").select("id,name,email"),
     db.from("notifications").select("*").eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(100),
     isManager(session.account.role) ? db.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(500) : Promise.resolve({ data: [], error: null }),
@@ -90,6 +93,7 @@ export async function PATCH(request: Request) {
   if (!session?.account || session.account.role === "doctor") return Response.json({ error: "Sem permissão para decidir solicitações" }, { status: 403 });
   const body = await request.json() as { id?: string; decision?: "accepted" | "denied"; note?: string };
   if (!body.id || !["accepted", "denied"].includes(body.decision || "")) return Response.json({ error: "Decisão inválida" }, { status: 400 });
+  if (body.decision === "denied" && !body.note?.trim()) return Response.json({ error: "Informe o motivo da recusa" }, { status: 400 });
   const db = getSupabaseAdmin();
   const requestResult = await db.from("agenda_requests").select("*").eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
   if (!row) return Response.json({ error: "Esta solicitação já foi decidida ou não existe" }, { status: 409 });
