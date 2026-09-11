@@ -6,14 +6,14 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../public/legacy-app.js', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'generateMonthlyReport', 'renderMobileCalendar', 'mobileHomeView']);
+const names = new Set(['phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'generateMonthlyReport', 'renderMobileCalendar', 'mobileHomeView']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
   const doctor = { id: 'd', name: 'Rosa', category: 'doctor' }, anesthetist = { id: 'a', name: 'Dr. Lima', category: 'anesthetist' };
   const appointment = { id: 'one', doctorId: 'd', anesthetistId: 'a', patientId: 'p', hospitalId: 'h', date: '2026-09-11', time: '09:00', duration: 60, status: 'scheduled', procedure: 'Joelho' };
   const elements = new Map();
   const context = {
-    state: { appointments: [appointment], cancelledAppointments: [], scheduleBlocks: [] },
+    state: { professionals: [doctor, anesthetist], appointments: [appointment], cancelledAppointments: [], scheduleBlocks: [] },
     owner: doctor, window: { AgendaAuth: { role: 'doctor' } }, workflowData: { requests: [] },
     selectedProf: () => context.owner, prof: id => ({ d: doctor, a: anesthetist })[id],
     patient: id => id === 'p' ? { name: 'Paciente teste', insurance: 'Convênio teste' } : null,
@@ -40,6 +40,13 @@ test('cards preserve patient and team, with insurance immediately before status'
   assert(html.indexOf('Convênio teste') < html.indexOf('appointment-status-badge'));
   c.owner = anesthetist; html = c.appointmentCardContent(a);
   assert.match(html, /Dr\. Rosa/); assert.match(html, /Paciente teste/);
+});
+
+test('contact numbers preserve country codes and normalize Brazilian DDD numbers', () => {
+  const { context: c } = fixture();
+  assert.equal(c.phoneNumber('(51) 99965-1810'), '5551999651810');
+  assert.equal(c.phoneNumber('+55 51 99965-1810'), '5551999651810');
+  assert.equal(c.phoneNumber('+1 415 555 0123'), '14155550123');
 });
 
 test('monthly reports separate patient and the other professional, including cancellations', () => {

@@ -296,3 +296,41 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(min-width:901px){.main{padding-top:12px}.toolbar{padding:0;margin-bottom:14px}.toolbar .date-wrap{gap:8px}.toolbar .date-copy{min-width:150px}}
 @media(min-width:981px) and (max-width:1450px){.toolbar .agenda-owner-select-card{flex-basis:280px}.toolbar .filters{margin-left:auto}}
 @media(max-width:980px){.toolbar .agenda-owner-select-card{flex:0 0 auto;width:100%}.toolbar .filters{width:100%;justify-content:flex-start}.toolbar .date-wrap{flex-wrap:wrap}}
+
+.phone-action{border:0;background:transparent;color:#087f82;padding:2px 0;text-align:left;text-decoration:underline;overflow-wrap:anywhere;max-width:100%}
+.phone-options{display:flex;gap:12px;margin:18px 0}.phone-options a{flex:1;text-align:center;text-decoration:none}
+.appointment .appointment-card-footer{position:absolute;bottom:3px;right:4px;display:flex;flex-direction:column;align-items:flex-end;max-width:calc(100% - 8px);background:inherit;margin:0;padding:2px 0 0}
+.appointment-card-footer .appointment-insurance{max-width:100%;text-align:right;overflow-wrap:anywhere}
+.appointment{padding-bottom:32px}
+.editable-flags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.editable-flags .detail-check{width:auto;min-width:0;padding:9px 5px;font-size:12px;justify-content:center;gap:5px;white-space:nowrap}
+.mobile-logout{color:white;display:grid;place-items:center;min-width:36px;min-height:36px}
+@media(max-width:900px){
+ .toolbar .segmented,.toolbar .date-wrap,.mobile-menu-shade{display:none!important}
+ .mobile-menu-open .sidebar{display:none!important}
+ .mobile-home-actions{display:flex;gap:12px;justify-content:center;width:100%;background:#fff}
+ .mobile-home-actions button{border:0;background:white;color:#254e63;padding:12px}
+ .mobile-profile-home #mobileAccountRole{margin:16px 0 0}
+ .mobile-profile-home #mobileAccountName{margin:5px 0 8px}
+ .mobile-profile-home #mobileAccountSpecialty{margin:0 0 18px}
+ .mobile-home-shortcuts button{min-width:0;font-size:14px}
+ .main .topbar,.report-heading,.agenda-report-row{width:100%}
+ #agendaReportBtn{width:100%;min-height:58px;border-radius:12px}
+ .mobile-appointment{grid-template-columns:54px minmax(0,1fr) 10px;gap:10px;padding:14px 0;align-items:start}
+ .mobile-time{padding:12px 2px;font-size:14px;margin-top:3px}
+ .mobile-time strong{font-size:15px}
+ .mobile-appointment-content{gap:4px;line-height:1.35}
+ .mobile-appointment-content>strong{font-size:11px;line-height:1.35;white-space:normal}
+ .mobile-appointment-content .appointment-patient{font-size:15px!important;line-height:1.35!important}
+ .mobile-appointment-content .appointment-procedure,.mobile-appointment-content .appointment-surgeon{font-size:13px!important;line-height:1.35!important}
+ .mobile-appointment-content .appointment-card-footer{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:8px;min-width:0}
+ .mobile-appointment-content .appointment-status-badge{max-width:100%;font-size:10px!important;white-space:normal;line-height:1.25!important}
+ #patientsTableWrap .table{min-width:0;width:100%;table-layout:fixed}
+ #patientsTableWrap th:nth-child(2),#patientsTableWrap td:nth-child(2),#patientsTableWrap th:nth-child(4),#patientsTableWrap td:nth-child(4),#patientsTableWrap th:nth-child(6),#patientsTableWrap td:nth-child(6),#patientsTableWrap th:nth-child(7),#patientsTableWrap td:nth-child(7){display:none}
+ #patientsTableWrap th,#patientsTableWrap td{padding:10px 5px;font-size:12px;overflow-wrap:anywhere}
+ #patientsTableWrap .patient-name-btn{white-space:normal;text-align:left;font-size:13px}
+ .editable-flags .detail-check input[role="switch"]{flex-basis:30px;width:30px;height:18px;min-height:18px}
+ .editable-flags .detail-check input[role="switch"]::after{width:12px;height:12px}
+ .editable-flags .detail-check input[role="switch"]:checked::after{transform:translateX(12px)}
+ .detail-modern-hero .detail-hero-meta{width:100%;min-width:0}
+}
