@@ -298,6 +298,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(max-width:980px){.toolbar .agenda-owner-select-card{flex:0 0 auto;width:100%}.toolbar .filters{width:100%;justify-content:flex-start}.toolbar .date-wrap{flex-wrap:wrap}}
 
 .phone-action{border:0;background:transparent;color:#087f82;padding:2px 0;text-align:left;text-decoration:underline;overflow-wrap:anywhere;max-width:100%}
+.phone-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.phone-dialog-head h3{margin:0}.phone-dialog-head form{margin:0}.phone-close{border:0;background:transparent;font-size:26px;line-height:1;min-width:36px;min-height:36px;color:#345365}
 .phone-options{display:flex;gap:12px;margin:18px 0}.phone-options a{flex:1;text-align:center;text-decoration:none}
 .appointment .appointment-card-footer{position:absolute;bottom:3px;right:4px;display:flex;flex-direction:column;align-items:flex-end;max-width:calc(100% - 8px);background:inherit;margin:0;padding:2px 0 0}
 .appointment-card-footer .appointment-insurance{max-width:100%;text-align:right;overflow-wrap:anywhere}
@@ -333,4 +334,21 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .editable-flags .detail-check input[role="switch"]::after{width:12px;height:12px}
  .editable-flags .detail-check input[role="switch"]:checked::after{transform:translateX(12px)}
  .detail-modern-hero .detail-hero-meta{width:100%;min-width:0}
+}
+@media(max-width:900px){
+ .mobile-home #mobileBack{display:none}
+ .mobile-home .mobile-app-header strong{font-size:17px}
+ .mobile-home-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
+ .mobile-home-shortcuts button{font-size:11px;padding:14px 2px;white-space:normal;line-height:1.4}
+ .main .topbar{margin-bottom:4px;gap:0;min-height:0}
+ .main .report-heading,.main .agenda-report-row{margin:0;padding:0;min-height:0}
+ #agendaView .toolbar{margin-top:0;padding-top:0}
+ .mobile-appointment-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr);gap:5px 8px;align-items:start}
+ .mobile-appointment-content>strong{grid-column:1 / -1;grid-row:1}
+ .mobile-appointment-content>.appointment-patient{grid-column:1 / -1;grid-row:2}
+ .mobile-appointment-content>.appointment-procedure{grid-column:1;grid-row:3}
+ .mobile-appointment-content>.appointment-surgeon{grid-column:1;grid-row:4}
+ .mobile-appointment-content .appointment-card-footer{display:contents}
+ .mobile-appointment-content .appointment-insurance{grid-column:2;grid-row:3;text-align:right;justify-self:end;margin:0;font-size:12px!important;line-height:1.35}
+ .mobile-appointment-content .appointment-status-badge{grid-column:2;grid-row:4;justify-self:end;align-self:start;margin:0!important;max-width:100%;width:auto;text-align:right}
 }

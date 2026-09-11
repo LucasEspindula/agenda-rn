@@ -441,7 +441,7 @@ document.addEventListener("click",e=>{
  const target=e.target.closest("[data-phone]");if(!target)return;
  const number=phoneNumber(target.dataset.phone);if(number.length<10||number.length>15)return appNotice("Telefone inválido","Informe o número com DDD e código do país.");
  const dialog=document.createElement("dialog");dialog.className="agenda-print-dialog phone-dialog";
- dialog.innerHTML=`<h3>Contato do paciente</h3><p>${esc(target.dataset.phone)}</p><div class="phone-options"><a href="tel:+${number}" class="secondary-btn">Ligar</a><a href="https://wa.me/${number}" class="primary-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a></div><form method="dialog"><button class="secondary-btn">Fechar</button></form>`;
+ dialog.innerHTML=`<div class="phone-dialog-head"><h3>Contato do paciente</h3><form method="dialog"><button class="phone-close" aria-label="Fechar" title="Fechar">×</button></form></div><p>${esc(target.dataset.phone)}</p><div class="phone-options"><a href="tel:+${number}" class="secondary-btn">Ligar</a><a href="https://wa.me/${number}" class="primary-btn" target="_blank" rel="noopener noreferrer">WhatsApp</a></div>`;
  dialog.addEventListener("close",()=>dialog.remove());document.body.appendChild(dialog);dialog.showModal();
 });
 function appointmentPartner(a,owner=selectedProf()){
@@ -843,13 +843,15 @@ function mobileHomeView(){return (window.AgendaAuth||{}).role==="general_manager
 function updateMobileView(view){
  document.body.classList.toggle("mobile-home",view===mobileHomeView());
 
- if($("mobilePageTitle"))$("mobilePageTitle").textContent=({agenda:"Agenda",patients:"Pacientes",requests:"Solicitações",notifications:"Histórico de alterações",audit:"Histórico geral",settings:"Configurações",cancelled:"Cancelados"})[view]||"Agenda RN";
+ if($("mobilePageTitle"))$("mobilePageTitle").textContent=view===mobileHomeView()?"Perfil profissional de:":({agenda:"Agenda",patients:"Pacientes",requests:"Solicitações",notifications:"Histórico de alterações",audit:"Histórico geral",settings:"Configurações",cancelled:"Cancelados"})[view]||"Agenda RN";
 }
 function initMobileUI(){
  document.body.insertAdjacentHTML("afterbegin",'<header class="mobile-app-header"><button id="mobileBack" aria-label="Página inicial">☰</button><strong id="mobilePageTitle">Agenda</strong><a class="mobile-logout" href="/api/auth/logout" aria-label="Sair" title="Sair"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4H4v16h5M13 8l4 4-4 4M8 12h13"/></svg></a></header>');
- const main=document.querySelector(".main");main.insertAdjacentHTML("afterbegin",'<section class="mobile-profile-home"><img src="/agenda-rn-icon.jpg" alt="Agenda RN"><p id="mobileAccountRole"></p><h1 id="mobileAccountName"></h1><p id="mobileAccountSpecialty"></p><div class="mobile-home-shortcuts"><button data-home-view="agenda">Agenda</button><button data-home-view="cancelled">Cancelados</button><button data-home-view="patients">Pacientes</button></div><div id="mobileHomeActions" class="mobile-home-actions"></div></section>');
+ const main=document.querySelector(".main");main.insertAdjacentHTML("afterbegin",'<section class="mobile-profile-home"><img src="/agenda-rn-icon.jpg" alt="Agenda RN"><p id="mobileAccountRole"></p><h1 id="mobileAccountName"></h1><p id="mobileAccountSpecialty"></p><div class="mobile-home-shortcuts"><button data-home-view="agenda">▦ Agenda</button><button data-home-view="cancelled">⊘ Cancelados</button><button id="mobileRequestsShortcut">✓ Solicitações</button><button data-home-view="patients">◉ Pacientes</button></div><div id="mobileHomeActions" class="mobile-home-actions"></div></section>');
  const auth=window.AgendaAuth||{};$("mobileAccountName").textContent=auth.name||auth.email||"Usuário";$("mobileAccountRole").textContent=roleLabel(auth.role);
- $("mobileHomeActions").innerHTML=auth.role==="general_manager"?'<button data-home-view="settings">⚙ Configurações</button><button data-home-view="requests">Solicitações</button>':"";
+ if(auth.role==="general_manager")document.querySelector(".mobile-app-header").insertAdjacentHTML("beforeend",'<button data-home-view="settings" aria-label="Configurações" title="Configurações">⚙</button>');
+ $("mobileRequestsShortcut").onclick=()=>showView(auth.role==="doctor"?"notifications":"requests");
+ document.querySelector(".mobile-logout").onclick=async e=>{e.preventDefault();const link=e.currentTarget;if(link.dataset.confirming)return;link.dataset.confirming="true";try{if(await appConfirm("Sair da conta","Tem certeza que deseja sair?","Sair"))window.location.assign(link.href)}finally{delete link.dataset.confirming}};
  $("agendaView").insertAdjacentHTML("beforeend",'<section id="mobileCalendar" class="mobile-calendar" aria-label="Calendário mensal"></section>');
  $("mobileBack").onclick=()=>showView(mobileHomeView());
  qsa("[data-home-view]").forEach(b=>b.onclick=()=>showView(b.dataset.homeView));
