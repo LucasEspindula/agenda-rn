@@ -6,7 +6,7 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../public/legacy-app.js', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'generateMonthlyReport', 'renderMobileCalendar', 'mobileHomeView']);
+const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'generateMonthlyReport', 'renderMobileCalendar', 'mobileHomeView']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
   const doctor = { id: 'd', name: 'Rosa', category: 'doctor' }, anesthetist = { id: 'a', name: 'Dr. Lima', category: 'anesthetist' };
@@ -47,6 +47,16 @@ test('contact numbers preserve country codes and normalize Brazilian DDD numbers
   assert.equal(c.phoneNumber('(51) 99965-1810'), '5551999651810');
   assert.equal(c.phoneNumber('+55 51 99965-1810'), '5551999651810');
   assert.equal(c.phoneNumber('+1 415 555 0123'), '14155550123');
+});
+
+test('anesthesia conflicts include overlapping intervals but not adjacent, cancelled or other agendas', () => {
+  const { context: c, appointment: a, anesthetist, doctor } = fixture();
+  const b = { ...a, id: 'two', time: '09:30' };
+  assert.equal(c.hasAnesthesiaConflict(a, [a, b], anesthetist), true);
+  for (const change of [{ time: '10:00' }, { date: '2026-09-12' }, { anesthetistId: 'other' }, { status: 'cancelled' }]) assert.equal(c.hasAnesthesiaConflict(a, [a, { ...b, ...change }], anesthetist), false);
+  assert.equal(c.hasAnesthesiaConflict(a, [a, b], doctor), false);
+  c.owner = anesthetist; c.state.appointments.push(b); c.renderMobileCalendar();
+  assert.equal((c.$('mobileCalendar').innerHTML.match(/has-conflict/g) || []).length, 2);
 });
 
 test('monthly reports separate patient and the other professional, including cancellations', () => {

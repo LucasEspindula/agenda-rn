@@ -41,7 +41,6 @@ select:focus,input:focus,textarea:focus{border-color:#87cfc9;box-shadow:0 0 0 3p
 .time-cell{min-height:64px;padding:7px 8px;color:#8a96a3;font-size:11px;border-bottom:1px solid #eef2f5;background:#fff;position:sticky;left:0;z-index:2}
 .slot{position:relative;min-height:64px;border-left:1px solid var(--line);border-bottom:1px solid #eef2f5;background:linear-gradient(to bottom,transparent 49%,#f3f6f8 50%,transparent 51%)}
 .appointment{position:absolute;left:2px;right:2px;top:2px;z-index:3;border-radius:7px;padding:4px 5px;font-size:10.5px;line-height:1.08;border:1px solid rgba(39,72,94,.24);text-align:left;box-shadow:0 2px 8px rgba(18,55,79,.12);overflow:hidden;color:#26323c;transition:none}
-.appointment:hover{filter:none;transform:none;border-color:rgba(20,75,105,.48);box-shadow:0 4px 12px rgba(18,55,79,.18)}
 .appointment strong{display:block;font-size:8.5px;line-height:1.03;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.appointment strong b{font-weight:850}.appointment-patient{font-weight:750;font-size:8.7px!important;line-height:1.03!important}.appointment-procedure{font-size:9.5px!important;line-height:1.05!important;font-weight:500}.appointment span{display:block;margin-top:1px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .appointment em{display:block;margin-top:3px;font-size:9px;font-style:normal;font-weight:800;text-transform:uppercase;white-space:nowrap}
 .appointment.scheduled{background:#eef4fb;border-color:#7ca3c8}.appointment.confirmed{background:#e8f7ff;border-color:#45a6d8}.appointment.authorized{background:#e8f8ef;border-color:#47a975}.appointment.analysis{background:#fff7df;border-color:#d8a83d}.appointment.realized{background:#e8f8f2;border-color:#2f9a70}.appointment.rescheduled{background:#f4edff;border-color:#9873c7}.appointment.cancelled{background:#fff0f0;border-color:var(--danger);opacity:.76}
@@ -205,7 +204,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media(min-width:901px){.agenda-card{height:auto;max-height:none;overscroll-behavior:auto;scrollbar-gutter:auto}.agenda-card .day-head,.agenda-card .corner{top:0}}
 
 /* Keep agenda controls compact without reserving an empty heading row. */
-.appointment{overflow-y:auto;scrollbar-width:thin}
+.appointment{overflow:hidden}
 .appointment .appointment-status-badge{position:static;align-self:flex-end;margin-top:2px!important;flex-shrink:0}
 .appointment .appointment-insurance{margin-top:2px}
 .doctor-history.accepted{border-color:#80c9a1;background:#f1faf5}
@@ -303,6 +302,9 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .appointment .appointment-card-footer{position:absolute;bottom:3px;right:4px;display:flex;flex-direction:column;align-items:flex-end;max-width:calc(100% - 8px);background:inherit;margin:0;padding:2px 0 0}
 .appointment-card-footer .appointment-insurance{max-width:100%;text-align:right;overflow-wrap:anywhere}
 .appointment{padding-bottom:32px}
+.appointment.anesthesia-conflict{padding-bottom:5px}
+.appointment.anesthesia-conflict .appointment-card-footer{display:none}
+.mobile-appointment.has-conflict .mobile-time{background:#fff0f1;border-color:#d43948;color:#a51f2d}
 .editable-flags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .editable-flags .detail-check{width:auto;min-width:0;padding:9px 5px;font-size:12px;justify-content:center;gap:5px;white-space:nowrap}
 .mobile-logout{color:white;display:grid;place-items:center;min-width:36px;min-height:36px}
