@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { getSession } from '@/app/authz';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { compressPdf } from '@/lib/compress-pdf';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -85,13 +86,41 @@ export async function PATCH(request: Request) {
    await db.from('surgery_documents').delete().eq('id',id).eq('status','pending');
    return Response.json({error:'Arquivo inválido. Envie um PDF original de até 20 MB.'},{status:400});
   }
-  const hash = createHash('sha256').update(Buffer.from(await file.arrayBuffer())).digest('hex');
-  const { error: updateError } = await db.from('surgery_documents').update({status:'ready',sha256:hash}).eq('id',id).eq('status','pending');
+  const original = Buffer.from(await file.arrayBuffer());
+  const hash = createHash('sha256').update(original).digest('hex');
+  const compressed = await compressPdf(original);
+  let storedPath=doc.object_path;
+  if(compressed.bytes.length<original.length){
+   storedPath=doc.object_path+'.compact.pdf';
+   const {error: uploadError}=await db.storage.from(BUCKET).upload(storedPath,compressed.bytes,{contentType:'application/pdf',upsert:true});
+   if(uploadError) throw uploadError;
+  }
+  const { error: updateError } = await db.from('surgery_documents').update({status:'ready',sha256:hash,size:compressed.bytes.length,object_path:storedPath}).eq('id',id).eq('status','pending');
   if (updateError?.code==='23505') {
-   await db.storage.from(BUCKET).remove([doc.object_path]);await db.from('surgery_documents').delete().eq('id',id).eq('status','pending');
+   await db.storage.from(BUCKET).remove([...new Set([doc.object_path,storedPath])]);await db.from('surgery_documents').delete().eq('id',id).eq('status','pending');
    return Response.json({error:'Este PDF já está vinculado a esta cirurgia.'},{status:409});
   }
   if (updateError) throw updateError;
-  return Response.json({ok:true});
+  if(storedPath!==doc.object_path) await db.storage.from(BUCKET).remove([doc.object_path]);
+  return Response.json({ok:true,originalSize:original.length,size:compressed.bytes.length,compression:compressed.reason});
  } catch(error) { return failure(error); }
+}
+
+export async function DELETE(request: Request) {
+ if(!sameOrigin(request)) return Response.json({error:'Origem inválida.'},{status:403});
+ try {
+  const {session,db,surgeries}=await context();
+  const {id,confirmed}=await request.json();
+  if(confirmed!==true) return Response.json({error:'Confirme a exclusão do PDF.'},{status:400});
+  const {data:doc,error}=await db.from('surgery_documents').select('*').eq('id',id).maybeSingle();
+  if(error) throw error;
+  const surgery=doc && surgeries.find(a=>a.id===doc.appointment_id);
+  if(!surgery||!permitted(session,surgery)) return Response.json({error:'Documento não disponível.'},{status:404});
+  const originalPath=doc.object_path.replace(/\.compact\.pdf$/,'');
+  const {error:removeError}=await db.storage.from(BUCKET).remove([originalPath,originalPath+'.compact.pdf']);
+  if(removeError) throw removeError;
+  const {error:deleteError}=await db.from('surgery_documents').delete().eq('id',id);
+  if(deleteError) throw deleteError;
+  return Response.json({ok:true});
+ }catch(error){return failure(error)}
 }
