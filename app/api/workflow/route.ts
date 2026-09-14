@@ -1,3 +1,6 @@
+import { canReadAppointment, validateAppointment, validId } from "@/lib/security/state";
+import { consumeLimit } from "@/lib/security/rate-limit";
+import { readJson, secureMutation } from "@/lib/security/http";
 import { getSession, isManager } from "@/app/authz";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -31,7 +34,7 @@ export async function GET() {
   if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const db = getSupabaseAdmin();
   let requestQuery = db.from("agenda_requests").select("*");
-  if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id);
+  if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id).in("professional_id", session.agendaIds);
   else if (!isManager(session.account.role)) requestQuery = requestQuery.in("professional_id", session.agendaIds);
   const [requestRows, userRows, notificationRows, auditRows] = await Promise.all([
     requestQuery.order("created_at", { ascending: false }).limit(200),
@@ -45,7 +48,7 @@ export async function GET() {
   const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>, audit = (auditRows.data || []) as Array<Record<string, any>>;
   const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
   const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null }]));
-  const visibleRequests = requests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id : allowed(session, row.professional_id));
+  const visibleRequests = requests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
   return Response.json({
     requests: visibleRequests.map((row) => ({ ...row, requestedBy: Number(row.requested_by), decidedBy: row.decided_by ? Number(row.decided_by) : null, professionalId: row.professional_id, appointmentId: row.appointment_id, createdAt: row.created_at, decidedAt: row.decided_at, decisionNote: row.decision_note, requesterName: names.get(Number(row.requested_by)), deciderName: row.decided_by ? names.get(Number(row.decided_by)) : null, proposed: row.proposed_payload || null, previous: row.previous_payload || null })),
     notifications: notifications.map((row) => ({ ...row, readAt: row.read_at, createdAt: row.created_at, requestId: row.request_id })),
@@ -57,10 +60,11 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   if (!session?.account || session.account.role !== "doctor") return Response.json({ error: "Somente médicos enviam sugestões de agenda" }, { status: 403 });
-  const body = await request.json() as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
+  await consumeLimit("workflow", String(session.account.id), 30, 300);
+  const body = await readJson(request) as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
   if (!body.action || !["create", "update", "delete"].includes(body.action)) return Response.json({ error: "Solicitação inválida" }, { status: 400 });
   const db = getSupabaseAdmin();
   const stateResult = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
@@ -68,10 +72,19 @@ export async function POST(request: Request) {
   const state = stateRow.payload as AgendaState;
   const previous = state.appointments?.find((item) => item.id === (body.appointmentId || body.appointment?.id)) || null;
   const proposed = body.appointment || null;
+  if (body.action !== "create" && previous && !canReadAppointment(session, previous)) return Response.json({ error: "Agendamento sem permissão" }, { status: 403 });
+  if (!proposed) return Response.json({ error: "Agendamento inválido" }, { status: 400 });
+  validateAppointment(proposed);
+  if (body.action === "create" && [...(state.appointments || []),...(state.cancelledAppointments || [])].some(a=>a.id===proposed.id)) return Response.json({error:"Identificador já utilizado"},{status:409});
+  if (previous && (proposed.id !== previous.id || proposed.doctorId !== previous.doctorId || proposed.anesthetistId !== previous.anesthetistId || proposed.patientId !== previous.patientId)) return Response.json({error:"Transferência de agendamento exige a gerência"},{status:403});
+  if (!previous && proposed.patientId && !(state.patients || []).some(p=>p.id===proposed.patientId && session.agendaIds.includes(String(p.doctorId)))) return Response.json({error:"Paciente sem permissão"},{status:403});
+  if (!previous && [proposed.doctorId,proposed.anesthetistId].some(id=>id && !session.agendaIds.includes(id))) return Response.json({error:"Novo vínculo exige acesso às agendas envolvidas"},{status:403});
+  proposed.suggestedByName = session.account.name || session.account.email;
+  proposed.suggestedByEmail = session.account.email;
   const professionalId = appointmentProfessional(proposed || previous || { id: "" });
   if (!professionalId || !allowed(session, professionalId)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
   if (body.action !== "create" && !previous) return Response.json({ error: "Agendamento não encontrado" }, { status: 404 });
-  if (!proposed?.patientId || !proposed.date || !proposed.time) return Response.json({ error: "Preencha paciente, data e horário" }, { status: 400 });
+  if (!proposed.date || !proposed.time) return Response.json({ error: "Preencha paciente, data e horário" }, { status: 400 });
   const targetAppointmentId = previous?.id || proposed?.id || null;
   const duplicate = await db.from("agenda_requests").select("id").eq("requested_by", session.account.id).eq("action", body.action).eq("appointment_id", targetAppointmentId).eq("status", "pending").maybeSingle();
   dbError(duplicate.error, "Check duplicate workflow request");
@@ -88,11 +101,11 @@ export async function POST(request: Request) {
   return Response.json({ ok: true, id, message: "Alteração de agenda enviada." });
 }
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const session = await getSession();
   if (!session?.account || session.account.role === "doctor") return Response.json({ error: "Sem permissão para decidir solicitações" }, { status: 403 });
-  const body = await request.json() as { id?: string; decision?: "accepted" | "denied"; note?: string };
-  if (!body.id || !["accepted", "denied"].includes(body.decision || "")) return Response.json({ error: "Decisão inválida" }, { status: 400 });
+  const body = await readJson(request) as { id?: string; decision?: "accepted" | "denied"; note?: string };
+  if (!validId(body.id) || (body.note !== undefined && (typeof body.note !== "string" || body.note.length > 2000)) || !["accepted", "denied"].includes(body.decision || "")) return Response.json({ error: "Decisão inválida" }, { status: 400 });
   if (body.decision === "denied" && !body.note?.trim()) return Response.json({ error: "Informe o motivo da recusa" }, { status: 400 });
   const db = getSupabaseAdmin();
   const requestResult = await db.from("agenda_requests").select("*").eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
@@ -103,9 +116,15 @@ export async function PATCH(request: Request) {
   const state = stateRow.payload as AgendaState;
   const proposed = row.proposed_payload as Appointment | null;
   const previous = row.previous_payload as Appointment | null;
-  const now = new Date().toISOString();
+  const now = new Date(Math.max(Date.now(),Date.parse(stateRow.updated_at)+1)).toISOString();
   if (body.decision === "accepted") {
     const current = state.appointments || [];
+    const original = current.find(a=>a.id===row.appointment_id);
+    if (original && (!canReadAppointment(session,original) || JSON.stringify(original)!==JSON.stringify(previous))) return Response.json({error:"Agendamento mudou ou acesso foi revogado; envie uma nova sugestão"},{status:409});
+    if (!proposed) return Response.json({error:"Solicitação inválida"},{status:400});
+    validateAppointment(proposed);
+    if (!canReadAppointment(session,proposed) || (previous && (proposed.id!==previous.id || proposed.doctorId!==previous.doctorId || proposed.anesthetistId!==previous.anesthetistId || proposed.patientId!==previous.patientId))) return Response.json({error:"Vínculo da solicitação inválido"},{status:403});
+    if (row.action==="create" && [...current,...(state.cancelledAppointments || [])].some(a=>a.id===proposed.id)) return Response.json({error:"Identificador já utilizado"},{status:409});
     if (row.action !== "create" && !current.some((a) => a.id === row.appointment_id)) return Response.json({ error: "O agendamento original já foi alterado. Negue a solicitação e peça uma nova sugestão." }, { status: 409 });
     if (proposed && current.some((a) => overlaps(proposed, a))) return Response.json({ error: "O horário ficou indisponível. A solicitação não foi aplicada." }, { status: 409 });
     if (row.action === "delete") {
@@ -120,23 +139,25 @@ export async function PATCH(request: Request) {
   const patient = personName(state, "patients", (proposed || previous)?.patientId) || "paciente";
   const accepted = body.decision === "accepted";
   const description = `${actor} ${accepted ? "aceitou" : "negou"} a sugestão de ${row.action === "delete" ? "desagendamento" : "alteração"} de ${patient}.`;
-  const operations = [
-    db.from("agenda_requests").update({ status: body.decision!, decided_by: session.account.id, decision_note: body.note?.trim() || null, decided_at: now }).eq("id", row.id).eq("status", "pending"),
-    db.from("notifications").insert({ id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", request_id: row.id, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.${body.note?.trim() ? ` ${body.note.trim()}` : ""}`, created_at: now }),
-    db.from("audit_logs").insert({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null }, created_at: now }),
-  ];
-  if (accepted) {
-    const saved = await db.from("app_state").update({ payload: state, updated_at: now }).eq("id", 1).eq("updated_at", stateRow.updated_at).select("id").maybeSingle();
-    dbError(saved.error, "Save approved request");
-    if (!saved.data) return Response.json({ error: "A agenda mudou durante a aprovação. Confira a solicitação e tente novamente." }, { status: 409 });
-  }
-  const results = await Promise.all(operations); results.forEach((result) => dbError(result.error, "Decide workflow request"));
+  const result = await db.rpc("commit_agenda_change", {
+    p_expected: stateRow.updated_at, p_payload: accepted ? state : null, p_revision: now,
+    p_request_id: row.id, p_decision: body.decision, p_actor: session.account.id, p_note: body.note?.trim() || null,
+    p_notification: { id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` },
+    p_audit: [{ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: (proposed || previous)?.patientId || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null } }],
+  });
+  dbError(result.error,"Commit workflow decision");
+  if (!result.data) return Response.json({error:"Agenda ou solicitação mudou. Atualize e tente novamente."},{status:409});
   return Response.json({ ok: true, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` });
 }
 
-export async function DELETE() {
+async function handleDELETE() {
   const session = await getSession();
   if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const result = await getSupabaseAdmin().from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", session.account.id).is("read_at", null); dbError(result.error, "Mark notifications read");
   return Response.json({ ok: true });
 }
+
+
+export const POST = secureMutation(handlePOST);
+export const PATCH = secureMutation(handlePATCH);
+export const DELETE = secureMutation(handleDELETE);

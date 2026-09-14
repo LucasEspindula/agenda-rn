@@ -1,3 +1,6 @@
+import { getSession } from "@/app/authz";
+import { consumeLimit } from "@/lib/security/rate-limit";
+import { HttpError } from "@/lib/security/http";
 import { GET as readState } from "../state/route";
 import { GET as readWorkflow } from "../workflow/route";
 
@@ -7,6 +10,10 @@ export const maxDuration = 60;
 // Only the existing, session-authorized responses enter this stream.
 // Recheck authorization on every refresh, including permission revocations.
 export async function GET(request: Request) {
+  const session = await getSession();
+  if (!session) return Response.json({error:"Acesso não autorizado"},{status:403});
+  try { await consumeLimit("live-open",String(session.account.id),10,60); }
+  catch(error) { return Response.json({error:"Limite de conexões. Aguarde e tente novamente."},{status:error instanceof HttpError ? error.status : 503}); }
   const initial = await readState();
   if (!initial.ok) return initial;
   const encoder = new TextEncoder();
@@ -35,5 +42,6 @@ export async function GET(request: Request) {
     },
     cancel() { stopped = true; },
   });
-  return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" } });
+  return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "private, no-store, no-transform", "X-Accel-Buffering": "no" } });
 }
+

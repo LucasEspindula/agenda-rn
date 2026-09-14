@@ -1,3 +1,4 @@
+import {loadTs} from './load-ts.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -90,11 +91,15 @@ test('doctor history includes pending requests without notifications and rejecti
 test('API requires denial reason before writing and filters doctor requests before limit', async () => {
   const code = ts.transpileModule(readFileSync(new URL('../app/api/workflow/route.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const calls = []; let role = 'secretary';
-  const query = { select() { return this; }, eq(...args) { calls.push(['eq', ...args]); return this; }, order() { return this; }, limit(n) { calls.push(['limit', n]); return this; }, then(resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); } };
-  const context = { exports: {}, Response, require: name => name.includes('authz') ? { getSession: async () => ({ account: { role, id: 5 }, agendaIds: ['d'] }), isManager: r => r === 'general_manager' } : { getSupabaseAdmin: () => ({ from: () => query }), dbError() {} } };
-  vm.runInNewContext(code, context);
-  const denied = await context.exports.PATCH({ json: async () => ({ id: 'r', decision: 'denied', note: '  ' }) });
+  const query = { in() { return this; }, select() { return this; }, eq(...args) { calls.push(['eq', ...args]); return this; }, order() { return this; }, limit(n) { calls.push(['limit', n]); return this; }, then(resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); } };
+  const api=loadTs('app/api/workflow/route.ts',{
+    '@/app/authz':{getSession:async()=>({account:{role,id:5},agendaIds:['d']}),isManager:r=>r==='general_manager'},
+    '@/lib/supabase-admin':{getSupabaseAdmin:()=>({from:()=>query}),dbError(){}},
+    '@/lib/security/rate-limit':{consumeLimit:async()=>{}}
+  });
+  const denied = await api.PATCH(new Request('https://example.com/api/workflow',{method:'PATCH',headers:{origin:'https://example.com','content-type':'application/json'},body:JSON.stringify({id:'r',decision:'denied',note:'  '})}));
   assert.equal(denied.status, 400); assert.equal(calls.length, 0);
-  role = 'doctor'; await context.exports.GET();
+  role = 'doctor'; await api.GET();
   assert.deepEqual(calls[0], ['eq', 'requested_by', 5]); assert.deepEqual(calls[1], ['limit', 200]);
 });
+

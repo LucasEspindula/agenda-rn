@@ -26,6 +26,8 @@ export async function compressPdf(original: Buffer) {
    if(value('Subtype')!=='/Image'||!['/DCTDecode','[/ASCII85Decode/DCTDecode]'].includes(filter||'')||value('ColorSpace')!=='/DeviceRGB'||d.has(PDFName.of('SMask'))||d.has(PDFName.of('Mask'))||d.has(PDFName.of('Decode'))) continue;
    const input=filter==='[/ASCII85Decode/DCTDecode]'?ascii85(obj.getContents()):obj.getContents();
    if(input.length<50000) continue;
+   // DCTDecode must really contain JPEG, never let libvips auto-detect AVIF/HEIF here.
+   if(input[0]!==0xff || input[1]!==0xd8 || input[2]!==0xff) continue;
    const {data,info}=await sharp(input,{limitInputPixels:40000000}).timeout({seconds:8}).resize(2000,2000,{fit:'inside',withoutEnlargement:true}).jpeg({quality:85,chromaSubsampling:'4:4:4'}).toBuffer({resolveWithObject:true});
    if(data.length>=input.length) continue;
    const dict=d.clone(pdf.context);dict.set(PDFName.of('Filter'),PDFName.of('DCTDecode'));dict.set(PDFName.of('Width'),PDFNumber.of(info.width));dict.set(PDFName.of('Height'),PDFNumber.of(info.height));dict.set(PDFName.of('BitsPerComponent'),PDFNumber.of(8));dict.set(PDFName.of('Length'),PDFNumber.of(data.length));dict.delete(PDFName.of('DecodeParms'));
@@ -35,3 +37,4 @@ export async function compressPdf(original: Buffer) {
   return bytes.length<original.length ? {bytes,reason:'compressed'} : unchanged('unchanged');
  } catch { return unchanged('unsupported'); }
 }
+
