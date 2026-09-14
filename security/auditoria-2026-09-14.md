@@ -2,6 +2,16 @@
 
 **Data:** 14 de setembro de 2026. **Repositório:** `LucasEspindula/agenda-rn`. **Base examinada:** `main`, commit `9f1ecc178ed0b8acc17a0158977345aed21f65b2`. **Produção informada:** `https://agenda-rn.vercel.app`. **Banco identificado:** Supabase Agenda RN, referência `nagddicinjszfrtwgjbu`.
 
+## Atualização após aprovação — 14/09/2026
+
+A migração foi aplicada ao Supabase Agenda RN (`nagddicinjszfrtwgjbu`) com sucesso e registrada como `20260914115046_security_hardening`. O arquivo SQL foi alinhado à versão registrada pelo serviço para evitar reaplicação indevida.
+
+Verificação no banco real: RLS ativo no contador; ausência de permissões de tabela e execução para `anon` e `authenticated`; três funções `SECURITY INVOKER` com `search_path` fixo e execução por `service_role`; gatilho `users_revoke_sessions` ativo. Uma prova de limite em transação desfeita por rollback confirmou a recusa da segunda tentativa com limite 1. Nenhum registro clínico ou credencial foi alterado pelo teste.
+
+O advisor apresenta somente nove avisos informativos de RLS sem políticas, coerentes com o acesso exclusivo pelo backend, conforme [explicação oficial](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy). O código da aplicação permanece no PR nº 1, sem integração/implantação confirmada. A disponibilidade das funções no banco não ativa os limites nos endpoints antigos.
+
+As referências abaixo à migração bloqueada descrevem a situação anterior à aprovação; esta atualização substitui esse status. Permanecem válidos os demais limites e riscos do relatório.
+
 ## 1. Parecer executivo
 
 Foram encontradas falhas relevantes de autorização, armazenamento no navegador, autenticação e consistência transacional, além de dependências com alertas conhecidos. As correções estão preparadas no código e acompanhadas de testes. **Este documento não certifica segurança absoluta nem ausência de vulnerabilidades desconhecidas.**

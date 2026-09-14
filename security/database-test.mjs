@@ -10,7 +10,7 @@ create table agenda_requests(id text primary key,status text,decided_by bigint,d
 create table audit_logs(id text primary key,actor_user_id bigint,actor_name text,actor_role text,action text,professional_id text,appointment_id text,patient_id text,description text,metadata jsonb,created_at timestamptz);
 create table notifications(id text primary key,user_id bigint,type text,request_id text,message text,created_at timestamptz);
 grant all on all tables in schema public to service_role;`);
-await db.exec(readFileSync(new URL('../supabase/migrations/20260914031343_security_hardening.sql',import.meta.url),'utf8'));
+await db.exec(readFileSync(new URL('../supabase/migrations/20260914115046_security_hardening.sql',import.meta.url),'utf8'));
 await db.exec('set role service_role');
 const key='a'.repeat(64);
 for(let i=0;i<4;i++){const r=await db.query('select consume_security_limit($1,3,60) as allowed',[key]);assert.equal(r.rows[0].allowed,i<3)}

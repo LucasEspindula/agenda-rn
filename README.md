@@ -14,7 +14,7 @@ Variáveis do servidor: `APP_ORIGIN` (origem canônica, em produção `https://a
 
 ## Atualização de segurança de 14/09/2026
 
-Aplicar `supabase/migrations/20260914031343_security_hardening.sql` antes da implantação do código. A migração adiciona limites persistentes, revogação de sessões ao mudar credenciais e transações para agenda/auditoria. Não abre acesso público ao banco.
+Aplicar `supabase/migrations/20260914115046_security_hardening.sql` antes da implantação do código. A migração adiciona limites persistentes, revogação de sessões ao mudar credenciais e transações para agenda/auditoria. Não abre acesso público ao banco.
 
 O login não cria contas nem aceita `INITIAL_MANAGER_PASSWORD`. Contas existentes com senha continuam funcionando; hashes antigos são atualizados após login correto. Uma instalação nova exige provisionamento administrativo fora da rota pública. Novas senhas devem ter de 12 a 128 caracteres. Sessões novas duram 8 horas.
 
