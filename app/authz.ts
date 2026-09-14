@@ -7,13 +7,14 @@ export const SESSION_COOKIE = "agenda_rn_session";
 
 export async function getSession() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+  if (!token || !/^[0-9a-f-]{73}$/.test(token)) return null;
   const tokenHash = await hashToken(token);
   const db = getSupabaseAdmin();
-  const { data: session, error } = await db.from("sessions").select("id,user_id,expires_at,users(*)").eq("token_hash", tokenHash).gt("expires_at", new Date().toISOString()).maybeSingle();
+  const { data: session, error } = await db.from("sessions").select("id,user_id,expires_at,users(id,email,name,role)").eq("token_hash", tokenHash).gt("expires_at", new Date().toISOString()).maybeSingle();
   dbError(error, "Read session");
   if (!session?.users) return null;
   const raw = Array.isArray(session.users) ? session.users[0] : session.users;
+  if (!raw || !["general_manager", "secretary", "doctor"].includes(raw.role)) return null;
   const account = { id: Number(raw.id), email: raw.email as string, name: raw.name as string, role: raw.role as Role };
   if (account.role === "general_manager") return { account, agendaIds: [] as string[] };
   const { data: grants, error: grantError } = await db.from("agenda_access").select("professional_id").eq("user_id", account.id);
@@ -22,3 +23,4 @@ export async function getSession() {
 }
 
 export function isManager(role: Role) { return role === "general_manager"; }
+

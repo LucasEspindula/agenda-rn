@@ -15,17 +15,16 @@ export function LegacyApp() {
       const session = await sessionResponse.json() as Session;
       const state = await stateResponse.json() as { state: unknown; revision: string | null };
       (window as Window & { AgendaRevision?: string | null }).AgendaRevision = state.revision;
-      if (state.state !== null) {
-        localStorage.setItem("agendaRNData_v5", JSON.stringify(state.state));
-      } else {
-        localStorage.removeItem("agendaRNData_v5");
+      (window as Window & { AgendaInitialState?: unknown }).AgendaInitialState = state.state;
+      for (const key of ["agendaRNData_v5", "agendaRNData_v4", "agendaRNData_v3", "agendaRNData_v2", "agendaClinicaData_v1"]) {
+        try { localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
       }
       (window as Window & { AgendaAuth?: unknown }).AgendaAuth = session.user;
       if (cancelled) return;
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=live-20260910";
+        script.src = "/legacy-app.js?v=security-20260914";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
@@ -36,3 +35,4 @@ export function LegacyApp() {
   if (!ready) return <main className="grid min-h-screen place-items-center bg-slate-50"><p className="text-slate-600">Carregando Agenda RN…</p></main>;
   return <div dangerouslySetInnerHTML={{ __html: legacyBody }} />;
 }
+

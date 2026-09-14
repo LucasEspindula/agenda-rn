@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 // Schema types are generated after deployment; keep this server-only client untyped
@@ -11,8 +12,11 @@ export function getSupabaseAdmin(): any {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key) throw new Error("Supabase server configuration is incomplete");
+  const endpoint = new URL(url);
+  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password) throw new Error("Supabase requires HTTPS");
   client = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
+    global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, cache: "no-store", redirect: "error" }) },
   });
   return client;
 }
@@ -20,3 +24,4 @@ export function getSupabaseAdmin(): any {
 export function dbError(error: { message?: string } | null, context: string) {
   if (error) throw new Error(`${context}: ${error.message || "Supabase error"}`);
 }
+

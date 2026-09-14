@@ -1,3 +1,6 @@
+import { consumeLimit } from "@/lib/security/rate-limit";
+import { HttpError } from "@/lib/security/http";
+import { readJson, secureMutation } from "@/lib/security/http";
 import { createHash, randomUUID } from 'node:crypto';
 import { getSession } from '@/app/authz';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
@@ -22,6 +25,7 @@ async function context() {
  return { session, db, surgeries };
 }
 function failure(error: unknown) {
+ if (error instanceof HttpError) return Response.json({error:error.message},{status:error.status});
  const unauthorized = error instanceof Error && error.message === 'unauthorized';
  return Response.json({ error: unauthorized ? 'Entre na sua conta.' : 'Não foi possível acessar os documentos. Tente novamente.' }, { status: unauthorized ? 401 : 500 });
 }
@@ -52,11 +56,12 @@ export async function GET(request: Request) {
   return Response.json({ documents:(data || []).map((d: { appointment_id:string }) => ({ ...d, surgery:allowed.find(a=>a.id===d.appointment_id) })) },{ headers:{'Cache-Control':'no-store'} });
  } catch(error) { return failure(error); }
 }
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
  if (!sameOrigin(request)) return Response.json({error:'Origem inválida.'},{status:403});
  try {
   const { session, db, surgeries } = await context();
-  const body = await request.json();
+  await consumeLimit("pdf-upload",String(session.account.id),20,3600);
+  const body = await readJson(request);
   const surgery = surgeries.find(a => a.id === body.appointmentId);
   if (!surgery || !permitted(session,surgery)) return Response.json({error:'Agenda sem permissão.'},{status:403});
   if (typeof body.name !== 'string' || !body.name.toLowerCase().endsWith('.pdf') || !Number.isInteger(body.size) || body.size <= 0 || body.size > MAX_SIZE || !['guide','report','summary','other'].includes(body.category)) return Response.json({error:'Selecione um PDF de até 20 MB e uma categoria.'},{status:400});
@@ -68,11 +73,12 @@ export async function POST(request: Request) {
   return Response.json({id,url:data.signedUrl},{headers:{'Cache-Control':'no-store'}});
  } catch(error) { return failure(error); }
 }
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
  if (!sameOrigin(request)) return Response.json({error:'Origem inválida.'},{status:403});
  try {
   const { session, db, surgeries } = await context();
-  const { id } = await request.json();
+  await consumeLimit("pdf-finalize",String(session.account.id),30,3600);
+  const { id } = await readJson(request);
   const { data: doc, error } = await db.from('surgery_documents').select('*').eq('id',id).maybeSingle();
   if (error) throw error;
   const surgery = doc && surgeries.find(a=>a.id===doc.appointment_id);
@@ -87,15 +93,14 @@ export async function PATCH(request: Request) {
    return Response.json({error:'Arquivo inválido. Envie um PDF original de até 20 MB.'},{status:400});
   }
   const original = Buffer.from(await file.arrayBuffer());
-  const hash = createHash('sha256').update(original).digest('hex');
   const compressed = await compressPdf(original);
-  let storedPath=doc.object_path;
-  if(compressed.bytes.length<original.length){
-   storedPath=doc.object_path+'.compact.pdf';
-   const {error: uploadError}=await db.storage.from(BUCKET).upload(storedPath,compressed.bytes,{contentType:'application/pdf',upsert:true});
+  // Publish a fresh server-written object; the client's upload URL never addresses a ready PDF.
+  const storedPath = `${surgery.id}/${randomUUID()}.verified.pdf`;
+  {
+   const {error: uploadError}=await db.storage.from(BUCKET).upload(storedPath,compressed.bytes,{contentType:'application/pdf',upsert:false});
    if(uploadError) throw uploadError;
   }
-  const { error: updateError } = await db.from('surgery_documents').update({status:'ready',sha256:hash,size:compressed.bytes.length,object_path:storedPath}).eq('id',id).eq('status','pending');
+  const { error: updateError } = await db.from('surgery_documents').update({status:'ready',sha256:createHash('sha256').update(compressed.bytes).digest('hex'),size:compressed.bytes.length,object_path:storedPath}).eq('id',id).eq('status','pending');
   if (updateError?.code==='23505') {
    await db.storage.from(BUCKET).remove([...new Set([doc.object_path,storedPath])]);await db.from('surgery_documents').delete().eq('id',id).eq('status','pending');
    return Response.json({error:'Este PDF já está vinculado a esta cirurgia.'},{status:409});
@@ -106,11 +111,11 @@ export async function PATCH(request: Request) {
  } catch(error) { return failure(error); }
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
  if(!sameOrigin(request)) return Response.json({error:'Origem inválida.'},{status:403});
  try {
   const {session,db,surgeries}=await context();
-  const {id,confirmed}=await request.json();
+  const {id,confirmed}=await readJson(request);
   if(confirmed!==true) return Response.json({error:'Confirme a exclusão do PDF.'},{status:400});
   const {data:doc,error}=await db.from('surgery_documents').select('*').eq('id',id).maybeSingle();
   if(error) throw error;
@@ -124,3 +129,8 @@ export async function DELETE(request: Request) {
   return Response.json({ok:true});
  }catch(error){return failure(error)}
 }
+
+
+export const POST = secureMutation(handlePOST);
+export const PATCH = secureMutation(handlePATCH);
+export const DELETE = secureMutation(handleDELETE);
