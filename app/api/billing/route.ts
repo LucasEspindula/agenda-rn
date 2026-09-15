@@ -1,53 +1,41 @@
-import { secureMutation, readJson } from "@/lib/security/http";
-import { canReadAppointment, type Row } from "@/lib/security/state";
-import { NextResponse } from "next/server";
-import { getSession } from "@/app/authz";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
-
-export const dynamic = "force-dynamic";
-
-async function permittedAppointments(session: NonNullable<Awaited<ReturnType<typeof getSession>>>) {
-  const {data,error}=await getSupabaseAdmin().from("app_state").select("payload").eq("id",1).maybeSingle();
-  if(error) throw new Error("Agenda indisponível");
-  const state=data?.payload || {};
-  return new Set<string>([...(state.appointments || []),...(state.cancelledAppointments || [])].filter((a: Row)=>canReadAppointment(session,a)).map((a: Row)=>String(a.id)));
-}
-
-
+import { getSession } from '@/app/authz';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { secureMutation, readJson, HttpError } from '@/lib/security/http';
+import { canReadAppointment, type Row } from '@/lib/security/state';
+export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
-  const session = await getSession();
-  if (!session || session.account.role === "doctor") return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
-  const url = new URL(request.url);
-  const status = url.searchParams.get("status");
-  const method = url.searchParams.get("method");
-  let query = getSupabaseAdmin().from("billing_records").select("id,appointment_id,billing_entity_id,billing_method,payment_status,invoice_number,received_amount,paid_at,notes,updated_at,updated_by").order("updated_at", { ascending: false });
-  if (status === "PENDENTE" || status === "PAGO") query = query.eq("payment_status", status);
-  if (method === "PARTICULAR" || method === "CONVENIO") query = query.eq("billing_method", method);
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: "Não foi possível consultar o faturamento." }, { status: 500 });
-  const allowed = await permittedAppointments(session);
-  return NextResponse.json({ records: (data || []).filter((row: { appointment_id: string }) => allowed.has(row.appointment_id)) }, { headers: { "cache-control": "no-store" } });
+ const session=await getSession();
+ if(!session || session.account.role==='doctor') return Response.json({error:'Acesso negado.'},{status:403});
+ const params=new URL(request.url).searchParams,appointmentId=params.get('appointment_id'),summary=params.get('summary')==='1';
+ if(session.account.role!=='general_manager'&&!appointmentId&&!summary) return Response.json({error:'Área administrativa restrita à gerência.'},{status:403});
+ try {
+  const db=getSupabaseAdmin();
+  const results=await Promise.all([db.from('app_state').select('payload').eq('id',1).maybeSingle(),db.from('billing_entities').select('*').order('name'),db.from('billing_doctor_entities').select('*'),db.from('billing_records').select('*'),db.from('invoices').select('*'),db.from('invoice_billing_records').select('*')]);
+  if(results.some(r=>r.error)) throw new Error('query');
+  const state=results[0].data?.payload || {};
+  const entities:Row[]=results[1].data||[],links:Row[]=results[2].data||[],records:Row[]=results[3].data||[],invoices:Row[]=results[4].data||[],items:Row[]=results[5].data||[];
+  const appointments:Row[]=(state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId));
+  if(appointmentId&&!appointments.length) return Response.json({error:'Atendimento sem acesso ou cancelado.'},{status:404});
+  const rows=appointments.map(a=>{
+   const patient=(state.patients||[]).find((p:Row)=>p.id===a.patientId),record=records.find(r=>r.appointment_id===a.id)||null;
+   const item=record&&items.find(i=>i.billing_record_id===record.id),invoice=item?invoices.find(i=>i.id===item.invoice_id):null;
+   return {appointment_id:a.id,date:a.date,time:a.time,patient:patient?.name||'Sem paciente',doctor_id:a.doctorId||a.anesthetistId,anesthetist_id:a.anesthetistId,procedure:a.procedure,insurance:a.insurance||patient?.insurance||'',status_atendimento:a.status,record,invoice:invoice||null,legacy_payment:a.payment||null,legacy_invoice:a.invoiceNumber||null};
+  });
+  if(summary) return Response.json({rows:rows.map(r=>({appointment_id:r.appointment_id,invoice_number:r.invoice?.invoice_number||r.record?.invoice_number||null}))},{headers:{'Cache-Control':'private, no-store'}});
+  if(session.account.role!=='general_manager') for(const row of rows) if(row.invoice) row.invoice={id:row.invoice.id,invoice_number:row.invoice.invoice_number,issue_date:row.invoice.issue_date,paid_at:row.invoice.paid_at};
+  const ids=new Set(appointments.flatMap(a=>[a.doctorId,a.anesthetistId]));
+  const visibleLinks=session.account.role==='general_manager'?links:links.filter(l=>ids.has(l.doctor_id));
+  const entityIds=new Set([...visibleLinks.map(l=>l.billing_entity_id),...rows.map(r=>r.record?.billing_entity_id)]);
+  return Response.json({rows,entities:session.account.role==='general_manager'?entities:entities.filter(e=>entityIds.has(e.id)),links:visibleLinks,doctors:(state.professionals||[]).filter((d:Row)=>session.account.role==='general_manager'||ids.has(d.id)),invoices:session.account.role==='general_manager'?invoices:[],items:session.account.role==='general_manager'?items:[]},{headers:{'Cache-Control':'private, no-store'}});
+ }catch{return Response.json({error:'Não foi possível carregar o faturamento.'},{status:503});}
 }
-
-async function updateBilling(request: Request) {
-  const session = await getSession();
-  if (!session || session.account.role === "doctor") return NextResponse.json({ error: "Acesso negado." }, { status: 403 });
-  const body = await readJson(request) as Record<string, unknown> | null;
-  const appointmentId = typeof body?.appointment_id === "string" ? body.appointment_id.trim() : "";
-  const entityId = typeof body?.billing_entity_id === "string" ? body.billing_entity_id : "";
-  const method = body?.billing_method;
-  const status = body?.payment_status;
-  if (!appointmentId || !entityId || !["PARTICULAR","CONVENIO"].includes(String(method)) || !["PENDENTE","PAGO"].includes(String(status))) {
-    return NextResponse.json({ error: "Dados financeiros inválidos." }, { status: 400 });
-  }
-  const allowed = await permittedAppointments(session);
-  if (!allowed.has(appointmentId)) return NextResponse.json({error:"Atendimento sem permissão."},{status:403});
-  const amount = body?.received_amount === null || body?.received_amount === undefined || body?.received_amount === "" ? null : Number(body.received_amount);
-  if (amount !== null && (!Number.isFinite(amount) || amount < 0)) return NextResponse.json({ error: "Valor recebido inválido." }, { status: 400 });
-  const payload = { appointment_id: appointmentId, billing_entity_id: entityId, billing_method: method, payment_status: status, invoice_number: typeof body?.invoice_number === "string" ? body.invoice_number.trim() || null : null, received_amount: method === "CONVENIO" ? null : amount, paid_at: typeof body?.paid_at === "string" && body.paid_at ? body.paid_at : null, notes: typeof body?.notes === "string" ? body.notes.trim() || null : null, updated_at: new Date().toISOString(), updated_by: session.account.id };
-  const { data, error } = await getSupabaseAdmin().from("billing_records").upsert(payload, { onConflict: "appointment_id" }).select().single();
-  if (error) return NextResponse.json({ error: "Não foi possível salvar o faturamento." }, { status: 500 });
-  return NextResponse.json({ record: data });
-}
-
-export const PUT = secureMutation(updateBilling);
+export const POST=secureMutation(async request=>{
+ const session=await getSession();
+ if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
+ const {kind,data}=await readJson(request);
+ if(!['entity','link','record','invoice'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ if(session.account.role!=='general_manager'&&kind!=='record') throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
+ const {data:id,error}=await getSupabaseAdmin().rpc('save_billing',{p_actor:session.account.id,p_kind:kind,p_data:data});
+ if(error){if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
+ return Response.json({id});
+});

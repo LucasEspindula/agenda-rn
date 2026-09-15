@@ -8,6 +8,6 @@ const nextConfig: NextConfig = {
     {key:'X-Frame-Options',value:'DENY'},
     {key:'Referrer-Policy',value:'no-referrer'},
     {key:'Permissions-Policy',value:'camera=(), microphone=(), geolocation=()'},
-  ]}]; },
+  ]},{source:'/appointment-finance',headers:[{key:'X-Frame-Options',value:'SAMEORIGIN'}]}]; },
 };
 export default nextConfig;
