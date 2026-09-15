@@ -17,13 +17,13 @@ export default async function HubPage() {
         <div><strong>RN Integra</strong><span>Gestão de atendimentos</span></div>
       </a>
       <nav className="hub-nav" aria-label="Módulos">
-        <a href="/dashboard?agenda=1">Agendamento</a>
-        <a href="/billing">Faturamento</a>
+        <a href="/dashboard?agenda=1"><span aria-hidden="true">▦</span> Agendamento</a>
+        <a href="/billing"><span aria-hidden="true">☷</span> Faturamento</a>
       </nav>
       <div className="hub-account">
         <div className="hub-avatar" aria-hidden="true">{(session.account.name || "G").slice(0,1).toUpperCase()}</div>
         <div className="hub-profile"><strong>{session.account.name}</strong><span>Gerente geral</span></div>
-        <a className="hub-icon" href="/dashboard?agenda=1#settings" aria-label="Configurações" title="Configurações">⚙</a>
+        <a className="hub-icon hub-settings" href="/dashboard?agenda=1#settings" aria-label="Configurações" title="Configurações">⚙</a>
         <HubLogout/>
       </div>
     </header>
