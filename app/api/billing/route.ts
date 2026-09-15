@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: "Não foi possível consultar o faturamento." }, { status: 500 });
   const allowed = await permittedAppointments(session);
-  return NextResponse.json({ records: (data || []).filter(row => allowed.has(row.appointment_id)) }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ records: (data || []).filter((row: { appointment_id: string }) => allowed.has(row.appointment_id)) }, { headers: { "cache-control": "no-store" } });
 }
 
 async function updateBilling(request: Request) {
