@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Agenda RN",
+  title: "RN Integra",
   description: "Gestão segura de agendas médicas e atendimentos.",
   icons: {
     icon: "/agenda-rn-icon.jpg",
