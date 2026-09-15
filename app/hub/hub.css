@@ -6,3 +6,19 @@
 .hub-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;border:0;border-radius:10px;color:#dbe7ee;background:transparent;text-decoration:none;font-size:23px;cursor:pointer}.hub-icon:hover{background:#ffffff20;color:#fff}.hub-icon:disabled{opacity:.5;cursor:wait}.hub-header a:focus-visible,.hub-icon:focus-visible{outline:2px solid #77ded7;outline-offset:2px}
 .hub-content{padding:26px}.hub-content h1{margin:0;font-size:26px;font-weight:650}.hub-content p{margin:5px 0 0;color:#6b7280;font-size:13px}
 @media(max-width:900px){.hub-header{gap:14px;padding:12px 16px}.hub-nav{order:3;width:100%;border-top:1px solid #ffffff25;padding-top:8px}.hub-account{gap:5px}.hub-profile{display:none}.hub-brand strong{font-size:16px}.hub-content{padding:20px 16px}.hub-content h1{font-size:22px}}
+
+/* Match the agenda desktop navigation tokens and account treatment. */
+.hub-header{background:linear-gradient(180deg,#123d57 0,#102f44 100%);transition:box-shadow .18s ease}
+.hub-header:hover,.hub-header:focus-within{box-shadow:0 8px 28px #102f4430}
+.hub-nav a{display:flex;align-items:center;gap:6px;min-height:42px;font-weight:650;white-space:nowrap;transition:background-color .18s ease,box-shadow .18s ease,color .18s ease}
+.hub-nav a:hover,.hub-nav a:focus-visible{background:rgba(255,255,255,.16);box-shadow:inset 3px 0 0 #77ded7;color:#fff}
+.hub-nav a:active{background:rgba(255,255,255,.22)}
+.hub-nav a span{display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}
+.hub-account{border-left:1px solid #ffffff25;padding-left:12px}
+.hub-profile{min-width:130px}.hub-profile strong{font-weight:700;line-height:1.4}.hub-profile span{line-height:1.4}
+.hub-avatar{flex:0 0 36px}
+.hub-icon{flex:0 0 38px;transition:background-color .16s ease,border-color .16s ease,color .16s ease}
+.hub-settings{border:1px solid rgba(255,255,255,.12);height:42px;width:38px}
+@media(min-width:901px) and (max-width:1200px){.hub-header{gap:10px;padding:12px}.hub-brand span{display:none}.hub-brand strong{font-size:14px}.hub-nav a{padding:9px 8px}.hub-account{gap:8px}}
+@media(max-width:900px){.hub-account{padding-left:9px}.hub-nav a:hover,.hub-nav a:focus-visible{box-shadow:inset 0 -3px 0 #77ded7}}
+@media(prefers-reduced-motion:reduce){.hub-header,.hub-nav a,.hub-icon{transition:none}}
