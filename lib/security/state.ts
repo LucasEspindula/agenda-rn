@@ -75,7 +75,7 @@ function mergeOwned(current: Row[], proposed: Row[], editable: (row: Row) => boo
 }
 export function mergeState(current: State | null, proposed: State, p: Principal): State {
   validateState(proposed);
-  if (p.account.role === 'general_manager') return proposed;
+  if (p.account.role === 'general_manager') return current ? {...proposed,professionals:current.professionals} : proposed;
   if (!current) throw new HttpError(403, 'Somente a gerência inicializa a agenda.');
   if (p.account.role === 'doctor') {
     const scheduleBlocks = mergeOwned(current.scheduleBlocks || [], proposed.scheduleBlocks, b => p.agendaIds.includes(b.professionalId));

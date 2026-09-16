@@ -10,7 +10,7 @@ export async function GET(request: Request) {
  if(session.account.role!=='general_manager'&&!appointmentId&&!summary) return Response.json({error:'Área administrativa restrita à gerência.'},{status:403});
  try {
   const db=getSupabaseAdmin();
-  const results=await Promise.all([db.from('app_state').select('payload').eq('id',1).maybeSingle(),db.from('billing_entities').select('*').order('name'),db.from('billing_doctor_entities').select('*'),db.from('billing_records').select('*'),db.from('invoices').select('*'),db.from('invoice_billing_records').select('*')]);
+  const results=await Promise.all([db.from('app_state').select('payload').eq('id',1).maybeSingle(),db.from('billing_entities').select('*').order('name'),db.from('billing_doctor_entities').select('*'),db.from('billing_records').select('*'),db.from('invoices').select('*'),db.from('invoice_billing_records').select('*'),db.from('doctors').select('id,name,crm,specialty,category,active')]);
   if(results.some(r=>r.error)) throw new Error('query');
   const state=results[0].data?.payload || {};
   const entities:Row[]=results[1].data||[],links:Row[]=results[2].data||[],records:Row[]=results[3].data||[],invoices:Row[]=results[4].data||[],items:Row[]=results[5].data||[];
@@ -26,14 +26,14 @@ export async function GET(request: Request) {
   const ids=new Set(appointments.flatMap(a=>[a.doctorId,a.anesthetistId]));
   const visibleLinks=session.account.role==='general_manager'?links:links.filter(l=>ids.has(l.doctor_id));
   const entityIds=new Set([...visibleLinks.map(l=>l.billing_entity_id),...rows.map(r=>r.record?.billing_entity_id)]);
-  return Response.json({rows,entities:session.account.role==='general_manager'?entities:entities.filter(e=>entityIds.has(e.id)),links:visibleLinks,doctors:(state.professionals||[]).filter((d:Row)=>session.account.role==='general_manager'||ids.has(d.id)),invoices:session.account.role==='general_manager'?invoices:[],items:session.account.role==='general_manager'?items:[]},{headers:{'Cache-Control':'private, no-store'}});
+  return Response.json({rows,entities:session.account.role==='general_manager'?entities:entities.filter(e=>entityIds.has(e.id)),links:visibleLinks,doctors:(results[6].data||[]).filter((d:Row)=>session.account.role==='general_manager'||ids.has(d.id)),invoices:session.account.role==='general_manager'?invoices:[],items:session.account.role==='general_manager'?items:[]},{headers:{'Cache-Control':'private, no-store'}});
  }catch{return Response.json({error:'Não foi possível carregar o faturamento.'},{status:503});}
 }
 export const POST=secureMutation(async request=>{
  const session=await getSession();
  if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
  const {kind,data}=await readJson(request);
- if(!['entity','link','record','invoice'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ if(!['entity','link','record','invoice','delete_entity','delete_link'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
  if(session.account.role!=='general_manager'&&kind!=='record') throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
  const {data:id,error}=await getSupabaseAdmin().rpc('save_billing',{p_actor:session.account.id,p_kind:kind,p_data:data});
  if(error){if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}

@@ -57,7 +57,7 @@ function hospitalAcronym(name=""){
  return words.map(w=>w[0]).join("").slice(0,4).toUpperCase();
 }
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-function prof(id){return state.professionals.find(x=>x.id===id)}function patient(id){return state.patients.find(x=>x.id===id)}function hospital(id){return state.hospitals.find(x=>x.id===id)}function selectedProf(){return prof($("professionalFilter").value)||state.professionals[0]}
+function prof(id){return state.professionals.find(x=>x.id===id)}function patient(id){return state.patients.find(x=>x.id===id)}function hospital(id){return state.hospitals.find(x=>x.id===id)}function selectedProf(){return prof($("professionalFilter").value)}
 function statusLabel(s){return({scheduled:"Agendado",confirmed:"Confirmado",authorized:"Autorizado",analysis:"Análise",realized:"Realizado",rescheduled:"Agendado",provisional:"Agendado",attended:"Realizado"})[s]||s}
 function occurrenceInMonth(date){
  const d=new Date(date),day=d.getDay(),dayNum=d.getDate();
@@ -177,7 +177,7 @@ function activeRulesForDate(owner,dateString){
  return state.schedulingRules.filter(r=>r.professionalId===owner.id&&ruleMatchesDate(r,dateString));
 }
 function hardRuleIntervalsForDate(owner,dateString){
- const workStart=mins(state.settings.workStart),workEnd=mins(state.settings.workEnd),out=[];
+ const workStart=mins(selectedProf()?.agendaSettings?.workStart||state.settings.workStart),workEnd=mins(selectedProf()?.agendaSettings?.workEnd||state.settings.workEnd),out=[];
  for(const r of activeRulesForDate(owner,dateString).filter(r=>r.severity==="block")){
    if(r.blockAllDay){
      out.push({start:workStart,end:workEnd,rule:r,label:`Dia bloqueado: ${r.name}`});
@@ -263,7 +263,7 @@ function appConfirm(title,message,confirmText="Continuar",danger=false){return a
 function hist(pid,type,text,aid=null){if(!pid)return;state.patientHistory.push({id:crypto.randomUUID(),patientId:pid,type,text,appointmentId:aid,at:new Date().toISOString()})}
 function renderProfessionalOptions(){
  const sel=$("professionalFilter"),old=sel.value;
- const auth=window.AgendaAuth||{},allowed=auth.role==="general_manager"?state.professionals:state.professionals.filter(p=>(auth.agendaIds||[]).includes(p.id));
+ const auth=window.AgendaAuth||{},enabled=state.professionals.filter(p=>p.agendaEnabled!==false&&p.active!==false),allowed=auth.role==="general_manager"?enabled:enabled.filter(p=>(auth.agendaIds||[]).includes(p.id));
  sel.innerHTML=[["doctor","Cirurgiões"],["anesthetist","Anestesistas"]].map(([category,label])=>{const rows=allowed.filter(p=>p.category===category).sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));return rows.length?`<optgroup label="${label}">${rows.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.crm?` — CRM ${esc(p.crm)}`:""}</option>`).join("")}</optgroup>`:""}).join("");
  sel.disabled=!allowed.length;sel.setAttribute("aria-label",allowed.length?"Agenda do profissional":"Nenhuma agenda disponível");
  if([...sel.options].some(o=>o.value===old))sel.value=old;else if(sel.options[0])sel.value=sel.options[0].value
@@ -339,13 +339,13 @@ function dayConflictCount(day,appointments){
 function surgeonColor(id){const palette=["#dff4ef","#e8efff","#fff0d9","#f2e8ff","#ffe6ec","#e4f4ff","#edf4dc"];let n=0;for(const c of String(id||""))n=(n*31+c.charCodeAt(0))>>>0;return palette[n%palette.length]}
 function renderCalendar(){
  renderMobileCalendar();
- const owner=selectedProf();if(!owner){$("calendar").innerHTML='<div class="empty">Cadastre um profissional.</div>';return}
+ const owner=selectedProf();if(!owner){$("calendar").innerHTML='<div class="empty">Nenhuma agenda ativa disponível. A gerência pode configurar as agendas no cadastro central de médicos.</div>';return}
  mountAgendaOwnerSelector(owner);
  renderGuideAlerts();renderOperationalAlerts();updateNotificationCenter();
  const days=calendarMode==="week"?Array.from({length:7},(_,i)=>addDays(currentDate,i)):[new Date(currentDate)];
  $("periodLabel").textContent=calendarMode==="week"?currentDate.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}):currentDate.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
  $("periodRange").textContent=calendarMode==="week"?`${days[0].toLocaleDateString("pt-BR")} — ${days.at(-1).toLocaleDateString("pt-BR")}`:currentDate.toLocaleDateString("pt-BR");
- let start=mins(state.settings.workStart),end=mins(state.settings.workEnd);
+ let start=mins(selectedProf()?.agendaSettings?.workStart||state.settings.workStart),end=mins(selectedProf()?.agendaSettings?.workEnd||state.settings.workEnd);
  const visible=state.appointments.filter(a=>owner.category==="anesthetist"?a.anesthetistId===owner.id:a.doctorId===owner.id);
  const visibleDays=new Set(days.map(d=>ds(d)));
  const relevantAppointments=state.appointments.filter(a=>visibleDays.has(a.date)&&(owner.category==="anesthetist"?a.anesthetistId===owner.id:a.doctorId===owner.id));
@@ -468,11 +468,9 @@ function renderPatients(){
  qsa("[data-patient]").forEach(b=>b.onclick=()=>openPatient(b.dataset.patient));qsa("[data-detail]").forEach(b=>b.onclick=()=>openPatientDetail(b.dataset.detail))
 }
 function renderSettings(){
- $("professionalsList").innerHTML=state.professionals.map(p=>`<div class="prof-card"><div class="prof-left" style="cursor:pointer;flex:1" data-edit-prof="${esc(p.id)}"><div class="prof-avatar">${esc(p.name.charAt(0))}</div><div class="prof-meta"><strong>${esc(p.name)}<span class="category-badge">${p.category==="anesthetist"?"Anestesista":"Cirurgião"}</span></strong><span>${p.crm?`CRM: ${esc(p.crm)} · `:""}${esc(p.specialty||"Sem especialidade")}</span></div></div><div class="rule-actions"><button class="tiny-btn" data-edit-prof-btn="${esc(p.id)}">Editar</button><button class="link-btn" data-rprof="${esc(p.id)}">Remover</button></div></div>`).join("");
+ $("professionalsList").innerHTML='<div class="prof-card"><div class="prof-meta"><strong>Médicos e agendas</strong><span>Cadastro central compartilhado com o Faturamento.</span></div><div class="rule-actions"><a class="secondary-btn" href="/doctors">Médicos</a><a class="secondary-btn" href="/doctors?view=agendas">Agendas</a></div></div>';
+ $("newProfessionalBtn").textContent="Cadastrar médico";
  $("hospitalsList").innerHTML=state.hospitals.map(h=>`<div class="hospital-card"><div class="prof-left"><div class="hospital-icon">H</div><div class="prof-meta"><strong>${esc(h.name)}</strong><span>Disponível para todos</span></div></div><button class="link-btn" data-rhospital="${esc(h.id)}">Remover</button></div>`).join("")||'<div class="empty">Nenhum hospital cadastrado.</div>';
- qsa("[data-edit-prof]").forEach(b=>b.onclick=()=>openProfessional(b.dataset.editProf));
- qsa("[data-edit-prof-btn]").forEach(b=>b.onclick=e=>{e.stopPropagation();openProfessional(b.dataset.editProfBtn)});
- qsa("[data-rprof]").forEach(b=>b.onclick=async e=>{e.stopPropagation();if(state.appointments.some(a=>a.doctorId===b.dataset.rprof||a.anesthetistId===b.dataset.rprof))return appNotice("Profissional em uso","Esse profissional possui agendamentos e não pode ser removido.");if(!await appConfirm("Remover profissional","O cadastro será removido das opções disponíveis.","Remover",true))return;state.professionals=state.professionals.filter(p=>p.id!==b.dataset.rprof);persist()});
  qsa("[data-rhospital]").forEach(b=>b.onclick=async()=>{if(state.appointments.some(a=>a.hospitalId===b.dataset.rhospital))return appNotice("Hospital em uso","Esse hospital está vinculado a agendamentos e não pode ser removido.");if(!await appConfirm("Remover hospital","O hospital será removido das opções disponíveis.","Remover",true))return;state.hospitals=state.hospitals.filter(h=>h.id!==b.dataset.rhospital);persist()})
 }
 
@@ -781,48 +779,8 @@ $("ruleForm").onsubmit=e=>{
 $("deleteRuleBtn").onclick=async()=>{const id=$("ruleId").value;if(id&&await appConfirm("Excluir regra","A regra deixará de orientar ou bloquear novos agendamentos.","Excluir",true)){state.schedulingRules=state.schedulingRules.filter(x=>x.id!==id);persist();closeModals();toast("Regra excluída.")}};
 
 
-function openProfessional(id=null){
- $("professionalForm").reset();
- $("professionalId").value="";
- $("professionalModalTitle").textContent=id?"Editar profissional":"Novo profissional";
- $("saveProfessionalBtn").textContent=id?"Salvar alterações":"Adicionar";
- $("specialtyResults").classList.add("hidden");
- if(id){
-   const p=state.professionals.find(x=>x.id===id);
-   if(!p)return;
-   $("professionalId").value=p.id;
-   $("professionalName").value=p.name||"";
-   $("professionalCrm").value=p.crm||"";
-   $("professionalSpecialty").value=p.specialty||"";
-   $("professionalCategory").value=p.category||"doctor";
- }
- openModal("professionalModal");
-}
-
-$("professionalForm").onsubmit=async e=>{
- e.preventDefault();
- const id=$("professionalId").value||crypto.randomUUID();
- const existing=state.professionals.find(p=>p.id===id);
- const category=$("professionalCategory").value;
- if(existing && existing.category!==category){
-   const hasAppointments=state.appointments.some(a=>a.doctorId===id||a.anesthetistId===id);
-   if(hasAppointments && !await appConfirm("Alterar categoria","Este profissional possui agendamentos e a mudança pode afetar a agenda dele.","Alterar mesmo assim"))return;
- }
- const item={
-   id,
-   name:$("professionalName").value.trim(),
-   crm:$("professionalCrm").value.trim(),
-   specialty:$("professionalSpecialty").value.trim(),
-   category
- };
- const i=state.professionals.findIndex(p=>p.id===id);
- if(i>=0)state.professionals[i]=item;else state.professionals.push(item);
- persist();
- closeModals();
- $("professionalForm").reset();
- $("specialtyResults").classList.add("hidden");
- toast(i>=0?"Profissional atualizado.":"Profissional adicionado.");
-}
+function openProfessional(){window.location.assign('/doctors')}
+$("professionalForm").onsubmit=e=>{e.preventDefault();openProfessional()};
 $("hospitalForm").onsubmit=e=>{e.preventDefault();const name=$("hospitalName").value.trim();if(state.hospitals.some(h=>h.name.localeCompare(name,"pt-BR",{sensitivity:"base"})===0))return appNotice("Hospital já cadastrado","Use o hospital existente na lista.");state.hospitals.push({id:crypto.randomUUID(),name});persist();closeModals();$("hospitalForm").reset();toast("Hospital adicionado.")}
 $("professionalFilter").onchange=renderCalendar;$("rulesProfessionalFilter").onchange=renderRules;$("rulesStatusFilter").onchange=renderRules;$("patientSearch").oninput=renderPatients;$("appointmentPatient").onchange=()=>{updateStandaloneInsuranceField();updatePatientSide()};$("appointmentDate").onchange=()=>{validatePastDate();renderRuleFeedback()};
 
@@ -958,5 +916,3 @@ function mountDocumentPanel(host,appointmentId,patientId){if(window.mountSurgery
 async function logoutAgenda(){const response=await fetch("/api/auth/logout",{method:"POST"});if(!response.ok)return appNotice("Não foi possível sair","Tente novamente.");liveConnection?.close();state=Storage.defaultData();workflowData={requests:[],notifications:[],audit:[]};window.location.replace("/")}
 document.querySelectorAll('a[href="/api/auth/logout"]').forEach(link=>{if(!link.classList.contains("mobile-logout"))link.addEventListener("click",async event=>{event.preventDefault();await logoutAgenda()})});
 window.addEventListener("pageshow",event=>{if(event.persisted)window.location.reload()});
-
-
