@@ -67,6 +67,39 @@ await assert.rejects(()=>save('invoice',{billing_entity_id:entity,invoice_number
 assert.equal((await db.query("select count(*)::int n from invoices where invoice_number='200'")).rows[0].n,0);
 const emptyInvoice=await save('invoice',{billing_entity_id:entity,invoice_number:'201',payer:'UNIMED',issue_date:'2026-09-10',record_ids:[]});
 assert.ok(emptyInvoice);
+// Direct selection: no financial preconfiguration, no period constraint and no proration.
+const newAppointments=[
+ {id:'direct1',doctorId:'d1',patientId:'p1',date:'2026-08-03',status:'realized',forma_cobranca:'CONVENIO'},
+ {id:'direct2',doctorId:'d1',patientId:'p1',date:'2026-09-08',status:'realized',forma_cobranca:'CONVENIO'},
+ {id:'rollback',doctorId:'d1',patientId:'p1',date:'2026-07-01',status:'realized',forma_cobranca:'CONVENIO'},
+ {id:'notdone',doctorId:'d1',patientId:'p1',date:'2026-09-01',status:'scheduled',forma_cobranca:'CONVENIO'},
+ {id:'private',doctorId:'d1',patientId:'p1',date:'2026-09-01',status:'realized',forma_cobranca:'PARTICULAR'},
+ {id:'unclassified',doctorId:'d1',patientId:'p1',date:'2026-09-01',status:'realized'},
+ {id:'wrongdoctor',doctorId:'d2',patientId:'p1',date:'2026-09-01',status:'realized',forma_cobranca:'CONVENIO'},
+ {id:'wrongpayer',doctorId:'d1',patientId:'p1',insurance:'OUTRO',date:'2026-09-01',status:'realized',forma_cobranca:'CONVENIO'}
+];
+await db.query("update app_state set payload=jsonb_set(payload,'{appointments}',(payload->'appointments')||$1::jsonb)",[JSON.stringify(newAppointments)]);
+const note={billing_entity_id:entity,invoice_number:'300',payer:' Unimed ',issue_date:'2026-09-10',total_amount:15000,net_amount:13800,appointment_ids:['direct1','direct2']};
+const directInvoice=await save('invoice',note);
+const directRecords=(await db.query("select * from billing_records where appointment_id in ('direct1','direct2') order by appointment_id")).rows;
+assert.equal(directRecords.length,2);
+for(const r of directRecords){assert.equal(r.payment_status,'PENDENTE');assert.equal(r.billing_method,'CONVENIO');assert.equal(r.received_amount,null);assert.equal(r.paid_at,null);assert.equal(r.invoice_number,null)}
+assert.equal((await get('invoices',directInvoice)).payer,'UNIMED');
+assert.equal((await db.query('select count(*)::int n from invoice_billing_records where invoice_id=$1',[directInvoice])).rows[0].n,2);
+await save('invoice',{...(await get('invoices',directInvoice)),appointment_ids:['direct1','direct2'],paid_at:'2026-09-16'});
+for(const r of directRecords){const paid=await get('billing_records',r.id);assert.equal(paid.payment_status,'PAGO');assert.equal(paid.received_amount,null);assert.equal(paid.paid_at,null);assert.equal(paid.invoice_number,null)}
+assert.equal(Number((await get('invoices',directInvoice)).net_amount),13800);
+await assert.rejects(()=>save('invoice',{...note,invoice_number:'301'}));
+for(const id of ['notdone','private','unclassified','wrongdoctor','wrongpayer','missing']) await assert.rejects(()=>save('invoice',{...note,invoice_number:'bad-'+id,appointment_ids:['rollback',id]}));
+assert.equal((await db.query("select count(*)::int n from billing_records where appointment_id='rollback'")).rows[0].n,0);
+await assert.rejects(()=>save('invoice',{...note,invoice_number:'unknown',payer:'ARBITRARIO',appointment_ids:['rollback']}));
+await assert.rejects(()=>save('invoice',{...note,invoice_number:'unauthorized',appointment_ids:['rollback']},2));
+await assert.rejects(()=>db.exec("update app_state set payload=jsonb_set(payload,'{appointments,3,forma_cobranca}',to_jsonb('PARTICULAR'::text))"));
+await save('invoice',{...(await get('invoices',directInvoice)),appointment_ids:['direct1'],paid_at:''});
+for(const r of directRecords)assert.equal((await get('billing_records',r.id)).payment_status,'PENDENTE');
+const privateId=await save('record',{appointment_id:'private',billing_entity_id:entity,billing_method:'PARTICULAR',payment_status:'PAGO',invoice_number:'IND-1',received_amount:500,paid_at:'2026-09-16'});
+assert.equal(Number((await get('billing_records',privateId)).received_amount),500);
+assert.equal((await get('billing_records',privateId)).invoice_number,'IND-1');
 await db.exec('reset role;set role anon');
 await assert.rejects(()=>save('entity',{name:'Forbidden'}));
 await assert.rejects(()=>db.query('select * from billing_audit'));

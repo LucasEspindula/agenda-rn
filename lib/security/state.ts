@@ -21,6 +21,7 @@ function walk(value: unknown, depth = 0) {
 export function validateAppointment(a: Row) {
   if (!a || Array.isArray(a) || typeof a !== "object") throw new HttpError(400, "Agendamento inválido.");
   walk(a);
+  if (a.forma_cobranca != null && !['PARTICULAR','CONVENIO'].includes(a.forma_cobranca)) throw new HttpError(400, 'Forma de cobrança inválida.');
   if (!validId(a.id) || !date.test(a.date) || !time.test(a.time) || !Number.isInteger(a.duration) || a.duration < 1 || a.duration > 1440 ||
       !['scheduled','confirmed','authorized','analysis','realized'].includes(a.status) || (!a.doctorId && !a.anesthetistId)) throw new HttpError(400, 'Agendamento inválido.');
   for (const key of ['doctorId','anesthetistId','patientId','hospitalId']) if (a[key] && !validId(a[key])) throw new HttpError(400, 'Vínculo inválido.');

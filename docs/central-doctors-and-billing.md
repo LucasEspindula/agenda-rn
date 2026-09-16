@@ -10,7 +10,11 @@ O cliente antigo da agenda ainda lê `app_state.payload.professionals`. Esse cam
 
 `invoices → invoice_billing_records → billing_records → appointment_id`.
 
-A tabela associativa possui ID próprio, referência à NF e referência ao faturamento. Um faturamento não pode pertencer a duas NFs. Uma NF pode ser salva como rascunho sem itens; confirmar pagamento exige pelo menos um item. Novos vínculos exigem atendimento realizado, cobrança CONVENIO, status PENDENTE, entidade e pagador compatíveis e ausência de outra NF. O período é um filtro de seleção, não um limite permanente da nota. Itens já vinculados continuam editáveis quando pagos.
+A tabela associativa possui ID próprio, referência à NF e referência ao faturamento. Um faturamento não pode pertencer a duas NFs. Uma NF pode ser salva como rascunho sem itens; confirmar pagamento exige pelo menos um item. Novos vínculos exigem atendimento realizado, `forma_cobranca = CONVENIO` no agendamento, médico vinculado à entidade, pagador compatível e ausência de outra NF. Não é necessário um faturamento prévio: o cliente envia `appointment_ids` e a função cria os faturamentos ausentes dentro da transação da NF. O campo legado `record_ids` continua aceito para compatibilidade com páginas já abertas.
+
+A nota mostra imediatamente os atendimentos vinculados. O seletor separado permite buscar paciente e médico; datas são apenas filtros avançados opcionais, nunca enviadas como requisito de vínculo. Pagador é uma lista obtida dos cadastros existentes, com maiúsculas e espaços normalizados. Nomes diferentes não são tratados como equivalentes sem um cadastro explícito de aliases.
+
+O campo de cobrança está na criação e na edição do agendamento. A migração preenche somente escolhas explícitas anteriores, inclusive as do faturamento legado; não deduz CONVENIO pelo nome do plano. Um atendimento já vinculado não pode ter paciente, médicos, convênio, cobrança ou realização alterados sem primeiro desfazer a associação na NF.
 
 O número da NF e a data de pagamento de convênio são obtidos pela associação; valores brutos/líquidos ficam somente na NF. Não há rateio automático. A gravação da NF, de seus itens, do status financeiro e da auditoria é atômica. PARTICULAR mantém campos individuais.
 
