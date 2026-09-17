@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const rows=appointments.map(a=>{
    const patient=(state.patients||[]).find((p:Row)=>p.id===a.patientId),record=records.find(r=>r.appointment_id===a.id)||null;
    const item=record&&items.find(i=>i.billing_record_id===record.id),invoice=item?invoices.find(i=>i.id===item.invoice_id):null;
-   return {appointment_id:a.id,date:a.date,time:a.time,patient:patient?.name||'Sem paciente',doctor_id:a.doctorId||a.anesthetistId,anesthetist_id:a.anesthetistId,procedure:a.procedure,insurance:a.insurance||patient?.insurance||'',status_atendimento:a.status,forma_cobranca:a.forma_cobranca||a.billing_method||a.billingMethod||record?.billing_method||null,record,invoice:invoice||null,legacy_payment:a.payment||null,legacy_invoice:a.invoiceNumber||null};
+   return {appointment_id:a.id,date:a.date,time:a.time,patient:patient?.name||'Sem paciente',doctor_id:a.doctorId||a.anesthetistId,anesthetist_id:a.anesthetistId,procedure:a.procedure,insurance:a.insurance||patient?.insurance||'',status_atendimento:a.status,forma_cobranca:a.forma_cobranca||a.billing_method||a.billingMethod||record?.billing_method||null,record,invoice_item:item?{received_amount:item.received_amount??null}:null,invoice:invoice||null,legacy_payment:a.payment||null,legacy_invoice:a.invoiceNumber||null};
   });
   if(summary) return Response.json({rows:rows.map(r=>({appointment_id:r.appointment_id,invoice_number:r.invoice?.invoice_number||r.record?.invoice_number||null}))},{headers:{'Cache-Control':'private, no-store'}});
   if(session.account.role!=='general_manager') for(const row of rows) if(row.invoice) row.invoice={id:row.invoice.id,invoice_number:row.invoice.invoice_number,issue_date:row.invoice.issue_date,paid_at:row.invoice.paid_at};

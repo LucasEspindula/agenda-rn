@@ -60,14 +60,14 @@ test('anesthesia conflicts include overlapping intervals but not adjacent, cance
   assert.equal((c.$('mobileCalendar').innerHTML.match(/has-conflict/g) || []).length, 2);
 });
 
-test('monthly reports separate patient and the other professional, including cancellations', () => {
-  const { context: c, appointment: a, anesthetist } = fixture();
-  c.state.cancelledAppointments = [{ ...a, id: 'cancelled' }];
-  let html = ''; c.open = () => ({ document: { write: v => { html = v; }, close() {} } });
-  c.generateMonthlyReport(); assert.match(html, /<th>Paciente<\/th><th>Anestesista<\/th>/);
-  c.owner = anesthetist; c.generateMonthlyReport();
-  assert.equal((html.match(/<th>Paciente<\/th><th>Médico<\/th>/g) || []).length, 2);
-  assert.match(html, /Dr\. Rosa/);
+test('agenda report shortcut opens central financial report with doctor and full month', () => {
+  const { context: c, anesthetist } = fixture();
+  let target='';c.URLSearchParams=URLSearchParams;c.window.location={assign:v=>target=v};
+  c.generateMonthlyReport();let url=new URL(target,'https://example.test');
+  assert.equal(url.pathname,'/billing');assert.equal(url.searchParams.get('doctor'),'d');
+  assert.equal(url.searchParams.get('start'),'2026-09-01');assert.equal(url.searchParams.get('end'),'2026-09-30');
+  c.owner=anesthetist;c.generateMonthlyReport();url=new URL(target,'https://example.test');
+  assert.equal(url.searchParams.get('doctor'),'a');
 });
 
 test('mobile calendar has 42 dates and uses the same card content without other agendas', () => {
@@ -102,4 +102,3 @@ test('API requires denial reason before writing and filters doctor requests befo
   role = 'doctor'; await api.GET();
   assert.deepEqual(calls[0], ['eq', 'requested_by', 5]); assert.deepEqual(calls[1], ['limit', 200]);
 });
-
