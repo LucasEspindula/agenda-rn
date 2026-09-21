@@ -1,3 +1,4 @@
+import {canUseAgenda} from "@/lib/doctor-services";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { HttpError } from "@/lib/security/http";
 import { readJson, secureMutation } from "@/lib/security/http";
@@ -17,7 +18,7 @@ function permitted(session: Session, a: Surgery) {
 }
 async function context() {
  const session = await getSession();
- if (!session) throw new Error('unauthorized');
+ if (!session || !canUseAgenda(session)) throw new Error('unauthorized');
  const db = getSupabaseAdmin();
  const { data, error } = await db.from('app_state').select('payload').eq('id',1).maybeSingle();
  if (error || !data) throw new Error('state');

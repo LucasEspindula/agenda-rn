@@ -14,6 +14,8 @@ export function checkMutationOrigin(request: Request) {
   }
 }
 
+// Legacy JSON boundary: callers validate their operation-specific fields.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function readJson(request: Request, maximum = 64 * 1024): Promise<Record<string, any>> {
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) throw new HttpError(415, 'Envie JSON.');
   const length = Number(request.headers.get('content-length') || 0);

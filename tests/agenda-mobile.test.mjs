@@ -93,7 +93,7 @@ test('API requires denial reason before writing and filters doctor requests befo
   const calls = []; let role = 'secretary';
   const query = { in() { return this; }, select() { return this; }, eq(...args) { calls.push(['eq', ...args]); return this; }, order() { return this; }, limit(n) { calls.push(['limit', n]); return this; }, then(resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); } };
   const api=loadTs('app/api/workflow/route.ts',{
-    '@/app/authz':{getSession:async()=>({account:{role,id:5},agendaIds:['d']}),isManager:r=>r==='general_manager'},
+    '@/app/authz':{getSession:async()=>({account:{role,id:5,doctorId:'d'},services:{scheduling_enabled:true,billing_enabled:true,invoice_enabled:true},agendaIds:['d']}),isManager:r=>r==='general_manager'},
     '@/lib/supabase-admin':{getSupabaseAdmin:()=>({from:()=>query}),dbError(){}},
     '@/lib/security/rate-limit':{consumeLimit:async()=>{}}
   });

@@ -1,7 +1,10 @@
-export type Entity={id:string;name:string;tax_id:string;person_type:string;trade_name:string;active:boolean;updated_at:string};
-export type Doctor={id:string;name:string};
-export type Link={id:string;doctor_id:string;billing_entity_id:string;active:boolean;updated_at:string};
-export type Financial={id:string;appointment_id:string;billing_entity_id:string;billing_method:string;payment_status:string;invoice_number:string|null;received_amount:number|null;paid_at:string|null;notes:string|null;updated_at:string;updated_by:number};
-export type Invoice={id:string;billing_entity_id:string;invoice_number:string;payer:string;issue_date:string;paid_at:string|null;total_amount:number|null;net_amount:number|null;notes:string|null;updated_at:string};
-export type BillingRow={appointment_id:string;date:string;time:string;patient:string;doctor_id:string;anesthetist_id:string;procedure:string;insurance:string;status_atendimento:string;forma_cobranca:string|null;invoice_item?:{received_amount:number|null}|null;record:Financial|null;invoice:Invoice|null;legacy_payment:number|null;legacy_invoice:string|null};
-export type BillingData={rows:BillingRow[];payers:string[];entities:Entity[];doctors:Doctor[];links:Link[];invoices:Invoice[];items:{invoice_id:string;billing_record_id:string;received_amount?:number|null}[]};
+export type Authorship={created_at?:string|null;created_by?:number|null;updated_at:string;updated_by?:number|null};
+export type Entity=Authorship&{id:string;name:string;tax_id:string;person_type:string;trade_name:string;active:boolean};
+export type Doctor={id:string;name:string;scheduling_enabled?:boolean;billing_enabled?:boolean;invoice_enabled?:boolean};
+export type Link=Authorship&{id:string;doctor_id:string;billing_entity_id:string;active:boolean};
+export type Financial=Authorship&{id:string;attendance_id:string;appointment_id:string|null;settlement_mode:'DIRECT'|'INVOICE';billing_entity_id:string;billing_method:string;payment_status:string;invoice_number:string|null;received_amount:number|null;paid_at:string|null;notes:string|null};
+export type Invoice=Authorship&{id:string;billing_entity_id:string;invoice_number:string;payer:string;issue_date:string;paid_at:string|null;total_amount:number|null;net_amount:number|null;notes:string|null;shared?:boolean};
+export type BillingRow=Authorship&{attendance_id:string;appointment_id:string|null;patient_id:string|null;origin:string;date:string;time:string;patient:string;doctor_id:string;anesthetist_id:string;procedure:string;insurance:string;status_atendimento:string;forma_cobranca:string|null;invoice_item?:{received_amount:number|null}|null;record:Financial|null;invoice:Invoice|null;legacy_payment:number|null;legacy_invoice:string|null};
+export type Associate=Authorship&{id:string;billing_entity_id:string;name:string;doctor_id:string|null;active:boolean};
+export type Expense=Authorship&{id:string;billing_entity_id:string;description:string;category:string;supplier:string;competence_date:string;due_date:string|null;paid_at:string|null;amount:number;status:string;notes:string|null;paid_by_associate_id:string|null};
+export type BillingData={rows:BillingRow[];payers:string[];entities:Entity[];doctors:Doctor[];links:Link[];invoices:Invoice[];items:{invoice_id:string;billing_record_id:string;received_amount?:number|null}[];expenses?:Expense[];associates?:Associate[];patients?:{id:string;name:string}[];users?:{id:number;name:string}[];read_only?:boolean;doctor_id?:string;services?:{scheduling_enabled:boolean;billing_enabled:boolean;invoice_enabled:boolean}};

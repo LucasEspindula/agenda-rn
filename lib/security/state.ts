@@ -1,5 +1,8 @@
 import { HttpError } from './http';
+// Legacy agenda payload is heterogeneous; validateStateChange validates writes.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type State = Record<string, any>;
 export type Principal = { account: { role: string }; agendaIds: string[] };
 const collections = ['patients','professionals','hospitals','appointments','cancelledAppointments','patientHistory','schedulingRules','scheduleBlocks'];
@@ -44,6 +47,12 @@ export function validateState(s: State) {
   if (s.cancelledAppointments.some((a: Row) => active.has(a.id))) throw new HttpError(400, 'Agendamento duplicado no arquivo.');
   if (!s.settings || !time.test(s.settings.workStart) || !time.test(s.settings.workEnd) || s.settings.workStart >= s.settings.workEnd) throw new HttpError(400, 'Horário de trabalho inválido.');
 }
+// Financial reads for doctors come exclusively from the scoped financial APIs.
+export function withoutLegacyFinance<T>(value:T):T {
+  if(Array.isArray(value))return value.map(withoutLegacyFinance) as T;
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).filter(([key])=>!['payment','invoiceNumber','received_amount','paid_at','payment_status','total_amount','net_amount'].includes(key)).map(([key,item])=>[key,withoutLegacyFinance(item)])) as T;
+  return value;
+}
 export function visibleState(s: State, p: Principal): State {
   if (p.account.role === 'general_manager') return s;
   const appointments = (s.appointments || []).filter((a: Row) => canReadAppointment(p,a));
@@ -52,8 +61,8 @@ export function visibleState(s: State, p: Principal): State {
   const patientIds = new Set(patients.map((a: Row) => a.id));
   const appointmentIds = new Set([...appointments,...cancelled].map((a: Row) => a.id));
   return { schemaVersion:s.schemaVersion, settings:s.settings, professionals:s.professionals || [], hospitals:s.hospitals || [],
-    patients, appointments, cancelledAppointments:cancelled,
-    patientHistory:(s.patientHistory || []).filter((h: Row) => patientIds.has(h.patientId) && (!h.appointmentId || appointmentIds.has(h.appointmentId))),
+    patients, appointments:p.account.role==='doctor'?withoutLegacyFinance(appointments):appointments, cancelledAppointments:p.account.role==='doctor'?withoutLegacyFinance(cancelled):cancelled,
+    patientHistory:(s.patientHistory || []).filter((h: Row) => patientIds.has(h.patientId) && (!h.appointmentId || appointmentIds.has(h.appointmentId)) && (p.account.role!=='doctor'||!String(h.type||'').toLowerCase().includes('financeiro'))),
     schedulingRules:(s.schedulingRules || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)),
     scheduleBlocks:(s.scheduleBlocks || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)) };
 }

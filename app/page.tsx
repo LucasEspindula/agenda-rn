@@ -3,10 +3,11 @@ import { getSession } from "./authz";
 import { LoginForm } from "./login-form";
 import { LoginScene } from "./login-scene";
 
+import {doctorHome} from "@/lib/doctor-services";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  if (await getSession()) redirect("/dashboard");
+  const session=await getSession();if(session)redirect(doctorHome(session));
   return <main className="relative grid min-h-screen place-items-center overflow-hidden bg-[#eaf3f1] px-5 py-10 text-[#1f2a37]">
     <LoginScene />
     <section className="relative w-full max-w-md rounded-[2rem] border border-white/80 bg-white/90 p-7 shadow-[0_30px_90px_rgba(18,55,79,.14)] backdrop-blur-md sm:p-9">

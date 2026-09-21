@@ -1,4 +1,5 @@
-import { canReadAppointment, validateAppointment, validId } from "@/lib/security/state";
+import {canUseAgenda} from "@/lib/doctor-services";
+import { canReadAppointment, withoutLegacyFinance, validateAppointment, validId } from "@/lib/security/state";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { readJson, secureMutation } from "@/lib/security/http";
 import { getSession, isManager } from "@/app/authz";
@@ -31,7 +32,7 @@ function overlaps(a: Appointment, b: Appointment) {
 
 export async function GET() {
   const session = await getSession();
-  if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const db = getSupabaseAdmin();
   let requestQuery = db.from("agenda_requests").select("*");
   if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id).in("professional_id", session.agendaIds);
@@ -48,7 +49,8 @@ export async function GET() {
   const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>, audit = (auditRows.data || []) as Array<Record<string, any>>;
   const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
   const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null }]));
-  const visibleRequests = requests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
+  const scopedRequests = session.account.role === "doctor" ? requests.map(withoutLegacyFinance) : requests;
+  const visibleRequests = scopedRequests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
   return Response.json({
     requests: visibleRequests.map((row) => ({ ...row, requestedBy: Number(row.requested_by), decidedBy: row.decided_by ? Number(row.decided_by) : null, professionalId: row.professional_id, appointmentId: row.appointment_id, createdAt: row.created_at, decidedAt: row.decided_at, decisionNote: row.decision_note, requesterName: names.get(Number(row.requested_by)), deciderName: row.decided_by ? names.get(Number(row.decided_by)) : null, proposed: row.proposed_payload || null, previous: row.previous_payload || null })),
     notifications: notifications.map((row) => ({ ...row, readAt: row.read_at, createdAt: row.created_at, requestId: row.request_id })),
@@ -62,7 +64,7 @@ export async function GET() {
 
 async function handlePOST(request: Request) {
   const session = await getSession();
-  if (!session?.account || session.account.role !== "doctor") return Response.json({ error: "Somente médicos enviam sugestões de agenda" }, { status: 403 });
+  if (!session?.account || session.account.role !== "doctor" || !canUseAgenda(session)) return Response.json({ error: "Somente médicos com Agendamento habilitado enviam sugestões de agenda" }, { status: 403 });
   await consumeLimit("workflow", String(session.account.id), 30, 300);
   const body = await readJson(request) as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
   if (!body.action || !["create", "update", "delete"].includes(body.action)) return Response.json({ error: "Solicitação inválida" }, { status: 400 });
@@ -152,7 +154,7 @@ async function handlePATCH(request: Request) {
 
 async function handleDELETE() {
   const session = await getSession();
-  if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const result = await getSupabaseAdmin().from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", session.account.id).is("read_at", null); dbError(result.error, "Mark notifications read");
   return Response.json({ ok: true });
 }

@@ -3,11 +3,12 @@ import { mergeState, visibleState } from "@/lib/security/state";
 import { getSession } from "@/app/authz";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 
+import {canUseAgenda} from "@/lib/doctor-services";
 type AgendaState = Record<string, unknown> & { appointments?: Record<string, unknown>[]; cancelledAppointments?: Record<string, unknown>[]; patients?: Record<string, unknown>[]; schedulingRules?: Record<string, unknown>[]; scheduleBlocks?: Record<string, unknown>[] };
 
 export async function GET() {
   const session = await getSession();
-  if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const { data: row, error } = await getSupabaseAdmin().from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle();
   dbError(error, "Read application state");
   const state = row ? row.payload as AgendaState : null;
@@ -16,7 +17,7 @@ export async function GET() {
 
 async function putState(request: Request) {
   const session = await getSession();
-  if (!session?.account) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const proposed = (await readJson(request, 4 * 1024 * 1024)) as AgendaState;
   const db = getSupabaseAdmin();
   const stateResult = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle();
@@ -49,7 +50,7 @@ async function putState(request: Request) {
     for (const [id, item] of cancelledAfter) if (!cancelledBefore.has(id) && !before.has(id)) entries.push({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: "appointment_cancelled", professional_id: String(item.doctorId ?? item.anesthetistId ?? "") || null, appointment_id: id, patient_id: String(item.patientId ?? "") || null, description: `${actor} registrou um cancelamento.`, metadata: { after: item } });
 
   }
-  const saved = await db.rpc("commit_agenda_change", { p_expected: row?.updated_at ?? null, p_payload: next, p_revision: revision, p_audit: entries });
+  const saved = await db.rpc("commit_agenda_change", { p_actor:session.account.id, p_expected: row?.updated_at ?? null, p_payload: next, p_revision: revision, p_audit: entries });
   dbError(saved.error, "Save application state and audit");
   if (!saved.data) return Response.json({ error: "Outra pessoa salvou uma alteração. Atualize a agenda antes de salvar novamente." }, { status: 409 });
   return Response.json({ ok: true, revision });
