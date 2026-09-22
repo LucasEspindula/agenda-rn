@@ -12,4 +12,5 @@ export function doctorHome(session:Access){
  return '/no-services';
 }
 export function canOpenBilling(session:Access){return session.account.role==='general_manager'||(session.account.role==='doctor'&&!!session.account.doctorId&&!session.services?.scheduling_enabled&&!!(session.services?.billing_enabled||session.services?.invoice_enabled));}
+export function canOpenInvoices(session:Access){return session.account.role==='general_manager'||(session.account.role==='doctor'&&!!session.account.doctorId&&!!session.services?.invoice_enabled);}
 export function canUseAgenda(session:Access){return session.account.role!=='doctor'||(!!session.account.doctorId&&!!session.services?.scheduling_enabled);}

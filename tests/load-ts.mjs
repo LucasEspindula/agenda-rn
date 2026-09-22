@@ -7,6 +7,7 @@ import {webcrypto} from 'node:crypto';
 const nodeRequire=createRequire(import.meta.url);
 export function loadTs(path,mocks={},cache=new Map()) {
  const file=resolve(path.endsWith(".ts") && !existsSync(path) && existsSync(path+"x") ? path+"x" : path);if(cache.has(file))return cache.get(file);
+ if(file.endsWith('.json.ts'))return {default:JSON.parse(readFileSync(file.slice(0,-3),'utf8')),__esModule:true};
  const exports={};cache.set(file,exports);
  const source=readFileSync(file,'utf8');
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{

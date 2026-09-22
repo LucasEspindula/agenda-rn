@@ -2,9 +2,9 @@ import type {BillingData,BillingRow} from './billing-types';
 import {payerKey} from './billing-eligibility';
 type RecordData=Record<string,unknown>;
 export type FinancialPrincipal={account:{id:number;role:string;doctorId?:string|null};agendaIds:string[];services?:{scheduling_enabled:boolean;billing_enabled:boolean;invoice_enabled:boolean}};
-export function doctorBillingProjection(data:BillingData,principal:FinancialPrincipal):BillingData{
+export function doctorBillingProjection(data:BillingData,principal:FinancialPrincipal,invoiceOnly=false):BillingData{
  const id=principal.account.doctorId;
- const rows=data.rows.filter(r=>!!id&&r.doctor_id===id&&(principal.services?.billing_enabled||!!r.invoice));
+ const rows=data.rows.filter(r=>!!id&&r.doctor_id===id&&((!invoiceOnly&&principal.services?.billing_enabled)||!!r.invoice));
  const recordIds=new Set(rows.map(r=>r.record?.id));
  const visibleItems=data.items.filter(i=>recordIds.has(i.billing_record_id));
  const invoiceIds=new Set(visibleItems.map(i=>i.invoice_id));

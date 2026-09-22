@@ -7,7 +7,7 @@ import AppDialog from '@/components/app-dialog';
 const money=(v:number|null|undefined)=>v==null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
 export default function DoctorBilling({invoiceOnly=false}:{invoiceOnly?:boolean}){
  const [data,setData]=useState<BillingData|null>(null),[error,setError]=useState(''),[tab,setTab]=useState(invoiceOnly?'invoices':'records'),[start,setStart]=useState(''),[end,setEnd]=useState(''),[report,setReport]=useState<ReportScope|null>(null),[invoice,setInvoice]=useState<Invoice|null>(null);
- useEffect(()=>{let active=true;fetch('/api/billing',{cache:'no-store'}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error);if(active)setData(j)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[]);
+ useEffect(()=>{let active=true;fetch('/api/billing'+(invoiceOnly?'?view=invoices':''),{cache:'no-store'}).then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error);if(active)setData(j)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[invoiceOnly]);
  if(!data)return <main className="billing-main"><p role={error?'alert':undefined}>{error||'Carregando…'}</p></main>;
  function preview(){const scope:ReportScope={kind:tab==='invoices'?'invoices':'doctor',doctor:data!.doctor_id||'',entity:'',start,end,issued_at:new Date().toISOString()};try{buildReport(data!,scope);setReport(scope);setError('')}catch(e){setError(e instanceof Error?e.message:'Confira os filtros.')}}
  if(report)return <BillingReport data={data} scope={report} onClose={()=>setReport(null)}/>;

@@ -10,7 +10,7 @@ const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, tru
 const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'generateMonthlyReport', 'renderMobileCalendar', 'mobileHomeView']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
-  const doctor = { id: 'd', name: 'Rosa', category: 'doctor' }, anesthetist = { id: 'a', name: 'Dr. Lima', category: 'anesthetist' };
+  const doctor = { id: 'd', name: 'Rosa', specialty: 'Ortopedia e Traumatologia' }, anesthetist = { id: 'a', name: 'Dr. Lima', specialty: 'Anestesiologia' };
   const appointment = { id: 'one', doctorId: 'd', anesthetistId: 'a', patientId: 'p', hospitalId: 'h', date: '2026-09-11', time: '09:00', duration: 60, status: 'scheduled', procedure: 'Joelho' };
   const elements = new Map();
   const context = {
@@ -30,7 +30,7 @@ function fixture() {
     mobileSelectedDate: '2026-09-11', mobileMonth: new Date(2026, 8, 1), mobileListMode: 'day',
     $: id => { if (!elements.has(id)) elements.set(id, { innerHTML: '', querySelectorAll: () => [] }); return elements.get(id); },
   };
-  vm.createContext(context); vm.runInContext(functions, context);
+  context.isAnesthesiologist=loadTs('lib/medical-specialties.ts').isAnesthesiologist;context.appointmentInsurance=a=>a.insurance??context.patient(a.patientId)?.insurance??'';vm.createContext(context); vm.runInContext(functions, context);
   return { context, appointment, doctor, anesthetist, elements };
 }
 

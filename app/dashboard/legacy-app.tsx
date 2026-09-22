@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {MEDICAL_SPECIALTIES,isAnesthesiologist} from "@/lib/medical-specialties";
 import { legacyBody } from "./legacy-body";
 
 type Session = { user: { email: string; name: string; role: string; agendaIds: string[] } };
@@ -21,6 +22,7 @@ export function LegacyApp() {
       }
       (window as Window & { AgendaAuth?: unknown }).AgendaAuth = session.user;
       if (cancelled) return;
+      (window as Window & {MedicalDirectory?:unknown}).MedicalDirectory={specialties:MEDICAL_SPECIALTIES,isAnesthesiologist};
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");

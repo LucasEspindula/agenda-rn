@@ -2,6 +2,7 @@ import {getSession} from '@/app/authz';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {HttpError,readJson,secureMutation} from '@/lib/security/http';
 import {hashPassword} from '@/app/passwords';
+import {canonicalSpecialty} from '@/lib/medical-specialties';
 import {z} from 'zod';
 export const dynamic='force-dynamic';
 export async function GET(){
@@ -13,6 +14,7 @@ export async function GET(){
 export const POST=secureMutation(async request=>{
  const session=await getSession();if(!session||session.account.role!=='general_manager')throw new HttpError(403,'Acesso restrito à gerência.');
  const {kind,data,access}=await readJson(request);if(!['doctor','agenda'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data))throw new HttpError(400,'Operação inválida.');
+ if(kind==='doctor'){const specialty=canonicalSpecialty(String(data.specialty||''));if(!specialty)throw new HttpError(400,'Selecione uma especialidade da lista.');data.specialty=specialty;delete data.category;}
  let account=null,credentials=null;
  if(access!=null){
   const parsed=z.object({id:z.number().positive().optional(),email:z.string().trim().email().max(254),password:z.string().min(12).max(128).optional(),updated_at:z.string().optional()}).strict().safeParse(access);

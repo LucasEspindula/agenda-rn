@@ -68,7 +68,7 @@ export const legacyBody = `<div class="app-shell">
      <div id="agendaContext" class="context-box"></div>
      <div class="form-grid two">
       <label>Paciente<select id="appointmentPatient"></select></label>
-      <label id="appointmentInsuranceLabel" class="hidden">Convênio<input id="appointmentInsurance" list="appointmentInsuranceOptions" placeholder="Selecione ou informe o convênio"><datalist id="appointmentInsuranceOptions"></datalist></label>
+      <label id="appointmentInsuranceLabel">Convênio / plano<input id="appointmentInsurance" list="appointmentInsuranceOptions" placeholder="Selecione ou informe o convênio"><datalist id="appointmentInsuranceOptions"></datalist></label>
       <label>Forma de cobrança<select id="appointmentBillingMethod" required><option value="">Selecione</option><option value="PARTICULAR">Particular</option><option value="CONVENIO">Convênio</option></select></label>
       <label>Procedimento<input id="appointmentProcedure" required placeholder="Ex.: Artroscopia de joelho"></label>
       <label>Hospital<select id="appointmentHospital" required></select></label>
