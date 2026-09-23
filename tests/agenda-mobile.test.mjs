@@ -7,7 +7,7 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../public/legacy-app.js', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'generateMonthlyReport', 'renderMobileCalendar', 'mobileHomeView']);
+const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'renderMobileCalendar']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
   const doctor = { id: 'd', name: 'Rosa', specialty: 'Ortopedia e Traumatologia' }, anesthetist = { id: 'a', name: 'Dr. Lima', specialty: 'Anestesiologia' };
@@ -60,14 +60,8 @@ test('anesthesia conflicts include overlapping intervals but not adjacent, cance
   assert.equal((c.$('mobileCalendar').innerHTML.match(/has-conflict/g) || []).length, 2);
 });
 
-test('agenda report shortcut opens central financial report with doctor and full month', () => {
-  const { context: c, anesthetist } = fixture();
-  let target='';c.URLSearchParams=URLSearchParams;c.window.location={assign:v=>target=v};
-  c.generateMonthlyReport();let url=new URL(target,'https://example.test');
-  assert.equal(url.pathname,'/billing');assert.equal(url.searchParams.get('doctor'),'d');
-  assert.equal(url.searchParams.get('start'),'2026-09-01');assert.equal(url.searchParams.get('end'),'2026-09-30');
-  c.owner=anesthetist;c.generateMonthlyReport();url=new URL(target,'https://example.test');
-  assert.equal(url.searchParams.get('doctor'),'a');
+test('legacy financial report shortcut is removed from Agenda', () => {
+ assert.doesNotMatch(source,/agendaReportBtn|generateMonthlyReport/);
 });
 
 test('mobile calendar has 42 dates and uses the same card content without other agendas', () => {
@@ -85,11 +79,9 @@ test('doctor history includes pending requests without notifications and rejecti
   const html = c.renderDoctorHistory();
   assert.match(html, /Aguardando aprovação/); assert.match(html, /Recusada 🚫/); assert.match(html, /Aceita ✅/);
   assert.match(html, /&lt;script>/); assert.doesNotMatch(html, /<script>/);
-  for (const [role, view] of [['doctor', 'notifications'], ['secretary', 'requests'], ['general_manager', 'audit']]) { c.window.AgendaAuth.role = role; assert.equal(c.mobileHomeView(), view); }
 });
 
 test('API requires denial reason before writing and filters doctor requests before limit', async () => {
-  const code = ts.transpileModule(readFileSync(new URL('../app/api/workflow/route.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const calls = []; let role = 'secretary';
   const query = { in() { return this; }, select() { return this; }, eq(...args) { calls.push(['eq', ...args]); return this; }, order() { return this; }, limit(n) { calls.push(['limit', n]); return this; }, then(resolve) { return Promise.resolve({ data: [], error: null }).then(resolve); } };
   const api=loadTs('app/api/workflow/route.ts',{

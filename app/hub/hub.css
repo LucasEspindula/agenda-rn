@@ -22,3 +22,8 @@
 @media(min-width:901px) and (max-width:1200px){.hub-header{gap:10px;padding:12px}.hub-brand span{display:none}.hub-brand strong{font-size:14px}.hub-nav a{padding:9px 8px}.hub-account{gap:8px}}
 @media(max-width:900px){.hub-account{padding-left:9px}.hub-nav a:hover,.hub-nav a:focus-visible{box-shadow:inset 0 -3px 0 #77ded7}}
 @media(prefers-reduced-motion:reduce){.hub-header,.hub-nav a,.hub-icon{transition:none}}
+
+.hub-nav a[aria-current="page"],.hub-settings[aria-current="page"]{background:#ffffff20;color:#fff;box-shadow:inset 0 -2px #77ded7}
+.hub-header{isolation:isolate;z-index:30}
+.hub-nav svg{flex-shrink:0}
+@media(max-width:600px){.hub-header{gap:8px;padding:10px 12px}.hub-brand{gap:8px}.hub-brand img{width:34px;height:34px}.hub-brand span{font-size:10px}.hub-brand strong{font-size:15px}.hub-nav{flex-wrap:nowrap;overflow-x:auto;min-width:0;gap:2px}.hub-nav a{font-size:12px;padding:8px 9px;min-height:40px;flex-shrink:0}.hub-account{gap:3px;padding-left:7px}.hub-account .hub-avatar{display:none}.hub-account .hub-icon{width:34px;flex-basis:34px}}

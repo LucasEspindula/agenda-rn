@@ -129,9 +129,8 @@ label{font-size:12px;font-weight:650;color:#44505c;display:grid;gap:6px}.context
 .combo-option:hover{background:#f4f8fa}
 .nav-badge{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e45454;color:#fff;display:inline-grid;place-items:center;font-size:9px;font-weight:850;margin-left:auto}
 .workflow-list{display:grid;gap:11px;margin-top:18px}.workflow-card{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff}.workflow-card-main{min-width:0;flex:1}.workflow-heading{display:flex;align-items:center;gap:8px}.workflow-card-main strong{font-size:13px}.workflow-changes{display:grid;gap:5px;margin:10px 0 7px}.workflow-change{display:grid;grid-template-columns:34px 18px minmax(0,1fr);align-items:center;gap:4px;font-size:12px;line-height:1.4;color:#405462}.workflow-change-label{font-weight:800;color:#293f4c}.workflow-arrow{font-size:18px;font-weight:900;line-height:1;text-align:center}.workflow-change.from .workflow-arrow{color:#d84b4b}.workflow-change.to .workflow-arrow{color:#259467}.workflow-card-main small{font-size:10px;color:var(--muted)}.workflow-status{display:inline-block;padding:3px 7px;border-radius:999px;font-size:9px;font-weight:850;text-transform:uppercase}.workflow-status.pending{background:#fff3d9;color:#8c6210}.workflow-status.accepted{background:#e9f8f1;color:#237354}.workflow-status.denied{background:#fff0f0;color:#a33f3f}.workflow-actions{display:flex;gap:8px;flex:0 0 auto}.notification-card{border:1px solid var(--line);border-radius:11px;padding:13px;background:#fff;display:flex;justify-content:space-between;gap:14px}.notification-card.unread{border-left:4px solid var(--primary);background:#f5fbfb}.notification-card strong{font-size:12px}.notification-card span{font-size:10px;color:var(--muted);white-space:nowrap}.audit-card{display:grid;grid-template-columns:12px 1fr;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}.audit-dot{width:9px;height:9px;margin-top:4px;border-radius:50%;background:var(--primary)}.audit-card strong,.audit-card span{display:block}.audit-card strong{font-size:12px}.audit-card span{margin-top:4px;font-size:10px;color:var(--muted)}
-@media(max-width:720px){.workflow-card,.notification-card{align-items:flex-start;flex-direction:column}.workflow-heading{align-items:flex-start}.workflow-actions{width:100%}.workflow-actions button{flex:1}}
-.agenda-report-row{display:flex;justify-content:flex-end;gap:9px;margin:0 0 8px}.appointment-view-mode .appointment-main input:disabled,.appointment-view-mode .appointment-main select:disabled,.appointment-view-mode .appointment-main textarea:disabled{opacity:1;color:#183044;background:#f7fafb;border-color:transparent}.appointment-view-mode .status-option:has(input:disabled:not(:checked)),.appointment-view-mode .care-option:has(input:disabled:not(:checked)){display:none}.cancel-month{overflow:auto}.cancel-month h3{text-transform:capitalize;color:#16495c;margin:10px 0}.cancel-month+.cancel-month{margin-top:22px}
-.report-heading{display:flex;align-items:center}.dynamic-page-heading{display:block}.appointment-detail{padding:0 22px 22px}.appointment-detail-hero{display:flex;align-items:center;gap:14px;padding:20px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,#f7fbfd,#fff)}.detail-avatar{width:54px;height:54px;display:grid;place-items:center;border-radius:50%;background:#dbe9ee;color:#16495c;font-size:22px;font-weight:850}.detail-eyebrow,.appointment-detail-time span,.detail-section>span,.detail-notes>span{display:block;color:var(--muted);font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.04em}.appointment-detail-hero h4{margin:3px 0 2px;font-size:20px}.appointment-detail-hero p,.detail-section p,.detail-notes p{margin:0;color:var(--muted)}.detail-status{margin-left:auto;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:800}.detail-status.scheduled{background:#e8f0f8;color:#476782}.detail-status.confirmed{background:#e1f4fd;color:#16729d}.detail-status.authorized{background:#e3f6eb;color:#27734a}.detail-status.analysis{background:#fff2cf;color:#8a6516}.detail-status.realized{background:#dff5ec;color:#187653}.detail-status.rescheduled{background:#f0e7fb;color:#714b9e}.detail-status.cancelled{background:#fee9eb;color:#ac2937}.appointment-detail-time{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.appointment-detail-time>div,.detail-section,.detail-notes{padding:16px;border:1px solid var(--line);border-radius:12px}.appointment-detail-time strong,.appointment-detail-time b{display:block;margin-top:5px}.appointment-detail-time b{color:var(--primary-dark)}.appointment-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}.detail-section strong{display:block;margin:6px 0 4px}.detail-docs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.detail-flag{padding:6px 9px;border-radius:999px;background:#eef2f4;color:#647682;font-size:11px;font-weight:700}.detail-flag.active{background:#def5ef;color:#12755c}.detail-notes{margin-top:12px}.appointment-status-editor{display:grid;justify-content:end;gap:6px;margin-top:18px}.appointment-status-editor label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.status-select{width:220px;min-height:38px;font-size:13px;font-weight:800;border-width:1px;background:#fff}.appointment-detail-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:10px}.access-card small{max-width:720px;line-height:1.4}.conflict-summary{display:none!important}@media(max-width:720px){.appointment-detail-time,.appointment-detail-grid{grid-template-columns:1fr}.appointment-detail-hero{align-items:flex-start;flex-wrap:wrap}.detail-status{margin-left:0}.appointment-status-editor{justify-content:stretch}.status-select{width:100%}.appointment-detail{padding:0 14px 16px}}
+@media(max-width:720px){.workflow-card,.notification-card{align-items:flex-start;flex-direction:column}.workflow-heading{align-items:flex-start}.workflow-actions{width:100%}.workflow-actions button{flex:1}}.appointment-view-mode .appointment-main input:disabled,.appointment-view-mode .appointment-main select:disabled,.appointment-view-mode .appointment-main textarea:disabled{opacity:1;color:#183044;background:#f7fafb;border-color:transparent}.appointment-view-mode .status-option:has(input:disabled:not(:checked)),.appointment-view-mode .care-option:has(input:disabled:not(:checked)){display:none}.cancel-month{overflow:auto}.cancel-month h3{text-transform:capitalize;color:#16495c;margin:10px 0}.cancel-month+.cancel-month{margin-top:22px}
+.agenda-page-heading{display:flex;align-items:center}.dynamic-page-heading{display:block}.appointment-detail{padding:0 22px 22px}.appointment-detail-hero{display:flex;align-items:center;gap:14px;padding:20px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,#f7fbfd,#fff)}.detail-avatar{width:54px;height:54px;display:grid;place-items:center;border-radius:50%;background:#dbe9ee;color:#16495c;font-size:22px;font-weight:850}.detail-eyebrow,.appointment-detail-time span,.detail-section>span,.detail-notes>span{display:block;color:var(--muted);font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.04em}.appointment-detail-hero h4{margin:3px 0 2px;font-size:20px}.appointment-detail-hero p,.detail-section p,.detail-notes p{margin:0;color:var(--muted)}.detail-status{margin-left:auto;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:800}.detail-status.scheduled{background:#e8f0f8;color:#476782}.detail-status.confirmed{background:#e1f4fd;color:#16729d}.detail-status.authorized{background:#e3f6eb;color:#27734a}.detail-status.analysis{background:#fff2cf;color:#8a6516}.detail-status.realized{background:#dff5ec;color:#187653}.detail-status.rescheduled{background:#f0e7fb;color:#714b9e}.detail-status.cancelled{background:#fee9eb;color:#ac2937}.appointment-detail-time{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.appointment-detail-time>div,.detail-section,.detail-notes{padding:16px;border:1px solid var(--line);border-radius:12px}.appointment-detail-time strong,.appointment-detail-time b{display:block;margin-top:5px}.appointment-detail-time b{color:var(--primary-dark)}.appointment-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}.detail-section strong{display:block;margin:6px 0 4px}.detail-docs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.detail-flag{padding:6px 9px;border-radius:999px;background:#eef2f4;color:#647682;font-size:11px;font-weight:700}.detail-flag.active{background:#def5ef;color:#12755c}.detail-notes{margin-top:12px}.appointment-status-editor{display:grid;justify-content:end;gap:6px;margin-top:18px}.appointment-status-editor label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.status-select{width:220px;min-height:38px;font-size:13px;font-weight:800;border-width:1px;background:#fff}.appointment-detail-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:10px}.access-card small{max-width:720px;line-height:1.4}.conflict-summary{display:none!important}@media(max-width:720px){.appointment-detail-time,.appointment-detail-grid{grid-template-columns:1fr}.appointment-detail-hero{align-items:flex-start;flex-wrap:wrap}.detail-status{margin-left:0}.appointment-status-editor{justify-content:stretch}.status-select{width:100%}.appointment-detail{padding:0 14px 16px}}
 .appointment-status-controls{display:flex;align-items:center;gap:8px}.appointment-reschedule-history{margin-top:14px;padding:15px;border:1px solid #dce6eb;border-radius:13px;background:#fbfdfe}.reschedule-history-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.reschedule-history-title>span{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}.reschedule-history-title>strong{padding:4px 7px;border-radius:999px;background:#eef3f6;color:#496170;font-size:10px}.appointment-reschedule-history article{padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff}.appointment-reschedule-history article+article{margin-top:8px}.appointment-reschedule-history p{margin:8px 0 2px;font-size:12px;color:#405462}.appointment-reschedule-history small{color:var(--muted);font-size:10px}.reschedule-compare{display:grid;gap:7px;margin:0 0 15px;padding:12px;border:1px solid var(--line);border-radius:11px;background:#f8fbfc}.reschedule-line{display:grid;grid-template-columns:36px 24px 1fr;align-items:center;gap:5px;font-size:12px}.reschedule-line>span{font-weight:850;color:#293f4c}.reschedule-line>b{font-size:19px;line-height:1;text-align:center}.reschedule-line.from>b{color:#d84b4b}.reschedule-line.to>b{color:#259467}.reschedule-line strong{font-size:12px}@media(max-width:720px){.appointment-status-controls{align-items:stretch;flex-direction:column}}
 .settings-fixed{width:100%;margin:0 0 6px;text-align:left}.system-dialog-panel{white-space:pre-line}.system-dialog-actions{padding:0 20px 20px}.workflow-cancel-reason{margin-top:7px;font-size:12px;color:#7f4b20}.workflow-cancel-reason strong{font-size:12px}
 
@@ -143,7 +142,7 @@ body{font-size:14px;line-height:1.45;background:linear-gradient(180deg,#f3f7fa 0
 .primary-btn{box-shadow:0 4px 12px rgba(24,167,160,.2)}.primary-btn:hover{box-shadow:0 6px 16px rgba(18,133,127,.25)}
 .secondary-btn:hover,.tiny-btn:hover,.link-btn:hover{border-color:#b8d2dc;background:#f7fbfc;color:#0f706d}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(45,193,185,.38);outline-offset:2px}
-.topbar{min-height:48px}.topbar h1{letter-spacing:-.02em}.agenda-report-row{flex-wrap:wrap}.toolbar{padding:4px 0}
+.topbar{min-height:48px}.topbar h1{letter-spacing:-.02em}.toolbar{padding:4px 0}
 .agenda-card,.content-card{border-color:#dce5eb;box-shadow:0 10px 28px rgba(18,55,79,.08)}
 .content-card{overflow:hidden}.section-head{padding-bottom:2px}.section-head h2,.content-card h2{letter-spacing:-.01em}
 .table th{font-size:12px;letter-spacing:.035em;background:#f7fafb;position:sticky;top:0;z-index:1}.table td{font-size:14px}.table tbody tr:hover{background:#f8fbfc}
@@ -177,7 +176,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .appointment-status-editor{margin:0;justify-content:stretch}.appointment-status-controls .secondary-btn{min-height:42px}.appointment-detail-actions{margin:0;flex-wrap:wrap}
 @media(max-width:980px){.detail-edit-grid{grid-template-columns:1fr 1fr}.detail-finance-row{grid-template-columns:1fr 1fr}.detail-finance-row .tiny-btn{grid-column:1/-1}.detail-hero-meta{margin-left:0;text-align:left;border-left:0;padding-left:0}}
 @media(max-width:720px){.toolbar{position:static}.date-wrap,.filters{align-items:stretch}.filters #newAppointmentBtn,.filters #agendaNotifications{order:0}.agenda-owner-select-card{min-height:58px}.detail-modern-hero,.detail-appointment-line{align-items:flex-start;flex-direction:column}.detail-edit-grid,.detail-finance-row{grid-template-columns:1fr}.appointment-detail-toolbar{position:static;margin:16px 0 0;padding:0;border-top:0;background:transparent}.appointment-detail-actions{width:100%}.appointment-detail-actions button{flex:1}.detail-status{position:absolute;right:16px;top:16px}}
-@media(max-width:620px){.main{padding:12px}.topbar{display:grid;gap:12px}.top-actions,.date-wrap,.filters{width:100%;flex-wrap:wrap}.top-actions>*{flex:1}.agenda-report-row{width:100%}.agenda-report-row>*{flex:1}.date-copy{order:-1;width:100%}.filters select{flex:1}.modal{padding:8px}.modal-panel{max-height:96vh;border-radius:14px}.modal-head{padding:17px 16px 0}.appointment-detail,.appointment-main,.patient-side{padding-left:14px;padding-right:14px}.content-card{padding:14px}.section-head{align-items:flex-start;flex-direction:column}.section-head>button{width:100%}.workflow-actions{display:grid;grid-template-columns:1fr 1fr}.table{min-width:680px}}
+@media(max-width:620px){.main{padding:12px}.topbar{display:grid;gap:12px}.top-actions,.date-wrap,.filters{width:100%;flex-wrap:wrap}.top-actions>*{flex:1}.date-copy{order:-1;width:100%}.filters select{flex:1}.modal{padding:8px}.modal-panel{max-height:96vh;border-radius:14px}.modal-head{padding:17px 16px 0}.appointment-detail,.appointment-main,.patient-side{padding-left:14px;padding-right:14px}.content-card{padding:14px}.section-head{align-items:flex-start;flex-direction:column}.section-head>button{width:100%}.workflow-actions{display:grid;grid-template-columns:1fr 1fr}.table{min-width:680px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
 
 .password-control{position:relative;display:block}.password-control input{padding-right:48px}.password-control button{position:absolute;right:4px;top:4px;width:36px;height:34px;display:grid;place-items:center;background:transparent;border:0;border-radius:7px;color:#52717c}.password-control button:hover{background:#e8f8f7}.access-error{padding:12px;border:1px solid #edb4b4;border-radius:9px;background:#fff1f1;color:#a32b2b;font-size:13px}.agenda-choices{max-height:260px;overflow:auto;margin-top:12px}.agenda-choices label{padding:12px;border:1px solid #dce5eb;border-radius:10px;cursor:pointer;gap:12px;background:#fff}.agenda-choices label:has(input:checked){background:#e8f8f7;border-color:#18a7a0}.agenda-choices label:focus-within{outline:2px solid #18a7a0;outline-offset:1px}.agenda-choices input[type=checkbox]{appearance:auto;width:18px;height:18px;min-height:18px;margin:0;flex:0 0 18px;accent-color:#12857f}.agenda-choices strong,.agenda-choices small{display:block}.agenda-choices small{font-size:11px;color:#627784;margin-top:3px}
@@ -211,16 +210,9 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .doctor-history.denied{border-color:#e5a2a2;background:#fff5f5}
 .doctor-history .workflow-heading{justify-content:space-between;align-items:flex-start}
 .decision-reason{color:#8b3030;overflow-wrap:anywhere}
-.mobile-app-header,.mobile-profile-home,.mobile-calendar,.mobile-menu-shade{display:none}
+.mobile-calendar{display:none}
 @media(max-width:900px){
- .mobile-app-header{display:flex;position:sticky;top:0;z-index:20;align-items:center;gap:14px;padding:12px 16px;background:#12384b;color:white;min-height:60px}
- .mobile-app-header strong{font-size:18px;flex:1;min-width:0;line-height:1.3}
- .mobile-app-header button{background:transparent;color:inherit;border:0;font-size:25px;width:36px;height:36px;flex-shrink:0}
  .sidebar{display:none!important}
- .mobile-menu-open .sidebar{display:flex!important;position:fixed;inset:60px 0 0 auto;width:min(340px,90vw);height:calc(100dvh - 60px);overflow-y:auto;z-index:30;flex-direction:column;padding:20px}
- .mobile-menu-open .sidebar .nav{flex-direction:column;overflow:visible;flex-shrink:0}
- .mobile-menu-open .sidebar-footer{display:flex;flex-wrap:wrap;margin-top:auto;gap:12px}
- .mobile-menu-open .mobile-menu-shade{display:block;position:fixed;inset:60px 0 0;background:#0006;border:0;width:100%;height:100%;z-index:29}
  .main{padding:12px;min-width:0}
  .agenda-card,.floating-calendar-days{display:none!important}
  .mobile-calendar{display:block;background:white;margin:12px -12px 0;padding:16px 12px;scroll-margin-top:64px}
@@ -233,7 +225,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .toolbar .filters .segmented{margin-left:auto}
  .toolbar .filters #newAppointmentBtn{flex:1;white-space:normal}
  .toolbar .filters #agendaNotifications{flex:none}
- .topbar{margin-bottom:8px}.agenda-report-row{margin:0}
+ .topbar{margin-bottom:8px}
  .mobile-month-nav,.mobile-year-nav{display:flex;align-items:center;justify-content:space-between;max-width:340px;margin:0 auto 10px;gap:12px;color:#184b65}
  .mobile-month-nav strong{text-transform:capitalize;font-size:24px;font-weight:600}.mobile-year-nav strong{font-size:22px;font-weight:500}
  .mobile-month-nav button,.mobile-year-nav button{width:38px;height:38px;border:1px solid #a8bcc7;border-radius:50%;background:white;color:#426377;font-size:30px;line-height:1;padding:0}
@@ -255,12 +247,6 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .mobile-appointment-content .appointment-insurance{font-size:12px!important;color:#647782}
  .mobile-appointment-content .appointment-status-badge{position:static;align-self:flex-end;font-size:10px!important;margin-top:3px!important}
  .mobile-block{width:100%;white-space:normal;text-align:left;margin-top:10px}
- .mobile-home .mobile-profile-home{display:flex;flex-direction:column;align-items:center;text-align:center;background:#12384b;color:white;margin:-12px -12px 0;padding:20px 16px 0}
- .mobile-profile-home img{width:84px;height:84px;border-radius:50%;object-fit:contain;background:white}
- .mobile-profile-home h1{font-size:20px;margin:16px 0 6px;overflow-wrap:anywhere}.mobile-profile-home p{margin:0 0 20px;color:#c1d7df}
- .mobile-home-shortcuts{display:flex;background:white;width:calc(100% + 32px);border-bottom:1px solid #dce5eb}
- .mobile-home-shortcuts button{flex:1;padding:16px 8px;background:white;border:0;color:#254e63;font-size:15px}
- .mobile-home .content-card{box-shadow:none;border:0;border-radius:0;padding:16px 0}
  .workflow-card{flex-direction:column;gap:12px}.workflow-card-main,.workflow-changes{min-width:0;width:100%}.workflow-actions{width:100%}.workflow-actions button{flex:1}
  .workflow-heading{flex-wrap:wrap}.workflow-change{overflow-wrap:anywhere}.workflow-status{white-space:normal}
  .notification-panel{position:fixed;top:65px;right:12px;left:12px;width:auto;max-width:none;max-height:calc(100dvh - 85px)}
@@ -280,8 +266,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .agenda-print-dialog{position:fixed;inset:0;margin:auto;max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #dce6eb;border-radius:12px;padding:24px;width:min(380px,90vw)}
 .agenda-print-dialog::backdrop{background:#102f4470}.agenda-print-dialog label{display:grid;gap:6px;margin:14px 0}.print-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 .toolbar #newBlockBtn{order:6;white-space:nowrap;font-size:13px;padding:8px 10px;min-height:40px}
-.main .topbar{min-height:0;align-items:center;margin-bottom:8px}.agenda-report-row{align-items:center}.report-heading{display:flex;align-items:center}
-.topbar:not(:has(.dynamic-page-heading)):not(:has(#agendaReportBtn:not(.hidden))):not(:has(#newBlockBtn:not(.hidden))){display:none}
+.main .topbar{min-height:0;align-items:center;margin-bottom:8px}.agenda-page-heading{display:flex;align-items:center}
 .toolbar{align-items:center;flex-wrap:wrap;gap:12px}
 .toolbar .filters{flex:0 1 auto;width:auto;gap:8px;align-items:center;justify-content:flex-end}
 .toolbar #statusFilter{order:6;flex:0 0 148px;width:148px;min-width:0;max-width:148px;padding:8px 26px 8px 10px;font-size:13px;height:40px;min-height:40px}
@@ -307,18 +292,9 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .mobile-appointment.has-conflict .mobile-time{background:#fff0f1;border-color:#d43948;color:#a51f2d}
 .editable-flags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .editable-flags .detail-check{width:auto;min-width:0;padding:9px 5px;font-size:12px;justify-content:center;gap:5px;white-space:nowrap}
-.mobile-logout{color:white;display:grid;place-items:center;min-width:36px;min-height:36px}
 @media(max-width:900px){
- .toolbar .segmented,.toolbar .date-wrap,.mobile-menu-shade{display:none!important}
- .mobile-menu-open .sidebar{display:none!important}
- .mobile-home-actions{display:flex;gap:12px;justify-content:center;width:100%;background:#fff}
- .mobile-home-actions button{border:0;background:white;color:#254e63;padding:12px}
- .mobile-profile-home #mobileAccountRole{margin:16px 0 0}
- .mobile-profile-home #mobileAccountName{margin:5px 0 8px}
- .mobile-profile-home #mobileAccountSpecialty{margin:0 0 18px}
- .mobile-home-shortcuts button{min-width:0;font-size:14px}
- .main .topbar,.report-heading,.agenda-report-row{width:100%}
- #agendaReportBtn{width:100%;min-height:58px;border-radius:12px}
+ .toolbar .segmented,.toolbar .date-wrap{display:none!important}
+ .main .topbar,.agenda-page-heading{width:100%}
  .mobile-appointment{grid-template-columns:54px minmax(0,1fr) 10px;gap:10px;padding:14px 0;align-items:start}
  .mobile-time{padding:12px 2px;font-size:14px;margin-top:3px}
  .mobile-time strong{font-size:15px}
@@ -338,12 +314,8 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .detail-modern-hero .detail-hero-meta{width:100%;min-width:0}
 }
 @media(max-width:900px){
- .mobile-home #mobileBack{display:none}
- .mobile-home .mobile-app-header strong{font-size:17px}
- .mobile-home-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0}
- .mobile-home-shortcuts button{font-size:11px;padding:14px 2px;white-space:normal;line-height:1.4}
  .main .topbar{margin-bottom:4px;gap:0;min-height:0}
- .main .report-heading,.main .agenda-report-row{margin:0;padding:0;min-height:0}
+ .main .agenda-page-heading{margin:0;padding:0;min-height:0}
  #agendaView .toolbar{margin-top:0;padding-top:0}
  .mobile-appointment-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.85fr);gap:5px 8px;align-items:start}
  .mobile-appointment-content>strong{grid-column:1 / -1;grid-row:1}
@@ -355,3 +327,29 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .mobile-appointment-content .appointment-status-badge{grid-column:2;grid-row:4;justify-self:end;align-self:start;margin:0!important;max-width:100%;width:auto;text-align:right}
 }
 .surgery-documents{margin:20px 0;padding:18px;border:1px solid #dce8ec;border-radius:16px;min-width:0}.surgery-documents h4{margin:0 0 14px}.document-upload{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.document-upload label{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}.document-upload input{max-width:100%}.surgery-documents progress{width:100%;margin-top:12px}.surgery-document{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e6eef1}.surgery-document>div{min-width:0}.surgery-document strong{display:block;overflow-wrap:anywhere}.surgery-document small{display:block;color:#687787;margin-top:4px}.surgery-document nav{display:flex;gap:14px;flex-shrink:0}.surgery-document a{color:#078c91;font-weight:600}.surgery-documents [data-message]{font-size:14px}.surgery-documents h5{margin:18px 0 4px}@media(max-width:600px){.document-upload{display:grid;grid-template-columns:1fr}.surgery-document{align-items:flex-start;flex-direction:column}.surgery-documents{padding:12px}}
+
+/* Global modules and operational areas are separate navigation levels. */
+.rn-agenda .app-shell{display:block;min-height:calc(100vh - var(--global-header-height,82px))}
+.rn-agenda .agenda-subnav{position:sticky;top:var(--global-header-height,82px);z-index:17;display:flex!important;flex-direction:row;align-items:center;flex-wrap:wrap;width:100%;height:auto;min-height:64px;gap:14px;padding:10px 24px;background:#fff;color:#254e63;border-bottom:1px solid var(--line);box-shadow:none}
+.rn-agenda .agenda-subnav .agenda-owner{flex:0 1 220px;min-width:160px;padding:0}
+.rn-agenda .agenda-subnav .agenda-owner label{color:#526878;font-size:11px}
+.rn-agenda .agenda-subnav .agenda-owner select{background:#f6f9fb;color:#254e63;border:1px solid #d7e3ea;padding:7px 10px;margin-top:4px}
+.rn-agenda .agenda-subnav .nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;padding:0;margin:0}
+.rn-agenda .agenda-subnav .nav-item{color:#40566a;font-size:13px;border-radius:8px;min-height:40px;padding:9px 11px;border:0;background:transparent;white-space:nowrap}
+.rn-agenda .agenda-subnav .nav-item.active{color:#107b77;background:#e8f8f7;box-shadow:inset 0 -2px #18a7a0}
+.rn-agenda .agenda-subnav .nav-item:hover{background:#f0f5f8}
+.rn-agenda .agenda-subnav .nav-item:focus-visible{outline:2px solid #18a7a0;outline-offset:2px}
+.rn-agenda .main{min-width:0;margin:0;padding:20px 24px}
+.rn-agenda .topbar:not(:has(.dynamic-page-heading)){display:none}
+.settings-module .agenda-subnav{display:none!important}
+.settings-module .settings-grid{grid-template-columns:1fr}
+.settings-module .topbar{display:flex;margin-bottom:20px}
+@media(max-width:900px){
+ .rn-agenda .agenda-subnav{position:static;padding:10px 12px;gap:10px;min-height:0}
+ .rn-agenda .agenda-subnav .agenda-owner{flex-basis:100%}
+ .rn-agenda .agenda-subnav .nav{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px}
+ .rn-agenda .agenda-subnav .nav-item{flex-shrink:0}
+ .rn-agenda .main{padding:12px}
+ .rn-agenda .toolbar{margin-top:0}
+}
+@media print{.hub-header,.rn-agenda .agenda-subnav{display:none!important}}

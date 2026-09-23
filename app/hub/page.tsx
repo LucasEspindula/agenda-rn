@@ -13,7 +13,7 @@ export default async function HubPage() {
     <SiteHeader account={session.account}/>
     <main className="hub-content">
       <h1>Bem-vindo ao RN Integra</h1>
-      <p>Selecione Agendamento ou Faturamento no menu superior.</p>
+      <p>Selecione Agendamento, Faturamento ou Médicos no menu superior.</p>
     </main>
   </div>;
 }

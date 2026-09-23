@@ -37,3 +37,5 @@
 @media screen and (max-width:700px){.billing-report-document{overflow-x:auto}}
 .billing-filter-bar .billing-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end}.billing-filter-bar .billing-filters label{flex:1 1 150px;min-width:120px}.billing-filter-bar .billing-filters input,.billing-filter-bar .billing-filters select{width:100%;min-width:0;box-sizing:border-box}
 @media(max-width:640px){.billing-filter-bar .billing-filters label{flex-basis:100%;min-width:0}.billing-filter-action{align-items:flex-start;padding-top:12px}}
+
+.doctor-row-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}.doctor-grants{margin:16px 0;padding:12px;border:1px solid #dce5ec;border-radius:10px}.doctor-grants legend{font-weight:650}.billing-directory-link{font-size:13px;color:#64748b}.billing-directory-link a{color:#107b77;text-decoration:underline}
