@@ -30,9 +30,9 @@ export const legacyBody = `<div class="app-shell">
  <div class="settings-grid">
   <div class="content-card hospital-panel"><div class="section-head"><div><h2>Hospitais</h2><p>Lista global disponível para todos os profissionais.</p></div><button id="newHospitalBtn" class="secondary-btn">+ Adicionar hospital</button></div><div id="hospitalsList" class="stack"></div><div class="scroll-help" aria-hidden="true">Role para ver mais hospitais</div></div>
 
-  <div class="content-card wide">
+  <div class="content-card wide rules-panel">
     <div class="section-head">
-      <div><h2>Regras de agendamento</h2><p>Regras configuráveis por cirurgião. Nada fica fixo no código.</p></div>
+      <div><h2>Regras de agendamento</h2><p>Preferências, restrições e bloqueios desta agenda.</p></div>
       <button id="newRuleBtn" class="secondary-btn">+ Nova regra</button>
     </div>
     <div class="form-grid two" style="margin-bottom:8px">
@@ -43,9 +43,9 @@ export const legacyBody = `<div class="app-shell">
         <select id="rulesStatusFilter"><option value="active">Ativas</option><option value="all">Todas</option></select>
       </label>
     </div>
-    <div id="rulesList" class="stack"></div>
+    <div id="rulesList" class="stack"></div><div class="section-head"><h2>Bloqueios pontuais</h2><button id="configureBlockBtn" class="secondary-btn">+ Novo bloqueio</button></div><div id="configuredBlocks" class="stack"></div>
   </div>
- <div class="content-card wide manager-only">
+ <div class="content-card wide manager-only access-panel">
   <div class="section-head"><div><h2>Usuários e permissões</h2><p>Acessos administrativos. Os logins médicos são gerenciados em Médicos.</p></div><button id="newAccessBtn" class="primary-btn">+ Conceder acesso</button></div>
   <div id="accessList" class="stack"></div>
  </div>
@@ -66,7 +66,7 @@ export const legacyBody = `<div class="app-shell">
      <div class="form-grid two">
       <label>Paciente<select id="appointmentPatient"></select></label>
       <label id="appointmentInsuranceLabel">Convênio / plano<input id="appointmentInsurance" list="appointmentInsuranceOptions" placeholder="Selecione ou informe o convênio"><datalist id="appointmentInsuranceOptions"></datalist></label>
-      <label>Forma de cobrança<select id="appointmentBillingMethod" required><option value="">Selecione</option><option value="PARTICULAR">Particular</option><option value="CONVENIO">Convênio</option></select></label>
+      <label>Forma de cobrança<select id="appointmentBillingMethod" required><option value="">Selecione</option><option value="PARTICULAR">Particular</option><option value="CONVENIO">Convênio</option></select></label><section id="newAppointmentFinance" class="native-finance"></section>
       <label>Procedimento<input id="appointmentProcedure" required placeholder="Ex.: Artroscopia de joelho"></label>
       <label>Hospital<select id="appointmentHospital" required></select></label>
       <label>Validade da guia<input id="guideExpiry" type="date"></label>
@@ -107,7 +107,7 @@ export const legacyBody = `<div class="app-shell">
 <div id="patientDetailModal" class="modal hidden"><div class="modal-panel medium"><div class="modal-head"><div><h3 id="patientDetailTitle">Paciente</h3><p>Informações e histórico completo.</p></div><button class="modal-close" data-close>×</button></div><div class="patient-detail-grid"><div class="detail-card"><h4>Dados cadastrais</h4><div class="detail-row"><span>Telefone</span><strong id="detailPhone">—</strong></div><div class="detail-row"><span>E-mail</span><strong id="detailEmail">—</strong></div><div class="detail-row"><span>Convênio</span><strong id="detailInsurance">—</strong></div><div class="detail-row"><span>Carteirinha</span><strong id="detailCard">—</strong></div><div class="modal-actions"><button id="editPatientFromDetail" class="secondary-btn" type="button">Editar paciente</button></div></div><div class="detail-card"><h4>Histórico</h4><div id="detailHistory" class="history-list" style="max-height:430px"></div></div></div></div></div>
 
 
-<div id="hospitalModal" class="modal hidden"><div class="modal-panel small"><div class="modal-head"><div><h3>Novo hospital</h3><p>O hospital ficará disponível para todos.</p></div><button class="modal-close" data-close>×</button></div><form id="hospitalForm" style="padding:0 20px 20px"><div class="form-grid"><label>Nome do hospital<input id="hospitalName" required></label></div><div class="modal-actions"><div class="spacer"></div><button type="button" class="secondary-btn" data-close>Cancelar</button><button type="submit" class="primary-btn">Adicionar</button></div></form></div></div>
+<div id="hospitalModal" class="modal hidden"><div class="modal-panel small"><div class="modal-head"><div><h3 id="hospitalModalTitle">Novo hospital</h3><p>O hospital ficará disponível para todos.</p></div><button class="modal-close" data-close>×</button></div><form id="hospitalForm" style="padding:0 20px 20px"><div class="form-grid"><input id="hospitalId" type="hidden"><label>Nome do hospital<input id="hospitalName" required></label></div><div class="modal-actions"><div class="spacer"></div><button type="button" class="secondary-btn" data-close>Cancelar</button><button type="submit" class="primary-btn">Adicionar</button></div></form></div></div>
 
 
 <div id="blockModal" class="modal hidden">
@@ -166,3 +166,4 @@ export const legacyBody = `<div class="app-shell">
 <div id="systemDialog" class="modal hidden"><div class="modal-panel small system-dialog-panel"><div class="modal-head"><div><h3 id="systemDialogTitle">Aviso</h3><p id="systemDialogMessage"></p></div><button class="modal-close" data-dialog-cancel>×</button></div><div class="modal-actions system-dialog-actions"><button id="systemDialogCancel" type="button" class="secondary-btn" data-dialog-cancel>Cancelar</button><button id="systemDialogConfirm" type="button" class="primary-btn">Continuar</button></div></div></div>
 
 <div id="toast" class="toast hidden"></div>`;
+

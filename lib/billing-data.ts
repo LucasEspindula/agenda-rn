@@ -18,7 +18,7 @@ export async function loadBillingData(){
   return {data,error:null};
  }
  const names=['billing_entities','billing_doctor_entities','billing_records','invoices','invoice_billing_records','doctors','attendances','company_expenses','company_associates'] as const;
- const [stateResult,...results]=await Promise.all([db.from('app_state').select('payload').eq('id',1).maybeSingle(),...names.map(t=>allRows(t)),allRows('users','id,name')]);
+ const [stateResult,...results]=await Promise.all([db.from('app_state').select('payload').eq('id',1).maybeSingle(),...names.map(t=>allRows(t)),allRows('users','id,name,role')]);
  if(stateResult.error||results.some(r=>r.error))throw new Error('Não foi possível carregar o faturamento.');
  const state=stateResult.data?.payload||{};
  const records=results[2].data as Financial[],invoices=results[3].data as Invoice[],items=results[4].data as BillingData['items'];
@@ -31,3 +31,4 @@ export async function loadBillingData(){
  const data:BillingData={rows,entities:results[0].data,links:results[1].data,doctors:results[5].data,invoices,items,expenses:results[7].data,associates:results[8].data,users:results[9].data,patients:patients.map(p=>({id:p.id,name:p.name,created_by:p.created_by,created_at:p.created_at})),payers:[...new Set([...patients.map(p=>p.insurance||''),...rows.map(r=>r.insurance),...invoices.map(i=>i.payer)].map(payerKey).filter(Boolean))].sort()};
  return {data,state};
 }
+

@@ -13,3 +13,13 @@ test('secretary cannot enumerate financial records; doctor cannot read administr
  assert.equal((await api('secretary').GET(new Request('https://example.test/api/billing'))).status,403);
  assert.equal((await api('doctor').GET(new Request('https://example.test/api/billing?appointment_id=a'))).status,403);
 });
+test('scoped scheduled projection is read-only and excludes unauthorized appointments and entities',async()=>{
+ const session={account:{id:2,role:'secretary'},agendaIds:['d']};
+ const source={rows:[],doctors:[{id:'d'},{id:'other'}],entities:[{id:'e'},{id:'hidden'}],links:[{doctor_id:'d',billing_entity_id:'e'},{doctor_id:'other',billing_entity_id:'hidden'}],invoices:[],items:[],payers:[],patients:[patient],users:[],expenses:[]};
+ const state={patients:[patient],appointments:[{id:'scheduled',patientId:'p',doctorId:'d',date:'2026-09-24',status:'scheduled',procedure:'Consulta',insurance:'CABERGS',forma_cobranca:'PARTICULAR'},{id:'hidden',doctorId:'other'}]};
+ const route=loadTs('app/api/billing/route.ts',{'@/app/authz':{getSession:async()=>session},'@/lib/billing-data':{loadBillingData:async()=>({data:structuredClone(source),state})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>{throw Error('GET must not write')}}});
+ const response=await route.GET(new Request('https://example.test/api/billing?appointment_id=scheduled'));assert.equal(response.status,200);const result=await response.json();assert.equal(result.rows.length,1);assert.equal(result.rows[0].record,null);assert.equal(result.rows[0].status_atendimento,'scheduled');assert.equal(result.rows[0].insurance,'CABERGS');assert.deepEqual(result.entities.map(e=>e.id),['e']);assert.deepEqual(result.doctors.map(d=>d.id),['d']);assert.deepEqual(source.rows,[]);
+ assert.equal((await route.GET(new Request('https://example.test/api/billing?appointment_id=hidden'))).status,404);
+ assert.equal((await route.GET(new Request('https://example.test/api/billing?appointment_id=missing'))).status,404);
+ assert.deepEqual((await (await route.GET(new Request('https://example.test/api/billing?summary=1'))).json()).rows,[]);
+});

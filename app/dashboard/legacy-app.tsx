@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {MEDICAL_SPECIALTIES,isAnesthesiologist} from "@/lib/medical-specialties";
+import {formatBRL,parseBRL} from '@/lib/money';
+import {directPayment,allowedEntities} from '@/lib/billing-finance';
+import {individualReceived} from '@/lib/billing-reports';
 import { legacyBody } from "./legacy-body";
 
 type Session = { user: { email: string; name: string; role: string; agendaIds: string[] } };
 
-export function LegacyApp({initialView="agenda"}:{initialView?:"agenda"|"settings"}) {
+export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:{initialView?:"agenda"|"settings";adminSection?:"access"|"hospitals"|"rules";doctorId?:string}) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -24,18 +27,20 @@ export function LegacyApp({initialView="agenda"}:{initialView?:"agenda"|"setting
       (window as Window & { AgendaInitialView?: string }).AgendaInitialView = initialView;
       if (cancelled) return;
       (window as Window & {MedicalDirectory?:unknown}).MedicalDirectory={specialties:MEDICAL_SPECIALTIES,isAnesthesiologist};
+      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{directPayment,allowedEntities,individualReceived},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=navigation-20260922";
+        script.src = "/legacy-app.js?v=ux-20260924";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "Falha ao carregar."));
     return () => { cancelled = true; document.querySelector('[data-agenda-runtime="true"]')?.remove(); };
-  }, [initialView]);
+  }, [initialView,adminSection,doctorId]);
   if (error) return <main className="grid min-h-screen place-items-center bg-slate-50 p-6"><div className="rounded-2xl bg-white p-8 shadow-lg"><h1 className="text-xl font-semibold">Agenda indisponível</h1><p className="mt-2 text-slate-600">{error}</p></div></main>;
   if (!ready) return <main className="grid min-h-screen place-items-center bg-slate-50"><p className="text-slate-600">Carregando RN Integra…</p></main>;
-  return <div dangerouslySetInnerHTML={{ __html: legacyBody }} />;
+  return <><link rel="stylesheet" href="/legacy.css"/><div className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} /></>;
 }
+
 

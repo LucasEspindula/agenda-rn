@@ -3,7 +3,7 @@ import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {secureMutation,readJson,HttpError} from '@/lib/security/http';
 import {canReadAppointment,type Row} from '@/lib/security/state';
 import {loadBillingData} from '@/lib/billing-data';
-import {doctorBillingProjection} from '@/lib/billing-projection';
+import {doctorBillingProjection,projectFinancialRow} from '@/lib/billing-projection';
 import {canOpenBilling,canOpenInvoices} from '@/lib/doctor-services';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
@@ -18,6 +18,12 @@ export async function GET(request:Request){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
    if(appointmentId&&!allowed.has(appointmentId))return Response.json({error:'Atendimento sem acesso.'},{status:404});
    data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id));
+   // A scoped read may project an authorized scheduled appointment without writing finance.
+   if(appointmentId&&!data.rows.length){
+    const a=(state.appointments||[]).find((a:Row)=>a.id===appointmentId);
+    const p=(state.patients||[]).find((p:Row)=>p.id===a.patientId);
+    data.rows=[projectFinancialRow({id:a.id,appointment_id:a.id,patient_id:a.patientId||null,origin:'AGENDA',doctor_id:a.doctorId,anesthetist_id:a.anesthetistId,date:a.date,procedure:a.procedure,insurance:a.insurance??p?.insurance??'',status:a.status,billing_method:a.forma_cobranca||null},null,null,null,p?.name||'Paciente não informado')];
+   }
   }
   if(summary)return Response.json({rows:data.rows.map(r=>({appointment_id:r.appointment_id,invoice_number:r.invoice?.invoice_number||r.record?.invoice_number||null}))},{headers:{'Cache-Control':'private, no-store'}});
   if(session.account.role==='secretary'){
@@ -40,3 +46,4 @@ export const POST=secureMutation(async request=>{
  if(error){if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
  return Response.json({id});
 });
+

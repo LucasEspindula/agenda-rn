@@ -10,5 +10,6 @@ export default async function Dashboard() {
   const session = await getSession();
   if (!session?.account) redirect("/");
   if(!canUseAgenda(session))redirect(doctorHome(session));
-  return <div className="rn-hub rn-agenda"><link rel="stylesheet" href="/legacy.css" /><SiteHeader account={session.account} services={session.services} active="agenda"/><LegacyApp /></div>;
+  return <div className="rn-hub rn-agenda"><SiteHeader account={session.account} services={session.services} active="agenda"/><LegacyApp /></div>;
 }
+

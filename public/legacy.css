@@ -353,3 +353,11 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .rn-agenda .toolbar{margin-top:0}
 }
 @media print{.hub-header,.rn-agenda .agenda-subnav{display:none!important}}
+
+/* Administrative sections reuse the same editors in the central directory. */
+.admin-access :is(.hospital-panel,.rules-panel),.admin-hospitals :is(.rules-panel,.access-panel),.admin-rules :is(.hospital-panel,.access-panel){display:none!important}.admin-rules .rules-panel{grid-column:1/-1}.hospital-actions{display:flex;gap:12px}#configuredBlocks{margin-top:12px}.admin-module .main{padding-top:16px}.admin-module .billing-subnav{position:relative;z-index:10}
+.modal-backdrop{z-index:80}.modal{z-index:81}.modal:has(#appDialog){z-index:90}#appointmentModal{padding:16px}#appointmentModal .modal-panel{width:min(1040px,100%);max-height:calc(100dvh - 32px);overflow:hidden;display:flex;flex-direction:column}#appointmentModal .modal-head{flex-shrink:0;padding:16px 20px;border-bottom:1px solid #dce6eb}#appointmentForm{overflow:auto;min-height:0;overscroll-behavior:contain;scroll-padding-bottom:88px}#appointmentModal .appointment-detail-toolbar{position:sticky;top:auto;bottom:0;z-index:5;margin:16px -24px 0;padding:12px 24px;background:#fff;border:0;border-top:1px solid #dce6eb;border-radius:0;box-shadow:none}#appointmentModal .modal-actions{position:sticky;bottom:0;background:#fff;z-index:4}.native-finance{grid-column:1/-1;border:1px solid #dce6eb;border-radius:10px;padding:14px;margin:10px 0;background:#f8fcfc}.native-finance h4{margin:0 0 10px;font-size:14px}.native-finance p{margin:6px 0;font-size:12px}.native-finance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.native-finance-grid label{min-width:0}.native-finance-grid :is(input,select){width:100%;min-width:0}.native-finance-error{color:#ab2035;font-weight:600}
+@media(max-width:800px){.native-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#appointmentModal .appointment-detail-toolbar{margin-inline:-14px;padding-inline:14px}#appointmentModal .appointment-detail-actions{display:flex;flex-wrap:wrap;width:100%;gap:6px}#appointmentModal .appointment-detail-actions button{flex:1;white-space:normal;padding-inline:8px}}
+
+
+#appointmentModal .appointment-detail{padding-bottom:0}

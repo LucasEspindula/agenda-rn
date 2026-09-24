@@ -8,5 +8,6 @@ export default async function SettingsPage(){
  const session=await getSession();
  if(!session)redirect('/');
  if(session.account.role!=='general_manager')redirect(doctorHome(session));
- return <div className="rn-hub rn-agenda settings-module"><link rel="stylesheet" href="/legacy.css"/><SiteHeader account={session.account} services={session.services} active="settings"/><LegacyApp initialView="settings"/></div>;
+ return <div className="rn-hub rn-agenda settings-module"><SiteHeader account={session.account} services={session.services} active="settings"/><LegacyApp initialView="settings"/></div>;
 }
+

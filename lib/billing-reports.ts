@@ -1,4 +1,4 @@
-import {isInsurancePending,matchesRow,rowEntityId} from './billing-row';
+import {isInsurancePending,matchesRow,matchesInvoice,rowEntityId} from './billing-row';
 import type {BillingData,BillingRow} from './billing-types';
 export function individualReceived(row:BillingRow):number|null {
  const value=row.invoice||((row.forma_cobranca||row.record?.billing_method)==='CONVENIO'&&row.record?.settlement_mode!=='DIRECT')?row.invoice_item?.received_amount:row.record?.received_amount;
@@ -8,18 +8,18 @@ export function summarize(rows:BillingRow[]) {
  const paid=rows.filter(r=>r.invoice?!!r.invoice.paid_at:r.record?.payment_status==='PAGO').length;
  return {total:rows.length,private:rows.filter(r=>(r.forma_cobranca||r.record?.billing_method)==='PARTICULAR').length,insurance:rows.filter(r=>(r.forma_cobranca||r.record?.billing_method)==='CONVENIO').length,paid,pending:rows.length-paid,received:rows.reduce((c,r)=>c+Math.round((individualReceived(r)??0)*100),0)/100,unidentified:rows.filter(r=>individualReceived(r)==null).length};
 }
-export type ReportScope={kind:'filtered'|'doctor'|'entity'|'invoices'|'pending';doctor:string;entity:string;start:string;end:string;insurance?:string;issued_at?:string};
+export type ReportScope={kind:'filtered'|'doctor'|'entity'|'invoices'|'pending';doctor:string;entity:string;start:string;end:string;insurance?:string;status?:string;issued_at?:string};
 export function buildReport(data:BillingData,scope:ReportScope){
  if((['doctor','entity'].includes(scope.kind)&&(!scope.start||!scope.end))||(scope.start&&scope.end&&scope.start>scope.end))throw new Error('Selecione um período válido para o relatório.');
  if(scope.kind==='doctor'&&!data.doctors.some(d=>d.id===scope.doctor))throw new Error('Selecione o médico para gerar o relatório.');
  if(scope.kind==='entity'&&!data.entities.some(e=>e.id===scope.entity))throw new Error('Selecione a empresa para gerar o relatório.');
- const rows=data.rows.filter(r=>(scope.kind==='filtered'||r.status_atendimento==='realized')&&matchesRow(r,{...scope,doctor:scope.kind==='entity'?'':scope.doctor})&&(scope.kind!=='pending'||isInsurancePending(r))).sort((a,b)=>a.date.localeCompare(b.date)||a.patient.localeCompare(b.patient));
- const invoices=data.invoices.filter(i=>(!scope.entity||i.billing_entity_id===scope.entity)&&(!scope.start||i.issue_date>=scope.start)&&(!scope.end||i.issue_date<=scope.end)&&(!scope.insurance||i.payer.trim().toUpperCase()===scope.insurance.trim().toUpperCase())&&(!scope.doctor||data.rows.some(r=>r.doctor_id===scope.doctor&&r.invoice?.id===i.id)));
+ const rows=data.rows.filter(r=>(scope.kind==='filtered'||r.status_atendimento==='realized')&&matchesRow(r,scope)&&(scope.kind!=='pending'||isInsurancePending(r))).sort((a,b)=>a.date.localeCompare(b.date)||a.patient.localeCompare(b.patient));
+ const invoices=data.invoices.filter(i=>matchesInvoice(i,data,scope));
  const groups=[...new Set(rows.map(r=>scope.kind==='doctor'?rowEntityId(r):r.doctor_id))].map(id=>{
   const items=rows.filter(r=>(scope.kind==='doctor'?rowEntityId(r):r.doctor_id)===id);
   return {id,rows:items,summary:summarize(items)};
  });
- return {rows,groups,invoices,summary:summarize(rows),cash:scope.kind==='entity'?companyCash(data,scope.entity,scope.start,scope.end):null};
+ return {rows,groups,invoices,summary:summarize(rows),cash:scope.kind==='entity'&&!scope.status&&!scope.doctor&&!scope.insurance?companyCash(data,scope.entity,scope.start,scope.end):null};
 }
 
 export function companyCash(data:BillingData,entity:string,start:string,end:string){
@@ -31,3 +31,4 @@ export function companyCash(data:BillingData,entity:string,start:string,end:stri
  const revenue=sum([...direct.map(r=>r.record!.received_amount),...invoices.map(i=>i.net_amount)]),paidExpenses=sum(expenses.map(e=>e.amount));
  return {revenue,paidExpenses,result:Math.round((revenue-paidExpenses)*100)/100,unknownInvoices:invoices.filter(i=>i.net_amount==null).length,invoiceCount:invoices.length,expenses};
 }
+
