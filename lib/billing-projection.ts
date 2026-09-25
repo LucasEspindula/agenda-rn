@@ -10,7 +10,7 @@ export function doctorBillingProjection(data:BillingData,principal:FinancialPrin
  const invoiceIds=new Set(visibleItems.map(i=>i.invoice_id));
  const invoices=data.invoices.filter(i=>invoiceIds.has(i.id)).map(i=>{
   const shared=data.items.some(item=>item.invoice_id===i.id&&!recordIds.has(item.billing_record_id));
-  return {...i,notes:null,total_amount:shared?null:i.total_amount,net_amount:shared?null:i.net_amount,shared,created_by:null,updated_by:null};
+  return {...i,recipient_tax_id:null,recipient_address:null,notes:null,total_amount:shared?null:i.total_amount,net_amount:shared?null:i.net_amount,shared,created_by:null,updated_by:null};
  });
  const entities=new Set(rows.map(r=>r.record?.billing_entity_id));
  return {rows:rows.map(r=>({...r,invoice:r.invoice?invoices.find(i=>i.id===r.invoice?.id)||null:null,record:r.record?{...r.record,notes:null,created_by:null,updated_by:null}:null,created_by:null,updated_by:null})),doctors:data.doctors.filter(d=>d.id===id),entities:data.entities.filter(e=>entities.has(e.id)),links:[],invoices,items:visibleItems,payers:[...new Set(rows.map(r=>payerKey(r.insurance)).filter(Boolean))],expenses:[],associates:[],patients:[],users:[],read_only:true,doctor_id:id||undefined,services:principal.services};

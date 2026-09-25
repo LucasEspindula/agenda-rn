@@ -18,6 +18,7 @@ export async function GET(request:Request){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
    if(appointmentId&&!allowed.has(appointmentId))return Response.json({error:'Atendimento sem acesso.'},{status:404});
    data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id));
+   data.requests=(data.requests||[]).filter(r=>data.rows.some(row=>row.attendance_id===r.attendance_id));
    // A scoped read may project an authorized scheduled appointment without writing finance.
    if(appointmentId&&!data.rows.length){
     const a=(state.appointments||[]).find((a:Row)=>a.id===appointmentId);
@@ -31,7 +32,8 @@ export async function GET(request:Request){
    data.links=data.links.filter(l=>doctors.has(l.doctor_id));data.links.forEach(l=>entityIds.add(l.billing_entity_id));
    data.entities=data.entities.filter(e=>entityIds.has(e.id));data.doctors=data.doctors.filter(d=>doctors.has(d.id));
    data.rows=data.rows.map(r=>({...r,invoice:r.invoice?{...r.invoice,total_amount:null,net_amount:null,notes:null}:null}));
-   data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=[];data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
+   data.requests=(data.requests||[]).map(r=>({...r,taker_tax_id:'',taker_address:null,notes:null}));
+   data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=(data.patients||[]).filter(p=>data.rows.some(r=>r.patient_id===p.id));data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
   }
   return Response.json(data,{headers:{'Cache-Control':'private, no-store'}});
  }catch{return Response.json({error:'Não foi possível carregar o faturamento.'},{status:503});}

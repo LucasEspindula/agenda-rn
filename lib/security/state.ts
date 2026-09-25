@@ -1,3 +1,4 @@
+import {validCPF,normalizeCPF} from '../cpf';
 import { HttpError } from './http';
 // Legacy agenda payload is heterogeneous; validateStateChange validates writes.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,6 +39,8 @@ export function validateState(s: State) {
     for (const row of s[key]) {
       if (!row || typeof row !== 'object' || Array.isArray(row) || !validId(row.id) || seen.has(row.id)) throw new HttpError(400, 'Identificador inválido ou duplicado.');
       seen.add(row.id);
+      if(key==='patients'&&row.cpf){if(typeof row.cpf!=='string'||!validCPF(row.cpf))throw new HttpError(400,'CPF inválido. Deixe vazio se não informado.');row.cpf=normalizeCPF(row.cpf);}
+      if(key==='patients'&&row.address!=null&&typeof row.address!=='string')throw new HttpError(400,'Endereço inválido.');
       for (const field of ['name','email','phone','insurance','cardNumber','crm','specialty','category','notes','procedure','invoiceNumber','reason','text','type','at','severity','start','end','date','time','cancelReason','suggestionReason','rescheduleReason']) if (row[field] !== undefined && row[field] !== null && typeof row[field] !== 'string') throw new HttpError(400, 'Texto inválido.');
       for (const field of ['doctorId','anesthetistId','patientId','professionalId','hospitalId','appointmentId']) if (row[field] && !validId(row[field])) throw new HttpError(400, 'Vínculo inválido.');
     }
@@ -61,7 +64,7 @@ export function visibleState(s: State, p: Principal): State {
   const patientIds = new Set(patients.map((a: Row) => a.id));
   const appointmentIds = new Set([...appointments,...cancelled].map((a: Row) => a.id));
   return { schemaVersion:s.schemaVersion, settings:s.settings, professionals:s.professionals || [], hospitals:s.hospitals || [],
-    patients, appointments:p.account.role==='doctor'?withoutLegacyFinance(appointments):appointments, cancelledAppointments:p.account.role==='doctor'?withoutLegacyFinance(cancelled):cancelled,
+    patients:p.account.role==='doctor'?patients.map((patient:Row)=>{const clinical={...patient};delete clinical.cpf;delete clinical.address;return clinical}):patients, appointments:p.account.role==='doctor'?withoutLegacyFinance(appointments):appointments, cancelledAppointments:p.account.role==='doctor'?withoutLegacyFinance(cancelled):cancelled,
     patientHistory:(s.patientHistory || []).filter((h: Row) => patientIds.has(h.patientId) && (!h.appointmentId || appointmentIds.has(h.appointmentId)) && (p.account.role!=='doctor'||!String(h.type||'').toLowerCase().includes('financeiro'))),
     schedulingRules:(s.schedulingRules || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)),
     scheduleBlocks:(s.scheduleBlocks || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)) };

@@ -9,6 +9,6 @@ export function expensePayer(data:BillingData,e:Expense){const link=data.links.f
 export const ROW_STATUSES=['Não configurado','Pendente','Pendente sem NF','Aguardando pagamento','Pago'];
 export const INVOICE_STATUSES=['Aguardando pagamento','Pago'];
 export const invoiceStatus=(i:Invoice)=>i.paid_at?'Pago':'Aguardando pagamento';
-export const rowStatus=(r:BillingRow)=>(r.invoice?!!r.invoice.paid_at:r.record?.payment_status==='PAGO')?'Pago':r.invoice?'Aguardando pagamento':r.record?.settlement_mode==='DIRECT'?'Pendente':r.record?'Pendente sem NF':'Não configurado';
+export const rowStatus=(r:BillingRow)=>(r.invoice&&r.invoice.recipient_type!=='PARTICULAR'?!!r.invoice.paid_at:r.record?.payment_status==='PAGO')?'Pago':r.invoice?'Aguardando pagamento':r.record?.settlement_mode==='DIRECT'?'Pendente':r.record?'Pendente sem NF':'Não configurado';
 export const matchesInvoice=(i:Invoice,data:BillingData,f:RowFilters)=>(!f.entity||i.billing_entity_id===f.entity)&&(!f.start||i.issue_date>=f.start)&&(!f.end||i.issue_date<=f.end)&&(!f.insurance||i.payer.trim().toUpperCase()===f.insurance.trim().toUpperCase())&&(!f.status||invoiceStatus(i)===f.status)&&(!f.doctor||data.rows.some(r=>[r.doctor_id,r.anesthetist_id].includes(f.doctor)&&r.invoice?.id===i.id));
 

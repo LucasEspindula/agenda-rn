@@ -5,6 +5,9 @@ import {MEDICAL_SPECIALTIES,isAnesthesiologist} from "@/lib/medical-specialties"
 import {formatBRL,parseBRL} from '@/lib/money';
 import {directPayment,allowedEntities} from '@/lib/billing-finance';
 import {individualReceived} from '@/lib/billing-reports';
+import {notifyFinancialChange} from '@/lib/financial-events';
+import {confirmFiscalPayment} from '@/components/confirm-fiscal-payment';
+import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
 import { legacyBody } from "./legacy-body";
 
 type Session = { user: { email: string; name: string; role: string; agendaIds: string[] } };
@@ -27,11 +30,11 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       (window as Window & { AgendaInitialView?: string }).AgendaInitialView = initialView;
       if (cancelled) return;
       (window as Window & {MedicalDirectory?:unknown}).MedicalDirectory={specialties:MEDICAL_SPECIALTIES,isAnesthesiologist};
-      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{directPayment,allowedEntities,individualReceived},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
+      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{directPayment,allowedEntities,individualReceived,confirmFiscalPayment,notifyFinancialChange},RNCPF:{formatCPF,normalizeCPF,validCPF},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=ux-20260924";
+        script.src = "/legacy-app.js?v=fiscal-20260924";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });

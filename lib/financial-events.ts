@@ -1,0 +1,1 @@
+export function notifyFinancialChange(){window.dispatchEvent(new Event('rn-finance-changed'));if(typeof BroadcastChannel!=='undefined'){const channel=new BroadcastChannel('rn-finance');channel.postMessage('changed');channel.close();}}
