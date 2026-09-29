@@ -34,7 +34,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=fiscal-20260924";
+        script.src = "/legacy-app.js?v=fiscal-payments-20260929";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });

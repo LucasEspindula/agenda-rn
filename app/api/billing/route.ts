@@ -31,9 +31,9 @@ export async function GET(request:Request){
    const entityIds=new Set(data.rows.map(r=>r.record?.billing_entity_id));const doctors=new Set(data.rows.map(r=>r.doctor_id));
    data.links=data.links.filter(l=>doctors.has(l.doctor_id));data.links.forEach(l=>entityIds.add(l.billing_entity_id));
    data.entities=data.entities.filter(e=>entityIds.has(e.id));data.doctors=data.doctors.filter(d=>doctors.has(d.id));
-   data.rows=data.rows.map(r=>({...r,invoice:r.invoice?{...r.invoice,total_amount:null,net_amount:null,notes:null}:null}));
+   data.rows=data.rows.map(r=>({...r,invoice:r.invoice?{...r.invoice,total_amount:null,net_amount:null,notes:null,recipient_tax_id:null,recipient_address:null}:null}));
    data.requests=(data.requests||[]).map(r=>({...r,taker_tax_id:'',taker_address:null,notes:null}));
-   data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=(data.patients||[]).filter(p=>data.rows.some(r=>r.patient_id===p.id));data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
+   data.payment_parts=(data.payment_parts||[]).filter(p=>!!p.billing_record_id&&data.rows.some(r=>r.record?.id===p.billing_record_id));data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=(data.patients||[]).filter(p=>data.rows.some(r=>r.patient_id===p.id));data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
   }
   return Response.json(data,{headers:{'Cache-Control':'private, no-store'}});
  }catch{return Response.json({error:'Não foi possível carregar o faturamento.'},{status:503});}
@@ -42,9 +42,9 @@ export const POST=secureMutation(async request=>{
  const session=await getSession();
  if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
  const {kind,data}=await readJson(request);
- if(!['entity','link','record','invoice','delete_entity','delete_link','attendance','expense'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ if(!['entity','link','record','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
  if(session.account.role!=='general_manager'&&kind!=='record') throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
- const {data:id,error}=await getSupabaseAdmin().rpc(kind==='attendance'?'save_manual_attendance':['expense','associate'].includes(kind)?'save_company_finance':'save_billing',{p_actor:session.account.id,...(kind==='attendance'?{}:{p_kind:kind}),p_data:data});
+ const {data:id,error}=await getSupabaseAdmin().rpc(kind==='cancel_attendance'?'cancel_manual_attendance':kind==='attendance'?'save_manual_attendance':['expense','associate'].includes(kind)?'save_company_finance':'save_billing',{p_actor:session.account.id,...(['attendance','cancel_attendance'].includes(kind)?{}:{p_kind:kind}),p_data:data});
  if(error){if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
  return Response.json({id});
 });

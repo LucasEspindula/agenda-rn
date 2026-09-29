@@ -2,8 +2,8 @@ export const legacyBody = `<div class="app-shell">
 <aside class="sidebar agenda-subnav" aria-label="Navegação do Agendamento">
  <div class="agenda-owner"><label for="professionalFilter">Agenda do profissional</label><select id="professionalFilter"></select></div>
  <nav class="nav" aria-label="Áreas do Agendamento">
-  <button class="nav-item active" data-view="agenda">▦ Agenda</button>
-  <button class="nav-item" data-view="patients">◉ Pacientes</button>
+  <button class="nav-item active" data-view="agenda"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v16H4zM8 3v4M16 3v4M4 10h16"/></svg> Agenda</button>
+  <button class="nav-item" data-view="patients"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-3a6 6 0 0 1 6-4h4a6 6 0 0 1 6 4v3"/></svg> Pacientes</button>
  </nav>
 </aside>
 <main class="main">

@@ -1,0 +1,9 @@
+'use client';
+import {cents,paymentDifference,paymentMethods,type PaymentPart} from '@/lib/fiscal-money';
+import {formatBRL} from '@/lib/money';
+import {TrashIcon} from './billing-icons';
+export default function PaymentParts({value,onChange,amount}:{value:PaymentPart[];onChange:(parts:PaymentPart[])=>void;amount:number}){
+ const change=(index:number,patch:Partial<PaymentPart>)=>onChange(value.map((p,i)=>i===index?{...p,...patch}:p));
+ const difference=paymentDifference(value,amount);
+ return <fieldset className="payment-parts"><legend>Formas de pagamento</legend>{value.map((part,index)=><div className="payment-part" key={index}><label>Método<select aria-label={'Método '+(index+1)} value={part.method} onChange={e=>change(index,{method:e.target.value,installments:e.target.value==='CREDIT_CARD'?1:null})}>{Object.entries(paymentMethods).map(([key,label])=><option value={key} key={key}>{label}</option>)}</select></label><label>Valor<input aria-label={'Valor da forma '+(index+1)} type="number" min="0" step="0.01" required value={part.amount} onChange={e=>change(index,{amount:cents(e.target.value||0)/100})}/></label>{part.method==='CREDIT_CARD'&&<label>Parcelas<input aria-label={'Parcelas '+(index+1)} type="number" min="1" step="1" required value={part.installments??''} onChange={e=>change(index,{installments:Number(e.target.value)})}/></label>}<button type="button" className="billing-icon-action billing-delete" title="Remover forma de pagamento" aria-label={'Remover forma '+(index+1)} onClick={()=>onChange(value.filter((_,i)=>i!==index))}><TrashIcon/></button></div>)}<button type="button" className="billing-secondary billing-add" onClick={()=>onChange([...value,{method:'PIX',amount:0}])}>+ Adicionar forma</button><p role="status">Total das formas: {formatBRL((cents(amount)-difference)/100)} · {difference===0&&value.length?'Valores conferidos':difference>=0?'Falta '+formatBRL(difference/100):'Excede '+formatBRL(-difference/100)}</p></fieldset>;
+}
