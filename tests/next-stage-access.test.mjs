@@ -56,3 +56,17 @@ test('legacy agenda and workflow snapshots are not an alternative financial read
  assert.equal(view.appointments[0].payment,undefined);assert.equal(view.appointments[0].invoiceNumber,undefined);assert.equal(view.patientHistory.length,0);assert.equal(source.appointments[0].payment,9000);
  assert.equal(withoutLegacyFinance({previous_payload:source.appointments[0]}).previous_payload.payment,undefined);
 });
+
+test('cancelled/replaced shared invoice historical membership preserves doctor privacy and item values',()=>{
+ const {invoiceRows,matchesInvoice}=loadTs('lib/billing-row.ts');
+ for(const status of ['CANCELLED','REPLACED']){
+  const historical={...invoice,status};
+  const history={...data,invoices:[historical],rows:data.rows.map(r=>({...r,invoice:null,invoice_item:null})),items:data.items.map(i=>({...i,is_active:false}))};
+  assert.equal(invoiceRows(historical,history).length,2);
+  assert.equal(matchesInvoice(historical,history,{doctor:'d1',entity:'',start:'',end:''}),true);
+  const own=doctorBillingProjection(history,principal(services(false,false,true)),true);
+  assert.equal(own.rows.length,1);assert.equal(own.invoices.length,1);assert.equal(own.items.length,1);assert.equal(own.invoices[0].net_amount,null);
+  assert.deepEqual(Array.from(invoiceRows(historical,own),x=>x.amount),[1450]);
+  assert.ok(!JSON.stringify(own).includes('Paciente 2'));
+ }
+});

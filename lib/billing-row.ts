@@ -16,4 +16,9 @@ export const ROW_STATUSES=['Cancelado','Não configurado','Pendente','Pendente s
 export const INVOICE_STATUSES=['Aguardando pagamento','Pago','Cancelada','Substituída','Lançamento desfeito'];
 export const invoiceStatus=(i:Invoice)=>!activeInvoice(i)?fiscalStatus(i):i.paid_at?'Pago':'Aguardando pagamento';
 export const rowStatus=(r:BillingRow)=>r.status_atendimento==='cancelled'?'Cancelado':(r.invoice&&r.invoice.recipient_type!=='PARTICULAR'?!!r.invoice.paid_at:r.record?.payment_status==='PAGO')?'Pago':r.invoice?'Aguardando pagamento':r.record?.settlement_mode==='DIRECT'?'Pendente':r.record?'Pendente sem NF':'Não configurado';
-export const matchesInvoice=(i:Invoice,data:BillingData,f:RowFilters)=>(!f.entity||i.billing_entity_id===f.entity)&&(!f.start||i.issue_date>=f.start)&&(!f.end||i.issue_date<=f.end)&&(!f.insurance||i.payer.trim().toUpperCase()===f.insurance.trim().toUpperCase())&&(!f.status||invoiceStatus(i)===f.status)&&(!f.doctor||data.rows.some(r=>[r.doctor_id,r.anesthetist_id].includes(f.doctor)&&r.invoice?.id===i.id));
+export const matchesInvoice=(i:Invoice,data:BillingData,f:RowFilters)=>(!f.entity||i.billing_entity_id===f.entity)&&(!f.start||i.issue_date>=f.start)&&(!f.end||i.issue_date<=f.end)&&(!f.insurance||i.payer.trim().toUpperCase()===f.insurance.trim().toUpperCase())&&(!f.status||invoiceStatus(i)===f.status)&&(!f.doctor||invoiceRows(i,data).some(({row:r})=>[r.doctor_id,r.anesthetist_id].includes(f.doctor)));
+
+export function invoiceRows(invoice:Invoice,data:BillingData){
+ const items=new Map(data.items.filter(item=>item.invoice_id===invoice.id).map(item=>[item.billing_record_id,item]));
+ return data.rows.flatMap(row=>{const item=row.record&&items.get(row.record.id);return item?[{row,amount:item.received_amount??null}]:[]});
+}

@@ -34,6 +34,7 @@ await db.exec(readFileSync('supabase/migrations/20260924024434_scheduled_private
 
 await db.exec(readFileSync('supabase/migrations/20260924191510_invoice_requests_universal_fiscal.sql','utf8'));
 await db.exec(readFileSync('supabase/migrations/20260925173355_fiscal_payments_lifecycle.sql','utf8'));
+await db.exec(readFileSync('supabase/migrations/20260930194734_payment_reversal_operational_cleanup.sql','utf8'));
 const bill=async(kind,data,actor=1)=>(await db.query('select save_billing($1,$2,$3) id',[actor,kind,data])).rows[0].id;
 const entity=await bill('entity',{name:'Empresa Teste',person_type:'PJ',tax_id:'12345678000190',active:true});
 await bill('link',{doctor_id:'d1',billing_entity_id:entity,active:true});
@@ -54,9 +55,22 @@ await t.test('mixed payment and canonical patient name, idempotent request',asyn
  assert.equal((await db.query('select count(*)::int n from invoice_requests')).rows[0].n,1);
  assert.equal((await db.query('select count(*)::int n from payment_parts where billing_record_id=$1',[record])).rows[0].n,2);
 });
+await t.test('reversal clears operational receipt and parts, keeps audit and requires new composition',async()=>{
+ const old=await row('billing_records',record);
+ await bill('record',{...payment,updated_at:old.updated_at,payment_status:'PENDENTE'},2);
+ const reversed=await row('billing_records',record);
+ assert.equal(reversed.received_amount,null);assert.equal(reversed.paid_at,null);assert.equal(reversed.payment_composition_verified,false);
+ assert.equal((await db.query('select count(*)::int n from payment_parts where billing_record_id=$1',[record])).rows[0].n,0);
+ assert.equal((await row('invoice_requests',request.id)).status,'CANCELLED');
+ assert.ok((await db.query("select 1 from financial_log_changes where record_type='payment_parts' and action='DELETE' and before_data->>'billing_record_id'=$1",[record])).rows.length);
+ await assert.rejects(()=>bill('record',{...payment,updated_at:reversed.updated_at,payment_parts:undefined},2),/formas/);
+ await bill('record',{...payment,updated_at:reversed.updated_at},2);
+ request=(await db.query("select * from invoice_requests where billing_record_id=$1 and status='PENDING'",[record])).rows[0];
+ assert.equal((await db.query("select count(*)::int n from invoice_requests where billing_record_id=$1 and status in ('PENDING','ISSUED')",[record])).rows[0].n,1);
+});
 const privateNF=()=>({recipient_type:'PARTICULAR',request_id:request.id,billing_entity_id:entity,attendance_ids:['private'],invoice_number:'100',issue_date:'2026-09-25',total_amount:2000,net_amount:2000});
 await t.test('undo private preserves payment and reopens same snapshot',async()=>{
- invoice=await bill('invoice',privateNF());assert.equal(Number((await db.query('select received_amount from invoice_billing_records where invoice_id=$1',[invoice])).rows[0].received_amount),2000);
+ invoice=await bill('invoice',privateNF());await assert.rejects(async()=>bill('record',{...payment,updated_at:(await row('billing_records',record)).updated_at,payment_status:'PENDENTE'},2),/NF já emitida/);assert.equal(Number((await db.query('select received_amount from invoice_billing_records where invoice_id=$1',[invoice])).rows[0].received_amount),2000);
  await assert.rejects(async()=>bill('undo_invoice',{id:invoice,updated_at:(await row('invoices',invoice)).updated_at,reason:'Erro'},2),/negado/);
  await bill('undo_invoice',{id:invoice,updated_at:(await row('invoices',invoice)).updated_at,reason:'Erro de cadastro'});
  const reopened=await row('invoice_requests',request.id);assert.equal(reopened.status,'PENDING');assert.equal(reopened.taker_name,request.taker_name);assert.equal(reopened.invoice_id,null);
@@ -75,6 +89,17 @@ await t.test('allocation exact, all items required, adjustment reason required',
  await assert.rejects(()=>bill('invoice',{...insuranceNF,item_amounts:{'insurance-a':600,'insurance-b':398.21},closing_adjustment:1.78954685}),/adjustment_reason/);
  invoice=await bill('invoice',{...insuranceNF,item_amounts:{'insurance-a':600,'insurance-b':398.21},closing_adjustment:1.78954685,closing_adjustment_reason:'Ajuste informado no demonstrativo'});
  assert.equal(Number((await row('invoices',invoice)).closing_adjustment),1.79);
+});
+await t.test('undo invoice payment clears operational composition and restores related pending records',async()=>{
+ const old=await row('invoices',invoice);
+ await bill('invoice',{...insuranceNF,id:invoice,updated_at:old.updated_at,paid_at:null});
+ const reversed=await row('invoices',invoice);
+ assert.equal(reversed.paid_at,null);assert.equal(reversed.payment_composition_verified,false);
+ assert.equal((await db.query('select count(*)::int n from payment_parts where invoice_id=$1',[invoice])).rows[0].n,0);
+ assert.equal((await db.query("select count(*)::int n from billing_records where attendance_id like 'insurance-%' and payment_status='PENDENTE'")).rows[0].n,2);
+ assert.ok((await db.query("select 1 from financial_log_changes where record_type='payment_parts' and action='DELETE' and before_data->>'invoice_id'=$1",[invoice])).rows.length);
+ await assert.rejects(()=>bill('invoice',{...insuranceNF,id:invoice,updated_at:reversed.updated_at,payment_parts:undefined}),/formas/);
+ await bill('invoice',{...insuranceNF,id:invoice,updated_at:reversed.updated_at});
 });
 await t.test('cancel insurance retains items and restores pending; replacement has one active link',async()=>{
  await bill('cancel_invoice',{id:invoice,updated_at:(await row('invoices',invoice)).updated_at,reason:'Cancelamento fiscal'});
@@ -99,6 +124,16 @@ const create=async(doctor,method,procedure)=>(await db.query('select save_manual
 const manual=await create('d1','PARTICULAR','Manual NF');const b=(await db.query('select * from billing_records where attendance_id=$1',[manual])).rows[0];await bill('record',{...payment,attendance_id:manual,updated_at:b.updated_at});const req=(await db.query('select * from invoice_requests where attendance_id=$1',[manual])).rows[0];await bill('invoice',{...privateNF(),request_id:req.id,attendance_ids:[manual],invoice_number:'300'});
 await assert.rejects(async()=>db.query('select cancel_manual_attendance(1,$1)',[{id:manual,updated_at:(await row('attendances',manual)).updated_at,reason:'Erro'}]),/regularize/);
 const d=await row('doctors','d2');await db.query("select save_doctor_with_access(1,'doctor',$1,null,null)",[{...d,specialty:'Ortopedia e Traumatologia',scheduling_enabled:false,billing_enabled:false,invoice_enabled:true}]);await bill('link',{doctor_id:'d2',billing_entity_id:entity,active:true});const fiscal=await create('d2','CONVENIO','Fiscal manual');assert.equal((await row('attendances',fiscal)).origin,'FISCAL_MANUAL');await db.query('select cancel_manual_attendance(1,$1)',[{id:fiscal,updated_at:(await row('attendances',fiscal)).updated_at,reason:'Erro'}]);assert.equal((await row('attendances',fiscal)).status,'cancelled');
+});
+await t.test('direct insurance payment reversal clears amount and date without fiscal side effects',async()=>{
+ const d=await row('doctors','d2');await db.query("select save_doctor_with_access(1,'doctor',$1,null,null)",[{...d,specialty:'Ortopedia e Traumatologia',scheduling_enabled:false,billing_enabled:true,invoice_enabled:false}]);
+ const attendance=(await db.query('select save_manual_attendance(1,$1) id',[{doctor_id:'d2',patient_id:'p1',billing_entity_id:entity,billing_method:'CONVENIO',insurance:'CABERGS',date:'2026-09-25',procedure:'Direto'}])).rows[0].id;
+ const b=(await db.query('select * from billing_records where attendance_id=$1',[attendance])).rows[0];
+ const payload={...b,attendance_id:attendance,payment_status:'PAGO',received_amount:99.99,paid_at:'2026-09-25'};
+ await bill('record',payload);
+ await bill('record',{...payload,payment_status:'PENDENTE',updated_at:(await row('billing_records',b.id)).updated_at});
+ const reversed=await row('billing_records',b.id);assert.equal(reversed.received_amount,null);assert.equal(reversed.paid_at,null);assert.equal(reversed.payment_composition_verified,false);
+ assert.equal((await db.query('select count(*)::int n from invoice_requests where billing_record_id=$1',[b.id])).rows[0].n,0);
 });
 await t.test('service-only invoker RPCs and payment parts RLS',async()=>{const rows=(await db.query("select prosecdef,has_function_privilege('anon',oid,'EXECUTE') anon,has_function_privilege('authenticated',oid,'EXECUTE') authenticated from pg_proc where proname in ('save_billing','save_billing_fiscal_core','cancel_manual_attendance','write_payment_parts')")).rows;assert.equal(rows.length,4);for(const r of rows)assert.deepEqual(r,{prosecdef:false,anon:false,authenticated:false});assert.equal((await db.query("select relrowsecurity from pg_class where oid='payment_parts'::regclass")).rows[0].relrowsecurity,true)});
 });

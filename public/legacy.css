@@ -361,3 +361,8 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 
 
 #appointmentModal .appointment-detail{padding-bottom:0}
+
+/* Administrative agenda timeline matches financial logs. */
+.agenda-log-timeline{background:white;border:1px solid #dce6eb;border-radius:12px;padding:0 20px}.agenda-log-event{position:relative;margin-left:6px;padding:18px 0 18px 22px;border-left:2px solid #dfebed;border-bottom:1px solid #edf2f4;min-width:0;overflow-wrap:anywhere}.agenda-log-event:before{content:'';position:absolute;top:23px;left:-5px;width:8px;height:8px;border-radius:50%;background:#18a7a0}.agenda-log-event:last-child{border-bottom:0}.agenda-log-event header{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}.agenda-log-event header strong{font-size:13px}.agenda-log-event time,.agenda-log-event small{font-size:11px;color:#75858e}.agenda-log-event section{font-size:12px;margin-top:8px}.agenda-log-event h3{font-size:12px;margin:5px 0}.agenda-log-line{margin:4px 0;line-height:1.6;overflow-wrap:anywhere}.agenda-log-line b{font-size:10px;margin-right:7px}.agenda-log-line.before{color:#8c5260}.agenda-log-line.after{color:#256b59}
+.agenda-log-search{display:grid;gap:6px;margin:18px 0;font-size:12px;font-weight:600}.agenda-log-search input{width:100%;max-width:560px}.agenda-log-event small{display:block;margin-top:4px}
+@media(max-width:700px){.agenda-log-timeline{padding:0 12px}.agenda-log-event{padding-left:16px}.agenda-log-event header{display:block}.agenda-log-event time{display:block;margin-top:4px}}

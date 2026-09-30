@@ -37,11 +37,13 @@ export async function GET() {
   let requestQuery = db.from("agenda_requests").select("*");
   if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id).in("professional_id", session.agendaIds);
   else if (!isManager(session.account.role)) requestQuery = requestQuery.in("professional_id", session.agendaIds);
+  let auditQuery = db.from("audit_logs").select("*");
+  if (!isManager(session.account.role)) auditQuery = auditQuery.in("professional_id", session.agendaIds);
   const [requestRows, userRows, notificationRows, auditRows] = await Promise.all([
     requestQuery.order("created_at", { ascending: false }).limit(200),
     db.from("users").select("id,name,email"),
     db.from("notifications").select("*").eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(100),
-    isManager(session.account.role) ? db.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(500) : Promise.resolve({ data: [], error: null }),
+    (isManager(session.account.role) || session.account.role === "secretary") ? auditQuery.order("created_at", { ascending: false }).limit(500) : Promise.resolve({ data: [], error: null }),
   ]);
   [requestRows, userRows, notificationRows, auditRows].forEach((result) => dbError(result.error, "Read workflow"));
   // Supabase schema types are generated after the first production migration.
@@ -54,7 +56,7 @@ export async function GET() {
   return Response.json({
     requests: visibleRequests.map((row) => ({ ...row, requestedBy: Number(row.requested_by), decidedBy: row.decided_by ? Number(row.decided_by) : null, professionalId: row.professional_id, appointmentId: row.appointment_id, createdAt: row.created_at, decidedAt: row.decided_at, decisionNote: row.decision_note, requesterName: names.get(Number(row.requested_by)), deciderName: row.decided_by ? names.get(Number(row.decided_by)) : null, proposed: row.proposed_payload || null, previous: row.previous_payload || null })),
     notifications: notifications.map((row) => ({ ...row, readAt: row.read_at, createdAt: row.created_at, requestId: row.request_id })),
-    audit: audit.map((row) => {
+    audit: audit.filter(row => isManager(session.account.role) || (session.account.role === "secretary" && session.agendaIds.includes(row.professional_id))).map((row) => {
       const metadata = (row.metadata || {}) as Record<string, unknown>;
       const linked = typeof metadata.requestId === "string" ? requestPayloads.get(metadata.requestId) : null;
       return { ...row, actorName: row.actor_name, actorRole: row.actor_role, professionalId: row.professional_id, appointmentId: row.appointment_id, patientId: row.patient_id, createdAt: row.created_at, before: linked?.before ?? metadata.before ?? null, after: linked?.after ?? metadata.after ?? null };
