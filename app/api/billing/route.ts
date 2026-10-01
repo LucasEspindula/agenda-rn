@@ -33,7 +33,7 @@ export async function GET(request:Request){
    data.entities=data.entities.filter(e=>entityIds.has(e.id));data.doctors=data.doctors.filter(d=>doctors.has(d.id));
    data.rows=data.rows.map(r=>({...r,invoice:r.invoice?{...r.invoice,total_amount:null,net_amount:null,notes:null,recipient_tax_id:null,recipient_address:null}:null}));
    data.requests=(data.requests||[]).map(r=>({...r,taker_tax_id:'',taker_address:null,notes:null}));
-   data.payment_parts=(data.payment_parts||[]).filter(p=>!!p.billing_record_id&&data.rows.some(r=>r.record?.id===p.billing_record_id));data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=(data.patients||[]).filter(p=>data.rows.some(r=>r.patient_id===p.id));data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
+   data.payment_parts=(data.payment_parts||[]).filter(p=>!!p.billing_record_id&&data.rows.some(r=>r.record?.id===p.billing_record_id));data.attachments=(data.attachments||[]).filter(a=>!!a.billing_record_id&&data.rows.some(r=>r.record?.id===a.billing_record_id));data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=(data.patients||[]).filter(p=>data.rows.some(r=>r.patient_id===p.id));data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
   }
   return Response.json(data,{headers:{'Cache-Control':'private, no-store'}});
  }catch{return Response.json({error:'Não foi possível carregar o faturamento.'},{status:503});}
@@ -48,4 +48,3 @@ export const POST=secureMutation(async request=>{
  if(error){if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
  return Response.json({id});
 });
-

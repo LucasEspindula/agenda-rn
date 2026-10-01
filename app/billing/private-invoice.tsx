@@ -4,6 +4,7 @@ import {useState} from 'react';
 import type {BillingData,Invoice,InvoiceRequest} from '@/lib/billing-types';
 import AppDialog from '@/components/app-dialog';
 import {PaymentPartsReadOnly} from '@/components/payment-parts';
+import PaymentProofs from '@/components/payment-proofs';
 import MoneyInput from '@/components/money-input';
 import {formatCPF} from '@/lib/cpf';
 import {parseBRL} from '@/lib/money';
@@ -18,7 +19,7 @@ export default function PrivateInvoice({data,initial,onClose,onSaved,onInsurance
  {request&&<><label>Empresa emissora<input readOnly value={request.entity_name_snapshot}/></label><label>Nome do tomador<input readOnly value={request.taker_name}/></label><label>CPF<input readOnly value={formatCPF(request.taker_tax_id)}/></label><label>Endereço<input readOnly value={request.taker_address||'Não informado'}/></label><label>Data do pagamento<input readOnly type="date" value={request.paid_at_snapshot.slice(0,10)}/></label></>}
  <label>Número da NF<input required value={number} onChange={e=>setNumber(e.target.value)}/></label><label>Data de emissão<input required type="date" value={issue} onChange={e=>setIssue(e.target.value)}/></label><label>Valor bruto<MoneyInput value={gross} onChange={setGross}/></label><label>Valor líquido<MoneyInput value={net} onChange={setNet}/></label></div>
  {request&&<><h3>Atendimento vinculado</h3><p>{request.patient_name_snapshot} · {request.procedure_snapshot} · {request.attendance_date_snapshot.slice(0,10).split('-').reverse().join('/')}<br/>{request.doctor_name_snapshot}</p><p>Um atendimento por NF particular. O recebimento permanece registrado no atendimento.</p>{request.notes&&<p><strong>Observação da solicitação:</strong> {request.notes}</p>}</>}
- {invoice&&request&&<PaymentPartsReadOnly value={(data.payment_parts||[]).filter(p=>p.billing_record_id===request.billing_record_id)}/>}
+ {invoice&&request&&<><PaymentPartsReadOnly value={(data.payment_parts||[]).filter(p=>p.billing_record_id===request.billing_record_id)}/><PaymentProofs attachments={data.attachments} billingRecordId={request.billing_record_id} readOnly/></>}
  <label>Observação fiscal<textarea value={notes} onChange={e=>setNotes(e.target.value)}/></label>{error&&<p role="alert" className="billing-error">{error}</p>}<div className="billing-modal-actions"><button type="button" disabled={busy} onClick={onClose} className="billing-secondary">Fechar</button><button type="submit" className="billing-primary" disabled={busy||!request}>{busy?'Salvando…':'Salvar NF'}</button></div>
  </form></AppDialog>;
 }

@@ -20,5 +20,5 @@ export const matchesInvoice=(i:Invoice,data:BillingData,f:RowFilters)=>(!f.entit
 
 export function invoiceRows(invoice:Invoice,data:BillingData){
  const items=new Map(data.items.filter(item=>item.invoice_id===invoice.id).map(item=>[item.billing_record_id,item]));
- return data.rows.flatMap(row=>{const item=row.record&&items.get(row.record.id);return item?[{row,amount:item.received_amount??null}]:[]});
+ return data.rows.flatMap(row=>{const item=row.record&&items.get(row.record.id);return item?[{row,amount:item.received_amount??null}]:row.invoice?.id===invoice.id?[{row,amount:row.invoice_item?.received_amount??null}]:[]});
 }
