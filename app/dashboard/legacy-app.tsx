@@ -44,7 +44,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=payment-proofs-hotfix-20261001";
+        script.src = "/legacy-app.js?v=agenda-recovery-20261001";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
