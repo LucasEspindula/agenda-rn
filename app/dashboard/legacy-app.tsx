@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {MEDICAL_SPECIALTIES,isAnesthesiologist} from "@/lib/medical-specialties";
 import {formatBRL,parseBRL} from '@/lib/money';
 import {directPayment,allowedEntities} from '@/lib/billing-finance';
+import {paymentMethods} from '@/lib/fiscal-money';
 import {individualReceived} from '@/lib/billing-reports';
 import {notifyFinancialChange} from '@/lib/financial-events';
 import {confirmFiscalPayment} from '@/components/confirm-fiscal-payment';
@@ -39,11 +40,11 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       (window as Window & { AgendaInitialView?: string }).AgendaInitialView = initialView;
       if (cancelled) return;
       (window as Window & {MedicalDirectory?:unknown}).MedicalDirectory={specialties:MEDICAL_SPECIALTIES,isAnesthesiologist};
-      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{directPayment,allowedEntities,individualReceived,confirmFiscalPayment,notifyFinancialChange,uploadPaymentProof},RNCPF:{formatCPF,normalizeCPF,validCPF},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
+      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{paymentMethods,directPayment,allowedEntities,individualReceived,confirmFiscalPayment,notifyFinancialChange,uploadPaymentProof},RNCPF:{formatCPF,normalizeCPF,validCPF},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=fiscal-payments-20260929";
+        script.src = "/legacy-app.js?v=payment-proofs-hotfix-20261001";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
@@ -54,4 +55,3 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
   if (!ready) return <main className="grid min-h-screen place-items-center bg-slate-50"><p className="text-slate-600">Carregando RN Integra…</p></main>;
   return <><link rel="stylesheet" href="/legacy.css"/><div className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} /></>;
 }
-
