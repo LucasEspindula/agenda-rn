@@ -44,7 +44,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=agenda-recovery-20261001";
+        script.src = "/legacy-app.js?v=agenda-nav-cleanup-20261002";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
@@ -53,5 +53,6 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
   }, [initialView,adminSection,doctorId]);
   if (error) return <main className="grid min-h-screen place-items-center bg-slate-50 p-6"><div className="rounded-2xl bg-white p-8 shadow-lg"><h1 className="text-xl font-semibold">Agenda indisponível</h1><p className="mt-2 text-slate-600">{error}</p></div></main>;
   if (!ready) return <main className="grid min-h-screen place-items-center bg-slate-50"><p className="text-slate-600">Carregando RN Integra…</p></main>;
-  return <><link rel="stylesheet" href="/legacy.css"/><div className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} /></>;
+  return <><link rel="stylesheet" href="/legacy.css?v=agenda-nav-cleanup-20261002"/><div className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} /></>;
 }
+

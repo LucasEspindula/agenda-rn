@@ -1,20 +1,16 @@
 :root{
  --bg:#f5f8fb;--panel:#fff;--text:#1f2a37;--muted:#6b7280;--line:#e4eaf0;
- --primary:#18a7a0;--primary-dark:#12857f;--primary-soft:#e8f8f7;--nav:#12374f;
+ --primary:#18a7a0;--primary-dark:#12857f;--primary-soft:#e8f8f7;
  --danger:#d94b4b;--success:#278f63;--purple:#8b5db5;--pink:#b13d76;--warning:#a46c0f;
- --shadow:0 10px 35px rgba(24,39,75,.06);--radius:14px;--sidebar:250px
+ --shadow:0 10px 35px rgba(24,39,75,.06);--radius:14px
 }
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:var(--bg)}
 button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
-.app-shell{min-height:100vh;display:grid;grid-template-columns:var(--sidebar) 1fr}
-.sidebar{position:sticky;top:0;height:100vh;background:var(--nav);color:#fff;padding:20px 16px;display:flex;flex-direction:column}
-.brand{display:flex;gap:11px;align-items:center;padding:2px 5px 13px}.brand-logo{width:50px;height:42px;object-fit:contain;border-radius:9px;background:#fff}
-.brand strong{display:block;font-size:17px}.brand span{display:block;font-size:11px;color:#b7c8d5;margin-top:3px}
-.agenda-owner{padding:0 5px 19px}.agenda-owner label{font-size:10px;color:#b7c8d5;text-transform:uppercase;letter-spacing:.05em}
-.agenda-owner select{margin-top:6px;background:#fff;color:#233746;border:0;padding:9px 10px}
-.nav{display:flex;flex-direction:column;gap:7px}.nav-item{border:0;background:transparent;color:#dbe7ee;padding:11px 12px;border-radius:10px;display:flex;align-items:center;gap:10px;text-align:left}
-.nav-item:hover,.nav-item.active{background:rgba(255,255,255,.12);color:#fff}.sidebar-footer{margin-top:auto;display:grid;gap:8px}
+.agenda-shell{min-height:100vh;display:block}
+.agenda-subnav{position:sticky;top:var(--global-header-height,82px);z-index:17;display:flex;align-items:center;flex-wrap:wrap;width:100%;min-height:64px;gap:14px;padding:10px 24px;background:#fff;color:#254e63;border-bottom:1px solid var(--line)}
+.agenda-owner{flex:0 1 220px;min-width:160px;padding:0}.agenda-owner label{color:#526878;font-size:11px;text-transform:uppercase;letter-spacing:.05em}.agenda-owner select{margin-top:4px;background:#f6f9fb;color:#254e63;border:1px solid #d7e3ea;padding:7px 10px}
+.agenda-nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;padding:0;margin:0}.agenda-nav-item{display:flex;align-items:center;gap:10px;color:#40566a;font-size:13px;border:0;border-radius:8px;min-height:40px;padding:9px 11px;background:transparent;white-space:nowrap;text-align:left}.agenda-nav-item.active{color:#107b77;background:#e8f8f7;box-shadow:inset 0 -2px #18a7a0}.agenda-nav-item:hover{background:#f0f5f8}.agenda-nav-item:focus-visible{outline:2px solid #18a7a0;outline-offset:2px}
 .ghost-btn,.file-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;text-align:center}.file-btn input{display:none}
 .main{min-width:0;padding:26px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}
 .topbar h1{margin:0;font-size:26px}.topbar p{margin:5px 0 0;color:var(--muted);font-size:13px}.top-actions{display:flex;gap:10px}
@@ -81,15 +77,11 @@ label{font-size:12px;font-weight:650;color:#44505c;display:grid;gap:6px}.context
 .warning-note{background:#fff8e8;border:1px solid #f1dfaa;color:#856514;border-radius:9px;padding:9px 10px;font-size:11px;margin-top:9px}
 .patient-detail-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:18px;padding:18px 20px 20px}.detail-card{border:1px solid var(--line);border-radius:12px;padding:15px;background:#fff}.detail-card h4{margin:0 0 12px;font-size:13px}
 .detail-row{display:flex;justify-content:space-between;gap:14px;border-top:1px solid #f0f2f4;padding:8px 0;font-size:12px}.detail-row:first-of-type{border-top:0}.detail-row span{color:var(--muted)}
-@media(max-width:980px){:root{--sidebar:210px}.settings-grid{grid-template-columns:1fr}.settings-grid .wide{grid-column:auto}.toolbar{align-items:flex-start;flex-direction:column}.filters{width:100%;flex-wrap:wrap}.appointment-layout,.patient-detail-grid{grid-template-columns:1fr}.patient-side{border-left:0;border-top:1px solid var(--line)}}
-@media(max-width:720px){.app-shell{display:block}.sidebar{position:static;height:auto}.sidebar-footer{display:none}.main{padding:15px}.topbar{align-items:flex-start}.top-actions{flex-direction:column}.form-grid.two,.form-grid.three,.toggle-grid{grid-template-columns:1fr}.date-wrap{align-items:flex-start;flex-direction:column}.status-choice,.care-choice{grid-template-columns:1fr}}
+@media(max-width:980px){.settings-grid{grid-template-columns:1fr}.settings-grid .wide{grid-column:auto}.toolbar{align-items:flex-start;flex-direction:column}.filters{width:100%;flex-wrap:wrap}.appointment-layout,.patient-detail-grid{grid-template-columns:1fr}.patient-side{border-left:0;border-top:1px solid var(--line)}}
+@media(max-width:720px){.main{padding:15px}.topbar{align-items:flex-start}.top-actions{flex-direction:column}.form-grid.two,.form-grid.three,.toggle-grid{grid-template-columns:1fr}.date-wrap{align-items:flex-start;flex-direction:column}.status-choice,.care-choice{grid-template-columns:1fr}}
 
 .appointment-insurance{font-size:8.5px!important;color:#526575;font-weight:650}
-.sidebar-profile{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:9px;margin-bottom:4px;padding:10px 8px;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.08)}
-.session-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#e8f8f7;color:#12857f;font-weight:850;font-size:14px}
-.sidebar-profile strong,.sidebar-profile span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sidebar-profile strong{font-size:12px;color:#fff}.sidebar-profile span{margin-top:3px;font-size:10px;color:#b7c8d5}.sidebar-profile a{font-size:10px;color:#b7c8d5;text-decoration:none}.sidebar-profile a:hover{color:#fff;text-decoration:underline}
 .hospital-panel{position:relative;min-height:0;max-height:428px;overflow:hidden}.hospital-panel #hospitalsList{max-height:292px;overflow-y:auto;padding-right:5px;scrollbar-width:thin;scrollbar-color:transparent transparent}.hospital-panel:hover #hospitalsList,.hospital-panel:focus-within #hospitalsList{scrollbar-color:#aac1cf transparent}.hospital-panel #hospitalsList::-webkit-scrollbar{width:7px}.hospital-panel #hospitalsList::-webkit-scrollbar-thumb{background:transparent;border-radius:99px}.hospital-panel:hover #hospitalsList::-webkit-scrollbar-thumb,.hospital-panel:focus-within #hospitalsList::-webkit-scrollbar-thumb{background:#aac1cf}.scroll-help{position:absolute;right:18px;bottom:12px;padding:5px 9px;border-radius:999px;background:#12374f;color:#fff;font-size:10px;font-weight:700;opacity:0;transform:translateY(4px);transition:.18s;pointer-events:none;box-shadow:0 5px 16px rgba(18,55,79,.18)}.hospital-panel:hover .scroll-help,.hospital-panel:focus-within .scroll-help{opacity:.92;transform:translateY(0)}
-@media(max-width:720px){.sidebar-footer{display:grid;margin-top:14px}.sidebar-profile{order:-1}}
 @media(max-width:980px){.settings-grid{grid-template-columns:1fr}.settings-grid .wide{grid-column:auto}.hospital-panel{max-height:none}.hospital-panel #hospitalsList{max-height:320px}}
 
 .rule-card,.block-card{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
@@ -136,9 +128,7 @@ label{font-size:12px;font-weight:650;color:#44505c;display:grid;gap:6px}.context
 
 /* Refinamento visual e acessibilidade */
 body{font-size:14px;line-height:1.45;background:linear-gradient(180deg,#f3f7fa 0,#f7f9fb 38%,#f5f8fb 100%)}
-.sidebar{background:linear-gradient(180deg,#123d57 0,#102f44 100%);box-shadow:8px 0 30px rgba(16,47,68,.08)}
-.nav-item,.primary-btn,.secondary-btn,.ghost-btn,.file-btn,.danger-btn{min-height:42px;font-size:14px;transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease}
-.nav-item{font-weight:650}.nav-item.active{background:rgba(255,255,255,.16);box-shadow:inset 3px 0 0 #77ded7}
+.primary-btn,.secondary-btn,.ghost-btn,.file-btn,.danger-btn{min-height:42px;font-size:14px;transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease}
 .primary-btn{box-shadow:0 4px 12px rgba(24,167,160,.2)}.primary-btn:hover{box-shadow:0 6px 16px rgba(18,133,127,.25)}
 .secondary-btn:hover,.tiny-btn:hover,.link-btn:hover{border-color:#b8d2dc;background:#f7fbfc;color:#0f706d}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(45,193,185,.38);outline-offset:2px}
@@ -155,7 +145,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .appointment{padding:5px 6px;line-height:1.14}.appointment strong{font-size:9.5px}.appointment-patient{font-size:10px!important}.appointment-insurance{font-size:9.5px!important}.appointment-procedure{font-size:10px!important}.appointment-surgeon{font-size:9.5px!important}
 .day-head .dow,.time-cell{font-size:12px}.day-conflict-label{font-size:10px}.day-rule-badge{font-size:9px}
 .cancel-month{border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 14px 10px}.cancel-month h3{position:sticky;left:0;padding-top:10px}.settings-fixed{justify-content:flex-start;border:1px solid rgba(255,255,255,.12)}
-@media(max-width:900px){.app-shell{display:block}.sidebar{position:relative;height:auto;padding:14px}.brand{padding-bottom:10px}.agenda-owner{padding-bottom:12px}.nav{flex-direction:row;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}.nav-item{flex:0 0 auto}.nav-item.active{box-shadow:inset 0 -3px 0 #77ded7}.sidebar-footer{margin-top:10px;grid-template-columns:minmax(0,1fr);gap:7px}.settings-fixed{order:-2}.sidebar-profile{order:-1}.main{padding:18px}.topbar{align-items:flex-start}.toolbar{align-items:stretch;flex-direction:column}.date-wrap,.filters{justify-content:space-between}.agenda-owner-display{min-width:0}.content-card{padding:17px}}
+@media(max-width:900px){.agenda-subnav{position:static;padding:10px 12px;gap:10px;min-height:0}.agenda-owner{flex-basis:100%}.agenda-nav{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px}.agenda-nav-item{flex-shrink:0}.settings-fixed{order:-2}.main{padding:18px}.topbar{align-items:flex-start}.toolbar{align-items:stretch;flex-direction:column}.date-wrap,.filters{justify-content:space-between}.agenda-owner-display{min-width:0}.content-card{padding:17px}}
 
 /* Agenda compacta e detalhe/edit unificados */
 .agenda-owner-hidden{display:none!important}
@@ -183,23 +173,6 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .edit-financial-field{display:none!important}.appointment-detail-toolbar{position:sticky;top:0;z-index:3;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:12px 0;padding:12px;border:1px solid #dce6eb;border-radius:13px;background:rgba(255,255,255,.96);box-shadow:0 10px 24px rgba(18,55,79,.08);backdrop-filter:blur(8px)}.appointment-detail-toolbar .appointment-status-editor{margin:0;justify-content:start}.finance-edit{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:10px;align-items:end}.finance-edit label{font-size:11px}.finance-edit input{min-height:34px}.notification-card{align-items:flex-start}.notification-card>div{min-width:0;flex:1}
 .account-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 38px;width:38px;height:38px;padding:0;border-radius:10px;color:#dbe7ee;text-decoration:none;font-size:23px}
 .account-icon:hover,.account-icon:focus-visible{background:#ffffff20;color:#fff}
-/* Desktop navigation stays available while the agenda scrolls. */
-@media(min-width:901px){
- .app-shell{display:block}
- .sidebar{position:sticky;top:0;z-index:18;height:auto;min-height:82px;display:flex;flex-direction:row;align-items:center;gap:20px;padding:12px 24px;box-shadow:0 6px 24px #102f4415}
- .sidebar:hover,.sidebar:focus-within{box-shadow:0 8px 28px #102f4430}
- .brand{padding:0;flex-shrink:0}.brand-logo{width:42px;height:42px}
- .agenda-owner{padding:0;flex:0 1 220px;min-width:150px}.agenda-owner select{margin-top:4px;padding:7px 10px}
- .nav{flex-direction:row;gap:4px}.nav-item{white-space:nowrap;transition:background .18s ease}
- .nav-item:focus-visible{outline:2px solid #77ded7;outline-offset:2px}
- .sidebar-footer{margin:0 0 0 auto;display:flex;align-items:center;gap:12px}
- .sidebar-profile{margin:0;padding:0 0 0 12px;border:0;border-left:1px solid #ffffff25;max-width:none;display:flex;gap:9px;min-width:170px;flex-shrink:0}.session-copy{min-width:130px}.sidebar-profile strong{white-space:normal;overflow-wrap:anywhere;max-width:240px}.sidebar-footer{flex-shrink:0}.sidebar .nav{flex-wrap:wrap}.sidebar{flex-wrap:wrap}.sidebar .settings-fixed{order:0}
- .main{padding-top:24px}
-}
-@media(min-width:901px) and (max-width:1200px){
- .sidebar{gap:10px;padding:12px}.brand span{display:none}.brand strong{font-size:14px}
- .nav-item{padding:9px 8px}.sidebar-footer{gap:8px}.sidebar-profile{max-width:none}.sidebar-profile .session-avatar{display:none}
-}
 @media(min-width:901px){.agenda-card{height:auto;max-height:none;overscroll-behavior:auto;scrollbar-gutter:auto}.agenda-card .day-head,.agenda-card .corner{top:0}}
 
 /* Keep agenda controls compact without reserving an empty heading row. */
@@ -212,7 +185,6 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .decision-reason{color:#8b3030;overflow-wrap:anywhere}
 .mobile-calendar{display:none}
 @media(max-width:900px){
- .sidebar{display:none!important}
  .main{padding:12px;min-width:0}
  .agenda-card,.floating-calendar-days{display:none!important}
  .mobile-calendar{display:block;background:white;margin:12px -12px 0;padding:16px 12px;scroll-margin-top:64px}
@@ -329,30 +301,30 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .surgery-documents{margin:20px 0;padding:18px;border:1px solid #dce8ec;border-radius:16px;min-width:0}.surgery-documents h4{margin:0 0 14px}.document-upload{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.document-upload label{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}.document-upload input{max-width:100%}.surgery-documents progress{width:100%;margin-top:12px}.surgery-document{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e6eef1}.surgery-document>div{min-width:0}.surgery-document strong{display:block;overflow-wrap:anywhere}.surgery-document small{display:block;color:#687787;margin-top:4px}.surgery-document nav{display:flex;gap:14px;flex-shrink:0}.surgery-document a{color:#078c91;font-weight:600}.surgery-documents [data-message]{font-size:14px}.surgery-documents h5{margin:18px 0 4px}@media(max-width:600px){.document-upload{display:grid;grid-template-columns:1fr}.surgery-document{align-items:flex-start;flex-direction:column}.surgery-documents{padding:12px}}
 
 /* Global modules and operational areas are separate navigation levels. */
-.rn-agenda .app-shell{display:block;min-height:calc(100vh - var(--global-header-height,82px))}
-.rn-agenda .agenda-subnav{position:sticky;top:var(--global-header-height,82px);z-index:17;display:flex!important;flex-direction:row;align-items:center;flex-wrap:wrap;width:100%;height:auto;min-height:64px;gap:14px;padding:10px 24px;background:#fff;color:#254e63;border-bottom:1px solid var(--line);box-shadow:none}
-.rn-agenda .agenda-subnav .agenda-owner{flex:0 1 220px;min-width:160px;padding:0}
-.rn-agenda .agenda-subnav .agenda-owner label{color:#526878;font-size:11px}
-.rn-agenda .agenda-subnav .agenda-owner select{background:#f6f9fb;color:#254e63;border:1px solid #d7e3ea;padding:7px 10px;margin-top:4px}
-.rn-agenda .agenda-subnav .nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;padding:0;margin:0}
-.rn-agenda .agenda-subnav .nav-item{color:#40566a;font-size:13px;border-radius:8px;min-height:40px;padding:9px 11px;border:0;background:transparent;white-space:nowrap}
-.rn-agenda .agenda-subnav .nav-item.active{color:#107b77;background:#e8f8f7;box-shadow:inset 0 -2px #18a7a0}
-.rn-agenda .agenda-subnav .nav-item:hover{background:#f0f5f8}
-.rn-agenda .agenda-subnav .nav-item:focus-visible{outline:2px solid #18a7a0;outline-offset:2px}
-.rn-agenda .main{min-width:0;margin:0;padding:20px 24px}
-.rn-agenda .topbar:not(:has(.dynamic-page-heading)){display:none}
+.agenda-shell{min-height:calc(100vh - var(--global-header-height,82px))}
+.agenda-subnav{position:sticky;top:var(--global-header-height,82px);z-index:17;display:flex!important;flex-direction:row;align-items:center;flex-wrap:wrap;width:100%;height:auto;min-height:64px;gap:14px;padding:10px 24px;background:#fff;color:#254e63;border-bottom:1px solid var(--line);box-shadow:none}
+.agenda-subnav .agenda-owner{flex:0 1 220px;min-width:160px;padding:0}
+.agenda-subnav .agenda-owner label{color:#526878;font-size:11px}
+.agenda-subnav .agenda-owner select{background:#f6f9fb;color:#254e63;border:1px solid #d7e3ea;padding:7px 10px;margin-top:4px}
+.agenda-subnav .agenda-nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:4px;padding:0;margin:0}
+.agenda-subnav .agenda-nav-item{color:#40566a;font-size:13px;border-radius:8px;min-height:40px;padding:9px 11px;border:0;background:transparent;white-space:nowrap}
+.agenda-subnav .agenda-nav-item.active{color:#107b77;background:#e8f8f7;box-shadow:inset 0 -2px #18a7a0}
+.agenda-subnav .agenda-nav-item:hover{background:#f0f5f8}
+.agenda-subnav .agenda-nav-item:focus-visible{outline:2px solid #18a7a0;outline-offset:2px}
+.agenda-shell .main{min-width:0;margin:0;padding:20px 24px}
+.agenda-shell .topbar:not(:has(.dynamic-page-heading)){display:none}
 .settings-module .agenda-subnav{display:none!important}
 .settings-module .settings-grid{grid-template-columns:1fr}
 .settings-module .topbar{display:flex;margin-bottom:20px}
 @media(max-width:900px){
- .rn-agenda .agenda-subnav{position:static;padding:10px 12px;gap:10px;min-height:0}
- .rn-agenda .agenda-subnav .agenda-owner{flex-basis:100%}
- .rn-agenda .agenda-subnav .nav{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px}
- .rn-agenda .agenda-subnav .nav-item{flex-shrink:0}
- .rn-agenda .main{padding:12px}
- .rn-agenda .toolbar{margin-top:0}
+ .agenda-subnav{position:static;padding:10px 12px;gap:10px;min-height:0}
+ .agenda-subnav .agenda-owner{flex-basis:100%}
+ .agenda-subnav .agenda-nav{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding-bottom:3px}
+ .agenda-subnav .agenda-nav-item{flex-shrink:0}
+ .agenda-shell .main{padding:12px}
+ .agenda-shell .toolbar{margin-top:0}
 }
-@media print{.hub-header,.rn-agenda .agenda-subnav{display:none!important}}
+@media print{.hub-header,.agenda-subnav{display:none!important}}
 
 /* Administrative sections reuse the same editors in the central directory. */
 .admin-access :is(.hospital-panel,.rules-panel),.admin-hospitals :is(.rules-panel,.access-panel),.admin-rules :is(.hospital-panel,.access-panel){display:none!important}.admin-rules .rules-panel{grid-column:1/-1}.hospital-actions{display:flex;gap:12px}#configuredBlocks{margin-top:12px}.admin-module .main{padding-top:16px}.admin-module .billing-subnav{position:relative;z-index:10}

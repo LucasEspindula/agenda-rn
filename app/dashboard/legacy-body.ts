@@ -1,9 +1,9 @@
-export const legacyBody = `<div class="app-shell">
-<aside class="sidebar agenda-subnav" aria-label="Navegação do Agendamento">
+export const legacyBody = `<div class="agenda-shell">
+<aside class="agenda-subnav" aria-label="Navegação do Agendamento">
  <div class="agenda-owner"><label for="professionalFilter">Agenda do profissional</label><select id="professionalFilter"></select></div>
- <nav class="nav" aria-label="Áreas do Agendamento">
-  <button class="nav-item active" data-view="agenda"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v16H4zM8 3v4M16 3v4M4 10h16"/></svg> Agenda</button>
-  <button class="nav-item" data-view="patients"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-3a6 6 0 0 1 6-4h4a6 6 0 0 1 6 4v3"/></svg> Pacientes</button>
+ <nav class="agenda-nav" aria-label="Áreas do Agendamento">
+  <button class="agenda-nav-item active" data-view="agenda"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v16H4zM8 3v4M16 3v4M4 10h16"/></svg> Agenda</button>
+  <button class="agenda-nav-item" data-view="patients"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21v-3a6 6 0 0 1 6-4h4a6 6 0 0 1 6 4v3"/></svg> Pacientes</button>
  </nav>
 </aside>
 <main class="main">
@@ -166,4 +166,5 @@ export const legacyBody = `<div class="app-shell">
 <div id="systemDialog" class="modal hidden"><div class="modal-panel small system-dialog-panel"><div class="modal-head"><div><h3 id="systemDialogTitle">Aviso</h3><p id="systemDialogMessage"></p></div><button class="modal-close" data-dialog-cancel>×</button></div><div class="modal-actions system-dialog-actions"><button id="systemDialogCancel" type="button" class="secondary-btn" data-dialog-cancel>Cancelar</button><button id="systemDialogConfirm" type="button" class="primary-btn">Continuar</button></div></div></div>
 
 <div id="toast" class="toast hidden"></div>`;
+
 
