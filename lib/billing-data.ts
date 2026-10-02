@@ -26,7 +26,9 @@ export async function loadBillingData(){
  const patients=(state.patients||[]) as {id:string;name:string;insurance?:string;cpf?:string;address?:string;created_at?:string;created_by?:number}[];
  const rows=(results[6].data||[]).map((t:Record<string,unknown>)=>{
   const record=records.find(b=>b.attendance_id===t.id)||null,item=record?items.find(i=>i.billing_record_id===record.id&&i.is_active!==false):null;
-  const appointment=!record?(state.appointments||[]).find((a:{id:string})=>a.id===t.appointment_id):null;
+  // Anesthesia ownership belongs to the legacy appointment state, not to billing_records.
+  // Always enrich it from the appointment so financial authorization sees the same agenda.
+  const appointment=(state.appointments||[]).find((a:{id:string})=>a.id===t.appointment_id);
   return projectFinancialRow({...t,anesthetist_id:appointment?.anesthetistId||''},record,item?invoices.find(i=>i.id===item.invoice_id)||null:null,item?{received_amount:item.received_amount??null}:null,patients.find(p=>p.id===t.patient_id)?.name||'Paciente não informado');
  }) as BillingRow[];
  const data:BillingData={rows,entities:results[0].data,links:results[1].data,doctors:results[5].data,invoices,items,expenses:results[7].data,associates:results[8].data,requests:results[9].data,users:results[10].data,payment_parts:results[11].data,attachments:results[12].data,patients:patients.map(p=>({id:p.id,name:p.name,cpf:p.cpf,address:p.address,created_by:p.created_by,created_at:p.created_at})),payers:[...new Set([...patients.map(p=>p.insurance||''),...rows.map(r=>r.insurance),...invoices.filter(i=>i.recipient_type!=='PARTICULAR').map(i=>i.payer)].map(payerKey).filter(Boolean))].sort()};

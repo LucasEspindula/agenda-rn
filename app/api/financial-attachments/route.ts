@@ -27,6 +27,8 @@ async function permitted(session:Session,invoiceId:string|null,recordId:string|n
  if(session.account.role==='general_manager')return true;
  if(session.account.role!=='secretary')return false;
  const {data}=await loadBillingData();
+ // Keep this in lockstep with authorized_financial_attachment_actor(): the doctor
+ // is stored on attendance and the optional anesthetist comes from app_state.
  if(recordId){const row=data.rows.find(r=>r.record?.id===recordId);return !!row&&[row.doctor_id,row.anesthetist_id].some(id=>session.agendaIds.includes(id));}
  const invoice=data.invoices.find(i=>i.id===invoiceId);if(!invoice)return false;
  const rows=invoiceRows(invoice,data).map(({row})=>row);

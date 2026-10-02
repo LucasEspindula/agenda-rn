@@ -640,7 +640,7 @@ function validateNativeFinance(){
 }
 async function saveNativeFinance(id){
  if((window.AgendaAuth||{}).role==='doctor')return;captureNativeFinance();let f=nativeFinance;const method=nativeMethod();if(f?.row?.invoice)return;
- if(!f?.row){if(method!=='PARTICULAR'||window.RNMoney.parseBRL(f?.draft.received_amount)==null&&f?.draft.payment_status!=='PAGO')return;await loadNativeFinance(id,f.draft);f=nativeFinance;captureNativeFinance()}
+ if(!f?.row){if(method!=='PARTICULAR'||window.RNMoney.parseBRL(f?.draft.received_amount)==null&&f?.draft.payment_status!=='PAGO')return;const proofFile=f.proofFile,proofTargetId=f.proofTargetId,proofReplacesId=f.proofReplacesId;await loadNativeFinance(id,f.draft);f=nativeFinance;if(f){f.proofFile=proofFile;f.proofTargetId=proofTargetId;f.proofReplacesId=proofReplacesId;}captureNativeFinance()}
  validateNativeFinance();if(!f.row)throw Error('Financeiro indisponível. Tente novamente.');
  const direct=window.RNFinance.directPayment(f.row,f.data,method),amount=direct?window.RNMoney.parseBRL(f.draft.received_amount):null;let proofUploadFailed=false;
  if(!f.row.record&&(amount==null&&f.draft.payment_status!=='PAGO'||!direct))return;

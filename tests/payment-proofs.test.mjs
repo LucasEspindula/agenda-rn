@@ -40,7 +40,7 @@ test('attachment endpoint validates file metadata, cleans PENDING uploads and ke
  assert.match(client,/cleanupPendingFinancialAttachment/);
 });
 
-test('proof UI and Agenda defer upload until the payment is saved',async()=>{
+test('proof UI and Agenda defer upload until the payment is saved and retry only uploads',async()=>{
  const component=await readFile('components/payment-proofs.tsx','utf8');
  const billing=await readFile('app/billing/billing-client.tsx','utf8');
  const agenda=await readFile('public/legacy-app.js','utf8');
@@ -51,12 +51,26 @@ test('proof UI and Agenda defer upload until the payment is saved',async()=>{
  assert.match(billing,/Tentar novamente/);
  assert.match(agenda,/showProofs=f\.draft\.payment_status==='PAGO'/);
  assert.match(agenda,/f\.proofFile=file/);
+ assert.match(agenda,/const proofFile=f\.proofFile,proofTargetId=f\.proofTargetId,proofReplacesId=f\.proofReplacesId/);
+ assert.match(agenda,/f\.proofFile=proofFile;f\.proofTargetId=proofTargetId;f\.proofReplacesId=proofReplacesId/);
  assert.match(agenda,/await window\.RNFinance\.uploadPaymentProof\(result\.id,f\.proofFile,f\.proofReplacesId\)/);
+ assert.match(agenda,/retryNativePaymentProof/);
+ const retry=agenda.slice(agenda.indexOf("if($('retryNativePaymentProof'))"),agenda.indexOf('\n}',agenda.indexOf("if($('retryNativePaymentProof'))")));
+ assert.doesNotMatch(retry,/fetch\('\/api\/billing'/);
+ assert.match(billing,/setMessage\(shouldUpload\?'Pagamento e comprovante salvos\.':'Alteração salva\.'\)/);
+ assert.match(billing,/setMessage\('Pagamento salvo\. O comprovante não foi enviado\.'\)/);
 });
 
-test('secretary authorization also covers anesthetist agendas and shared invoices remain all-or-nothing',async()=>{
- const migration=await readFile('supabase/migrations/20261002191946_refine_financial_payment_proofs.sql','utf8');
- assert.match(migration,/g\.professional_id=a\.doctor_id or g\.professional_id=a\.anesthetist_id/);
+test('SQL and API derive anesthetist access from the canonical appointment state',async()=>{
+ const migration=await readFile('supabase/migrations/20261002195405_fix_financial_attachment_agenda_authorization.sql','utf8');
+ const route=await readFile('app/api/financial-attachments/route.ts','utf8');
+ const data=await readFile('lib/billing-data.ts','utf8');
+ assert.doesNotMatch(migration,/a\.anesthetist_id/);
+ assert.match(migration,/jsonb_array_elements\(coalesce\(s\.payload->'appointments'/);
+ assert.match(migration,/ap\.value->>'anesthetistId'/);
+ assert.match(route,/\[row\.doctor_id,row\.anesthetist_id\]/);
+ assert.match(data,/const appointment=\(state\.appointments\|\|\[\]\)\.find/);
+ assert.match(data,/anesthetist_id:appointment\?\.anesthetistId\|\|''/);
  assert.match(migration,/and not exists\(/);
  assert.match(migration,/grant execute.*service_role/);
 });

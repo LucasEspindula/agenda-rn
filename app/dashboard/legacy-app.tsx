@@ -40,7 +40,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=payment-proofs-flow-20261002";
+        script.src = "/legacy-app.js?v=payment-proofs-regression-hotfix-20261002";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
