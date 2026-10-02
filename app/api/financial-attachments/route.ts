@@ -37,6 +37,21 @@ async function attachmentFor(id:string){
  if(error)throw error;
  return data as Attachment|null;
 }
+async function rejectPending(session:Session,attachment:Attachment){
+ if(attachment.status!=='PENDING'||attachment.created_by!==session.account.id||!(await permitted(session,attachment.invoice_id,attachment.billing_record_id)))throw new HttpError(403,'Envio não disponível.');
+ const db=getSupabaseAdmin();
+ // Storage removal is deliberately best effort: metadata still becomes REJECTED when
+ // the object was never uploaded or the upload URL expired.
+ await db.storage.from(BUCKET).remove([attachment.storage_path]);
+ const {error}=await db.rpc('reject_financial_attachment',{p_actor:session.account.id,p_id:attachment.id});
+ if(error)throw new HttpError(error.code==='P0001'?409:503,error.message||'Não foi possível cancelar o envio.');
+}
+async function cleanOldPending(session:Session){
+ const db=getSupabaseAdmin(),cutoff=new Date(Date.now()-60*60*1000).toISOString();
+ const {data,error}=await db.from('financial_attachments').select('id,invoice_id,billing_record_id,storage_path,created_by,status').eq('created_by',session.account.id).eq('status','PENDING').lt('created_at',cutoff);
+ if(error)return;
+ for(const row of data||[]){try{await rejectPending(session,row as Attachment);}catch{/* Keep rows whose authorization changed for audit. */}}
+}
 function failure(error:unknown){
  if(error instanceof HttpError)return Response.json({error:error.message},{status:error.status});
  return Response.json({error:'Não foi possível acessar o comprovante.'},{status:500});
@@ -56,6 +71,7 @@ export async function GET(request:Request){
 async function begin(request:Request){
  const session=await getSession();if(!session||session.account.role==='doctor')throw new HttpError(403,'Acesso negado.');
  await consumeLimit('payment-proof-upload',String(session.account.id),30,3600);
+ await cleanOldPending(session);
  const body=await readJson(request),invoiceId=body.invoiceId??null,recordId=body.billingRecordId??null;
  if((invoiceId===null)===(recordId===null)||!(!invoiceId||validId(invoiceId))||!(!recordId||validId(recordId)))throw new HttpError(400,'Selecione um pagamento válido.');
  const name=cleanName(body.name),mime=body.mimeType,size=body.size;
@@ -90,3 +106,10 @@ async function complete(request:Request){
 }
 export const POST=secureMutation(begin);
 export const PATCH=secureMutation(complete);
+export const DELETE=secureMutation(async request=>{
+ const session=await getSession();if(!session||session.account.role==='doctor')throw new HttpError(403,'Acesso negado.');
+ const id=new URL(request.url).searchParams.get('id');if(!id||!validId(id))throw new HttpError(400,'Comprovante inválido.');
+ const attachment=await attachmentFor(id);if(!attachment)throw new HttpError(404,'Comprovante não disponível.');
+ await rejectPending(session,attachment);
+ return Response.json({ok:true});
+});

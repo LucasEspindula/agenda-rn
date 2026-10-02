@@ -9,16 +9,12 @@ import {individualReceived} from '@/lib/billing-reports';
 import {notifyFinancialChange} from '@/lib/financial-events';
 import {confirmFiscalPayment} from '@/components/confirm-fiscal-payment';
 import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
+import {uploadFinancialAttachment} from '@/lib/financial-attachments-client';
 import { legacyBody } from "./legacy-body";
 
 type Session = { user: { email: string; name: string; role: string; agendaIds: string[] } };
-async function uploadPaymentProof(billingRecordId:string,file:File){
- const startResponse=await fetch('/api/financial-attachments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({billingRecordId,name:file.name,mimeType:file.type,size:file.size})}),start=await startResponse.json();
- if(!startResponse.ok)throw Error(start.error||'O pagamento foi mantido, mas o comprovante não foi enviado.');
- const upload=await fetch(start.url,{method:'PUT',headers:{'content-type':file.type},body:file});
- if(!upload.ok)throw Error('O pagamento foi mantido, mas o comprovante não foi enviado. Tente novamente.');
- const finishResponse=await fetch('/api/financial-attachments',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({id:start.id})}),finish=await finishResponse.json();
- if(!finishResponse.ok)throw Error(finish.error||'O pagamento foi mantido, mas o comprovante não foi enviado. Tente novamente.');
+async function uploadPaymentProof(billingRecordId:string,file:File,replacesId?:string|null){
+ await uploadFinancialAttachment(file,{billingRecordId,replacesId});
  notifyFinancialChange();
 }
 
@@ -44,7 +40,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       setReady(true);
       requestAnimationFrame(() => {
         const script = document.createElement("script");
-        script.src = "/legacy-app.js?v=agenda-nav-cleanup-20261002";
+        script.src = "/legacy-app.js?v=payment-proofs-flow-20261002";
         script.dataset.agendaRuntime = "true";
         document.body.appendChild(script);
       });
@@ -55,4 +51,3 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
   if (!ready) return <main className="grid min-h-screen place-items-center bg-slate-50"><p className="text-slate-600">Carregando RN Integra…</p></main>;
   return <><link rel="stylesheet" href="/legacy.css?v=agenda-nav-cleanup-20261002"/><div className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} /></>;
 }
-
