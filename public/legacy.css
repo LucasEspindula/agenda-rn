@@ -10,7 +10,7 @@ button,input,select,textarea{font:inherit}button{cursor:pointer}.hidden{display:
 .agenda-shell{min-height:calc(100vh - var(--global-header-height,82px));display:block}
 .agenda-subnav{position:sticky;top:var(--global-header-height,82px);z-index:17;display:flex;align-items:center;flex-wrap:wrap;width:100%;height:auto;min-height:64px;gap:14px;padding:10px 24px;background:#fff;color:#254e63;border-bottom:1px solid var(--line);box-shadow:none}
 .agenda-empty-state{display:none;min-height:calc(100dvh - var(--global-header-height,82px));padding:32px 24px;align-items:center;justify-content:center;background:var(--bg)}
-.agenda-empty-state img{display:block;width:min(920px,100%);height:auto}
+.agenda-empty-state img{display:block;width:min(552px,60%);height:auto}
 .agenda-shell.agenda-has-no-owner .agenda-subnav,.agenda-shell.agenda-has-no-owner .main{display:none!important}
 .agenda-shell.agenda-has-no-owner .agenda-empty-state{display:flex}
 .agenda-owner{flex:0 1 220px;min-width:160px;padding:0}.agenda-owner label{color:#526878;font-size:11px;text-transform:uppercase;letter-spacing:.05em}.agenda-owner select{margin-top:4px;background:#f6f9fb;color:#254e63;border:1px solid #d7e3ea;padding:7px 10px}
@@ -314,7 +314,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .agenda-shell .main{padding:12px}
  .agenda-shell .toolbar{margin-top:0}
  .agenda-empty-state{padding:22px 14px;align-items:flex-start}
- .agenda-empty-state img{width:100%;margin-top:clamp(22px,8vh,72px)}
+ .agenda-empty-state img{width:60%;margin-top:clamp(22px,8vh,72px)}
 }
 @media print{.hub-header,.agenda-subnav{display:none!important}}
 
