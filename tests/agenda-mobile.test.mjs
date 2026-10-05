@@ -94,3 +94,16 @@ test('API requires denial reason before writing and filters doctor requests befo
   role = 'doctor'; await api.GET();
   assert.deepEqual(calls[0], ['eq', 'requested_by', 5]); assert.deepEqual(calls[1], ['limit', 200]);
 });
+
+
+test('agenda starts weeks on Sunday and treats all-day rules as absolute', () => {
+  assert.match(source,/function startOfWeek\(x\)\{const d=new Date\(x\),day=d\.getDay\(\);d\.setDate\(d\.getDate\(\)-day\)/);
+  assert.match(source,/r\.severity==="block"\|\|r\.blockAllDay/);
+  assert.doesNotMatch(source,/Reagende ou cancele o atendimento primeiro/);
+});
+
+test('detail cancellation and critical dialogs remain reachable', () => {
+  assert.match(source,/cancelDetailAppointmentBtn/);
+  assert.match(source,/detailSuggestionReason/);
+  assert.match(source,/e\.target instanceof HTMLDialogElement/);
+});

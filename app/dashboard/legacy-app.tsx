@@ -51,7 +51,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
     if (!ready || !cssReady) return;
     let cancelled = false;
     const script = document.createElement("script");
-    script.src = "/legacy-app.js?v=agenda-bootstrap-20261005";
+    script.src = "/legacy-app.js?v=agenda-workflow-stability-20261005";
     script.dataset.agendaRuntime = "true";
     script.onload = () => { if (!cancelled) setRuntimeReady(true); };
     script.onerror = () => { if (!cancelled) setError("Não foi possível carregar sua agenda."); };
@@ -60,5 +60,5 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
   }, [ready,cssReady]);
   if (error) return <main className="grid min-h-screen place-items-center bg-slate-50 p-6"><div className="rounded-2xl bg-white p-8 shadow-lg"><h1 className="text-xl font-semibold">Agenda indisponível</h1><p className="mt-2 text-slate-600">{error}</p></div></main>;
   if (!ready) return <main className="grid min-h-screen place-items-center bg-slate-50"><p className="text-slate-600">Carregando RN Integra…</p></main>;
-  return <><link ref={stylesheetRef} rel="stylesheet" href="/legacy.css?v=agenda-bootstrap-20261005" onLoad={() => setCssReady(true)} onError={() => setError("Não foi possível carregar sua agenda.")}/><div aria-busy={!runtimeReady} style={{visibility:runtimeReady?'visible':'hidden'}} className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} />{!runtimeReady&&<main role="status" className="grid min-h-screen place-items-center bg-slate-50" style={{position:'fixed',inset:'var(--global-header-height,82px) 0 0',zIndex:1}}><p className="text-slate-600">Carregando RN Integra…</p></main>}</>;
+  return <><link ref={stylesheetRef} rel="stylesheet" href="/legacy.css?v=agenda-workflow-stability-20261005" onLoad={() => setCssReady(true)} onError={() => setError("Não foi possível carregar sua agenda.")}/><div aria-busy={!runtimeReady} style={{visibility:runtimeReady?'visible':'hidden'}} className={initialView==='settings'?'admin-section admin-'+adminSection:undefined} dangerouslySetInnerHTML={{ __html: legacyBody }} />{!runtimeReady&&<main role="status" className="grid min-h-screen place-items-center bg-slate-50" style={{position:'fixed',inset:'var(--global-header-height,82px) 0 0',zIndex:1}}><p className="text-slate-600">Carregando RN Integra…</p></main>}</>;
 }
