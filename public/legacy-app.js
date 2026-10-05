@@ -328,8 +328,8 @@ function dayConflictCount(day,appointments){
 }
 function surgeonColor(id){const palette=["#dff4ef","#e8efff","#fff0d9","#f2e8ff","#ffe6ec","#e4f4ff","#edf4dc"];let n=0;for(const c of String(id||""))n=(n*31+c.charCodeAt(0))>>>0;return palette[n%palette.length]}
 function setAgendaOwnerState(owner){
- const shell=document.querySelector(".agenda-shell"),empty=$("agendaEmptyState"),hasOwner=Boolean(owner);
- shell?.classList.toggle("agenda-has-no-owner",!hasOwner);empty?.classList.toggle("hidden",hasOwner);
+ const shell=document.querySelector(".agenda-shell"),empty=$("agendaEmptyState"),agendaContext=(window.AgendaInitialView||"agenda")==="agenda",hasOwner=Boolean(owner);
+ shell?.classList.toggle("agenda-has-no-owner",agendaContext&&!hasOwner);empty?.classList.toggle("hidden",!agendaContext||hasOwner);
 }
 function renderCalendar(){
  const owner=selectedProf();setAgendaOwnerState(owner);if(!owner)return;
