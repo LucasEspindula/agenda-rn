@@ -57,6 +57,11 @@ function occurrenceInMonth(date){
 }
 function csvTimes(value){return String(value||"").split(",").map(x=>x.trim()).filter(Boolean)}
 function overlap(startA,endA,startB,endB){return startA<endB&&endA>startB}
+function assignCalendarLanes(entries=[]){
+ const sorted=[...entries].filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start).sort((a,b)=>a.start-b.start||a.end-b.end||String(a.key).localeCompare(String(b.key))),assignments=new Map();let group=[],groupEnd=-Infinity;
+ const commit=()=>{if(!group.length)return;const laneEnds=[];for(const entry of group){let lane=laneEnds.findIndex(end=>end<=entry.start);if(lane<0){lane=laneEnds.length;laneEnds.push(entry.end)}else laneEnds[lane]=entry.end;assignments.set(entry.key,{lane,total:0})}for(const entry of group)assignments.get(entry.key).total=laneEnds.length;group=[];groupEnd=-Infinity};
+ for(const entry of sorted){if(group.length&&entry.start>=groupEnd)commit();group.push(entry);groupEnd=Math.max(groupEnd,entry.end)}commit();return assignments
+}
 function blockAppliesToAppointment(block,a){
  if(block.date!==a.date)return false;
  const s=mins(a.time),e=s+Number(a.duration||0);
@@ -344,6 +349,8 @@ function renderCalendar(){
  const visibleDays=new Set(days.map(d=>ds(d)));
  const relevantAppointments=state.appointments.filter(a=>visibleDays.has(a.date)&&(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id));
  const relevantBlocks=state.scheduleBlocks.filter(b=>visibleDays.has(b.date)&&b.professionalId===owner.id);
+ const dayAppointments=new Map(days.map(d=>{const day=ds(d);return [day,visible.filter(a=>a.date===day&&a.status!=="cancelled")]}));
+ const dayLaneAssignments=new Map(days.map(d=>{const day=ds(d),entries=[...(dayAppointments.get(day)||[]).map(a=>({key:"appointment:"+a.id,start:mins(a.time),end:mins(a.time)+Number(a.duration||0)})),...blocksForProfessional(owner.id,day).map(b=>({key:"block:"+b.id,start:mins(b.start),end:mins(b.end)}))];return [day,assignCalendarLanes(entries)]}));
  const timesToShow=[];
  relevantAppointments.forEach(a=>{timesToShow.push(mins(a.time));timesToShow.push(mins(a.time)+Number(a.duration||0))});
  relevantBlocks.forEach(b=>{timesToShow.push(mins(b.start));timesToShow.push(mins(b.end))});
@@ -385,16 +392,15 @@ function renderCalendar(){
        </div>
      </div>`;
    });
-   const ownerBlocks=blocksForProfessional(owner.id,day).filter(b=>mins(b.start)>=hour&&mins(b.start)<hour+60);
-   const slotEntries=[...apps.map(a=>({key:"appointment:"+a.id,start:mins(a.time),end:mins(a.time)+Number(a.duration||0)})),...ownerBlocks.map(b=>({key:"block:"+b.id,start:mins(b.start),end:mins(b.end)}))];
-   const laneStyle=key=>{const entry=slotEntries.find(x=>x.key===key);if(!entry)return "";const concurrent=slotEntries.filter(x=>overlap(entry.start,entry.end,x.start,x.end)),index=concurrent.findIndex(x=>x.key===key);return concurrent.length<2?"":`left:calc(${(100/concurrent.length)*index}% + 3px);right:auto;width:calc(${100/concurrent.length}% - 6px);`};
+   const ownerBlocks=blocksForProfessional(owner.id,day).filter(b=>mins(b.start)>=hour&&mins(b.start)<hour+60),lanes=dayLaneAssignments.get(day)||new Map(),dayApps=dayAppointments.get(day)||[];
+   const laneStyle=key=>{const assignment=lanes.get(key);return !assignment||assignment.total<2?"":`left:calc(${(100/assignment.total)*assignment.lane}% + 3px);right:auto;width:calc(${100/assignment.total}% - 6px);`};
    ownerBlocks.forEach(b=>{
      const top=Math.max(2,((mins(b.start)-hour)/60)*64+2),height=Math.max(28,((mins(b.end)-mins(b.start))/60)*64-4);
      html+=`<button class="schedule-block" data-block-id="${esc(b.id)}" style="top:${top}px;height:${height}px;${laneStyle("block:"+b.id)}"><strong>${esc(b.start)} - ${esc(b.end)}</strong><span>${esc(b.reason)}</span></button>`;
    });
    if(isAnesthesiologist(owner)&&apps.length){
     apps.forEach(a=>{
-     const overlaps=apps.filter(b=>a.id!==b.id&&mins(a.time)<mins(b.time)+b.duration&&mins(a.time)+a.duration>mins(b.time));if(overlaps.length)conflicts++;
+     const overlaps=dayApps.filter(b=>a.id!==b.id&&overlap(mins(a.time),mins(a.time)+Number(a.duration||0),mins(b.time),mins(b.time)+Number(b.duration||0)));if(overlaps.length)conflicts++;
      html+=appointmentCard(a,hour,laneStyle("appointment:"+a.id),overlaps.length>0)
     })
    }else apps.forEach(a=>html+=appointmentCard(a,hour,laneStyle("appointment:"+a.id),false));

@@ -7,7 +7,7 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../public/legacy-app.js', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'renderMobileCalendar']);
+const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowDate', 'renderMobileCalendar', 'assignCalendarLanes']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
   const doctor = { id: 'd', name: 'Rosa', specialty: 'Ortopedia e Traumatologia' }, anesthetist = { id: 'a', name: 'Dr. Lima', specialty: 'Anestesiologia' };
@@ -106,4 +106,26 @@ test('detail cancellation and critical dialogs remain reachable', () => {
   assert.match(source,/cancelDetailAppointmentBtn/);
   assert.match(source,/detailSuggestionReason/);
   assert.match(source,/e\.target instanceof HTMLDialogElement/);
+});
+
+
+test('calendar lanes include intervals that cross an hour boundary', () => {
+  const { context: c } = fixture();
+  const lanes = c.assignCalendarLanes([
+    { key: 'appointment', start: 9 * 60 + 30, end: 11 * 60 },
+    { key: 'block', start: 10 * 60, end: 10 * 60 + 30 },
+  ]);
+  assert.equal(lanes.get('appointment').total, 2);
+  assert.notEqual(lanes.get('appointment').lane, lanes.get('block').lane);
+});
+
+test('calendar lanes keep adjacent intervals together and transitive overlaps collision-free', () => {
+  const { context: c } = fixture();
+  const adjacent = c.assignCalendarLanes([{ key: 'a', start: 9 * 60, end: 10 * 60 }, { key: 'b', start: 10 * 60, end: 11 * 60 }]);
+  assert.equal(adjacent.get('a').total, 1);
+  assert.equal(adjacent.get('a').lane, adjacent.get('b').lane);
+  const lanes = c.assignCalendarLanes([{ key: 'a', start: 9 * 60, end: 10 * 60 }, { key: 'b', start: 9 * 60 + 30, end: 10 * 60 + 30 }, { key: 'c', start: 10 * 60, end: 11 * 60 }]);
+  assert.equal(lanes.get('a').total, 2);
+  assert.notEqual(lanes.get('a').lane, lanes.get('b').lane);
+  assert.equal(lanes.get('a').lane, lanes.get('c').lane);
 });
