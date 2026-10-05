@@ -1,4 +1,5 @@
 export const legacyBody = `<div class="agenda-shell">
+<section id="agendaEmptyState" class="agenda-empty-state hidden" aria-live="polite"><img src="/agenda-empty-state.webp" alt="Ilustração informando que a agenda aparecerá quando houver médicos disponíveis."/></section>
 <aside class="agenda-subnav" aria-label="Navegação do Agendamento">
  <div class="agenda-owner"><label for="professionalFilter">Agenda do profissional</label><select id="professionalFilter"></select></div>
  <nav class="agenda-nav" aria-label="Áreas do Agendamento">

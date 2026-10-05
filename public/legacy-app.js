@@ -327,9 +327,13 @@ function dayConflictCount(day,appointments){
  return ids.size;
 }
 function surgeonColor(id){const palette=["#dff4ef","#e8efff","#fff0d9","#f2e8ff","#ffe6ec","#e4f4ff","#edf4dc"];let n=0;for(const c of String(id||""))n=(n*31+c.charCodeAt(0))>>>0;return palette[n%palette.length]}
+function setAgendaOwnerState(owner){
+ const shell=document.querySelector(".agenda-shell"),empty=$("agendaEmptyState"),hasOwner=Boolean(owner);
+ shell?.classList.toggle("agenda-has-no-owner",!hasOwner);empty?.classList.toggle("hidden",hasOwner);
+}
 function renderCalendar(){
+ const owner=selectedProf();setAgendaOwnerState(owner);if(!owner)return;
  renderMobileCalendar();
- const owner=selectedProf();if(!owner){$("calendar").innerHTML='<div class="empty">Nenhuma agenda ativa disponível. A gerência pode configurar as agendas no cadastro central de médicos.</div>';return}
  mountAgendaOwnerSelector(owner);
  renderGuideAlerts();renderOperationalAlerts();updateNotificationCenter();
  const days=calendarMode==="week"?Array.from({length:7},(_,i)=>addDays(currentDate,i)):[new Date(currentDate)];
