@@ -50,7 +50,7 @@ export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>, audit = (auditRows.data || []) as Array<Record<string, any>>;
   const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
-  const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null }]));
+  const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null, action: row.action }]));
   const scopedRequests = session.account.role === "doctor" ? requests.map(withoutLegacyFinance) : requests;
   const visibleRequests = scopedRequests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
   return Response.json({
@@ -59,7 +59,7 @@ export async function GET() {
     audit: audit.filter(row => isManager(session.account.role) || (session.account.role === "secretary" && session.agendaIds.includes(row.professional_id))).map((row) => {
       const metadata = (row.metadata || {}) as Record<string, unknown>;
       const linked = typeof metadata.requestId === "string" ? requestPayloads.get(metadata.requestId) : null;
-      return { ...row, actorName: row.actor_name, actorRole: row.actor_role, professionalId: row.professional_id, appointmentId: row.appointment_id, patientId: row.patient_id, createdAt: row.created_at, before: linked?.before ?? metadata.before ?? null, after: linked?.after ?? metadata.after ?? null };
+      return { ...row, actorName: row.actor_name, actorRole: row.actor_role, professionalId: row.professional_id, appointmentId: row.appointment_id, patientId: row.patient_id, createdAt: row.created_at, requestAction: linked?.action ?? metadata.requestAction ?? null, before: linked?.before ?? metadata.before ?? null, after: linked?.after ?? metadata.after ?? null };
     }),
   });
 }

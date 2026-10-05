@@ -520,7 +520,7 @@ function initWorkflowUI(){
 }
 function renderDoctorHistory(){
  const rows=workflowData.requests||[];
- return rows.length?rows.map(r=>`<article class="workflow-card doctor-history ${esc(r.status)}"><div class="workflow-card-main"><div class="workflow-heading"><strong>${esc(workflowRequestTitle(r))}</strong><span class="workflow-status ${esc(r.status)}">${r.status==="accepted"?"Aceita ✅":r.status==="denied"?"Recusada 🚫":"Aguardando aprovação"}</span></div><div class="workflow-changes">${workflowChangeRows(r)}</div>${r.decisionNote?`<p class="decision-reason"><strong>Motivo da recusa:</strong> ${esc(r.decisionNote)}</p>`:""}<small>Enviada em ${workflowDate(r.createdAt)}${r.deciderName?` · ${esc(r.deciderName)} · ${workflowDate(r.decidedAt)}`:""}</small></div></article>`).join(""):'<div class="empty">Nenhuma solicitação enviada.</div>';
+ return rows.length?rows.map(r=>`<article class="workflow-card doctor-history ${esc(r.status)}"><div class="workflow-card-main"><div class="workflow-heading"><strong>${esc(workflowRequestTitle(r))}</strong><span class="workflow-status ${esc(r.status)}">${r.status==="accepted"?"Aceita ✅":r.status==="denied"?"Recusada 🚫":"Aguardando aprovação"}</span></div><div class="workflow-changes">${workflowChangeRows(r)}</div>${r.decisionNote?`<p class="decision-reason"><strong>Motivo da recusa:</strong> ${esc(r.decisionNote)}</p>`:""}<small>${esc(doctorName(r.requesterName||"Médico"))} · Médico · Enviada em ${workflowDate(r.createdAt)}${r.deciderName?` · Decidida por ${esc(r.deciderName)} em ${workflowDate(r.decidedAt)}`:""}</small></div></article>`).join(""):'<div class="empty">Nenhuma solicitação enviada.</div>';
 }
 function requestDenialReason(){
  return new Promise(resolve=>{
@@ -535,33 +535,37 @@ function requestDenialReason(){
 }
 function workflowDate(value){return value?new Date(value).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"—"}
 function suggestionReason(a){return a?.suggestionReason||a?.rescheduleReason||a?.cancelReason||""}
-function workflowAppointment(a){if(!a)return null;const p=patient(a.patientId),h=hospital(a.hospitalId),place=hospitalAcronym(h?.name||""),reason=suggestionReason(a);return {a,p,line:`${a.date||"—"} às ${a.time||"—"} · ${a.procedure||"Procedimento"}${place?` no ${place}`:""} · ${statusLabel(a.status||"scheduled")}${reason?` · Motivo: ${reason}`:""}`}}
-function workflowRequestTitle(r){const requester=doctorName(r.requesterName||"Médico");if(r.action==="create")return `${requester} enviou um agendamento.`;if(r.action==="delete")return `${requester} sugeriu um desagendamento.`;return `${requester} sugeriu uma alteração.`}
-function workflowChangeRows(r){const previous=workflowAppointment(r.previous),proposed=r.action==="delete"?workflowAppointment(r.proposed):workflowAppointment(r.proposed);return `${previous?`<div class="workflow-change from"><span class="workflow-change-label">De:</span><span class="workflow-arrow" aria-hidden="true">≫</span><span>${esc(previous.line)}</span></div>`:""}${proposed?`<div class="workflow-change to"><span class="workflow-change-label">Para:</span><span class="workflow-arrow" aria-hidden="true">≪</span><span>${esc(proposed.line)}</span></div>`:""}${suggestionReason(r.proposed)?`<div class="workflow-cancel-reason"><strong>Motivo:</strong> ${esc(suggestionReason(r.proposed))}</div>`:""}`}
+function workflowAppointment(a){if(!a)return null;const p=patient(a.patientId),h=hospital(a.hospitalId),place=hospitalAcronym(h?.name||""),reason=suggestionReason(a);return {a,p,line:`${p?.name||"Paciente não disponível"} · ${a.date||"—"} às ${a.time||"—"} · ${a.procedure||"Procedimento"}${place?` · ${place}`:""} · ${statusLabel(a.status||"scheduled")}${reason?` · Motivo: ${reason}`:""}`}}
+function workflowRequestTitle(r){const target=workflowAppointment(r.proposed||r.previous),patientName=target?.p?.name||"Paciente não disponível";if(r.action==="create")return `Solicitação de novo agendamento para ${patientName}`;if(r.action==="delete")return `Solicitação de desagendamento de ${patientName}`;return `Solicitação de alteração para ${patientName}`}
+function workflowChangeRows(r){const previous=workflowAppointment(r.previous),proposed=workflowAppointment(r.proposed),reason=suggestionReason(r.proposed);if(r.action==="create")return `${proposed?`<div class="workflow-change to"><span class="workflow-change-label">ADICIONADO</span><span class="workflow-arrow" aria-hidden="true">≪</span><span>${esc(proposed.line)}</span></div>`:""}${reason?`<div class="workflow-cancel-reason"><strong>Motivo:</strong> ${esc(reason)}</div>`:""}`;if(r.action==="delete")return `${previous?`<div class="workflow-change from"><span class="workflow-change-label">REMOVIDO</span><span class="workflow-arrow" aria-hidden="true">≫</span><span>${esc(previous.line)}</span></div>`:""}${reason?`<div class="workflow-cancel-reason"><strong>Motivo:</strong> ${esc(reason)}</div>`:""}`;return `${previous?`<div class="workflow-change from"><span class="workflow-change-label">DE</span><span class="workflow-arrow" aria-hidden="true">≫</span><span>${esc(previous.line)}</span></div>`:""}${proposed?`<div class="workflow-change to"><span class="workflow-change-label">PARA</span><span class="workflow-arrow" aria-hidden="true">≪</span><span>${esc(proposed.line)}</span></div>`:""}${reason?`<div class="workflow-cancel-reason"><strong>Motivo:</strong> ${esc(reason)}</div>`:""}`}
 function agendaLogSnapshot(a){
  if(!a)return null;
- const details=workflowAppointment(a),date=a.date?parseDate(a.date).toLocaleDateString("pt-BR"):"—";
- return {patient:patient(a.patientId)?.name||"",agenda:state.professionals.find(p=>p.id===(a.doctorId||a.anesthetistId))?.name||"",date:date+" às "+(a.time||"—"),procedure:a.procedure||"Procedimento",place:hospitalAcronym(hospital(a.hospitalId)?.name||""),status:statusLabel(a.status||"scheduled"),reason:suggestionReason(a)||"",duration:a.duration?String(a.duration)+" min":"",notes:a.notes||"",line:details.line.replace(a.date||"—",date)};
+ const date=a.date?parseDate(a.date).toLocaleDateString("pt-BR"):"—",p=patient(a.patientId),professional=state.professionals.find(x=>x.id===(a.doctorId||a.anesthetistId));
+ return {patient:p?.name||"Paciente não disponível",agenda:professional?.name||"Profissional não disponível",date:date+" às "+(a.time||"—"),procedure:a.procedure||"Procedimento não disponível",place:hospitalAcronym(hospital(a.hospitalId)?.name||""),status:statusLabel(a.status||"scheduled"),reason:suggestionReason(a)||"",duration:a.duration?String(a.duration)+" min":"",notes:a.notes||""};
 }
+const agendaLogFieldLabels={patient:"Paciente",agenda:"Agenda",date:"Data e horário",procedure:"Procedimento",place:"Hospital",status:"Status",reason:"Motivo",duration:"Duração",notes:"Observação"};
+function agendaLogContext(a,snapshot){return {patient:snapshot?.patient||patient(a.patientId)?.name||"Paciente não disponível",agenda:snapshot?.agenda||state.professionals.find(p=>p.id===a.professionalId)?.name||"Profissional não disponível"}}
+function agendaLogSnapshotText(v){return Object.keys(agendaLogFieldLabels).filter(key=>v?.[key]).map(key=>`${agendaLogFieldLabels[key]}: ${v[key]}`).join(" · ")}
+function agendaLogTitle(a,context){const suffix=context.patient!=="Paciente não disponível"?` de ${context.patient}`:"";const requestAction=a.requestAction||a.metadata?.requestAction;if(a.action==="appointment_created")return `Agendamento criado${suffix}`;if(a.action==="appointment_removed"||a.action==="appointment_deleted"||a.action==="appointment_cancelled")return `Agendamento removido${suffix}`;if(a.action==="request_created")return requestAction==="create"?`Solicitação de novo agendamento para ${context.patient}`:requestAction==="delete"?`Solicitação de desagendamento${suffix}`:`Solicitação de alteração${suffix}`;if(a.action==="request_accepted")return `Solicitação aprovada${suffix}`;if(a.action==="request_denied")return `Solicitação recusada${suffix}`;return `Alteração no agendamento${suffix}`;}
 function agendaLogContent(a){
- const before=agendaLogSnapshot(a.before),after=agendaLogSnapshot(a.after);
- const title=a.action==="appointment_created"?`${a.actorName||"Usuário"} criou um agendamento.`:a.description||"Alteração na agenda";
- const snapshotText=v=>[v?.patient,v?.agenda,v?.line,v?.duration,v?.notes].filter(Boolean).join(" · ");
+ const before=agendaLogSnapshot(a.before),after=agendaLogSnapshot(a.after),context=agendaLogContext(a,after||before);
+ const title=agendaLogTitle(a,context),snapshotText=v=>agendaLogSnapshotText(v);
  let lines=[];
- if(!before&&after)lines=[{label:"ADICIONOU",text:snapshotText(after),kind:"after"}];
- else if(before&&!after)lines=[{label:"REMOVEU",text:snapshotText(before),kind:"before"}];
+ if(!before&&after)lines=[{label:"ADICIONADO",text:snapshotText(after),kind:"after"}];
+ else if(before&&!after)lines=[{label:"REMOVIDO",text:snapshotText(before),kind:"before"}];
  else if(before&&after){
-  const fields=["patient","agenda","date","procedure","place","status","reason","duration","notes"].filter(key=>before[key]!==after[key]);
-  if(fields.length)lines=[{label:"DE",text:fields.map(key=>before[key]||"—").join(" · "),kind:"before"},{label:"PARA",text:fields.map(key=>after[key]||"—").join(" · "),kind:"after"}];
+  const fields=Object.keys(agendaLogFieldLabels).filter(key=>before[key]!==after[key]);
+  if(fields.length)lines=[{label:"DE",text:fields.map(key=>`${agendaLogFieldLabels[key]}: ${before[key]||"—"}`).join(" · "),kind:"before"},{label:"PARA",text:fields.map(key=>`${agendaLogFieldLabels[key]}: ${after[key]||"—"}`).join(" · "),kind:"after"}];
  }
- return {title,lines,search:[title,a.actorName,a.actorRole==="general_manager"?"Gerência":roleLabel(a.actorRole),snapshotText(before),snapshotText(after),patient(a.patientId)?.name,state.professionals.find(p=>p.id===a.professionalId)?.name].filter(Boolean).join(" ")};
+ const metadata=`Paciente: ${context.patient} · Agenda: ${context.agenda}`;
+ return {title,lines,metadata,search:[title,metadata,a.actorName,a.actorRole==="general_manager"?"Gerência":roleLabel(a.actorRole),snapshotText(before),snapshotText(after)].filter(Boolean).join(" ")};
 }
 function renderAgendaLogs(){
  if(!$("auditList"))return;
  const normalize=text=>String(text||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR");
  const query=normalize($("auditSearch")?.value).trim();
  const rows=(workflowData.audit||[]).map(a=>({a,...agendaLogContent(a)})).filter(row=>!query||normalize(row.search).includes(query));
- $("auditList").innerHTML=rows.length?rows.map(({a,title,lines})=>`<article class="agenda-log-event"><header><strong>${esc(title)}</strong><time>${esc(workflowDate(a.createdAt))}</time></header><small>${esc(a.actorName||"Usuário")} · ${esc(a.actorRole==="general_manager"?"Gerência":roleLabel(a.actorRole))}</small>${lines.length?`<section>${lines.map(line=>`<p class="agenda-log-line ${line.kind}"><b>${line.label}</b>${esc(line.text)}</p>`).join("")}</section>`:""}</article>`).join(""):'<p class="empty">Nenhum evento nos registros consultados.</p>';
+ $("auditList").innerHTML=rows.length?rows.map(({a,title,lines,metadata})=>`<article class="agenda-log-event"><header><strong>${esc(title)}</strong><time>${esc(workflowDate(a.createdAt))}</time></header><small>${esc(a.actorName||"Usuário")} · ${esc(a.actorRole==="general_manager"?"Gerência":roleLabel(a.actorRole))}</small><p class="agenda-log-context">${esc(metadata)}</p>${lines.length?`<section>${lines.map(line=>`<p class="agenda-log-line ${line.kind}"><b>${line.label}</b>${esc(line.text)}</p>`).join("")}</section>`:""}</article>`).join(""):'<p class="empty">Nenhum evento nos registros consultados.</p>';
 }
 async function refreshWorkflow(){const response=await fetch("/api/workflow");if(!response.ok)return;workflowData=await response.json();renderWorkflow()}
 function renderWorkflow(){
