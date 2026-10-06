@@ -599,7 +599,7 @@ function agendaLogValues(snapshot){return Object.keys(agendaLogFieldLabels).filt
 function agendaLogContent(a){
  const before=agendaLogSnapshot(a.before),after=agendaLogSnapshot(a.after),context=agendaLogContext(a,after||before),title=agendaLogTitle(a,context),snapshotText=v=>agendaLogSnapshotText(v);
  const lines=[];
- if(!before&&after){const values=agendaLogValues(after);if(values.length)lines.push({label:"Adicionar:",values,kind:"after"});}
+ if(!before&&after){const values=agendaLogValues(after);if(values.length)lines.push({label:"Adicionou",values,kind:"after"});}
  else if(before&&!after){const values=agendaLogValues(before);if(values.length)lines.push({label:"REMOVIDO",values,kind:"before"});}
  else if(before&&after){const from=[],to=[];for(const key of Object.keys(agendaLogFieldLabels))if(before[key]!==after[key]){if(agendaLogHasValue(before[key]))from.push(agendaLogFieldLabels[key]+": "+before[key]);if(agendaLogHasValue(after[key]))to.push(agendaLogFieldLabels[key]+": "+after[key]);}if(from.length)lines.push({label:"DE",values:from,kind:"before"});if(to.length)lines.push({label:"PARA",values:to,kind:"after"});}
  const metadata=`Paciente: ${context.patient} · Agenda: ${context.agenda}`,meaningful=a.action!=="appointment_updated"||lines.length>0;
