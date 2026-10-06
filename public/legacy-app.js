@@ -557,7 +557,7 @@ function agendaLogContent(a){
  if(!before&&after)lines=Object.keys(agendaLogFieldLabels).filter(key=>agendaLogHasValue(after[key])).map(key=>({label:"Adicionar:",text:agendaLogFieldLabels[key]+": "+after[key],kind:"after"}));
  else if(before&&!after)lines=Object.keys(agendaLogFieldLabels).filter(key=>agendaLogHasValue(before[key])).map(key=>({label:"REMOVIDO",text:agendaLogFieldLabels[key]+": "+before[key],kind:"before"}));
  else if(before&&after){
-  for(const key of Object.keys(agendaLogFieldLabels))if(before[key]!==after[key]){const from=agendaLogHasValue(before[key])?before[key]:"",to=agendaLogHasValue(after[key])?after[key]:"",textBefore=agendaLogFieldLabels[key]+": "+from,textAfter=agendaLogFieldLabels[key]+": "+to;if(from)lines.push({label:to?"DE":"REMOVIDO",text:textBefore,kind:"before"});if(to)lines.push({label:from?"PARA":"PARA",text:textAfter,kind:"after"})}
+  for(const key of Object.keys(agendaLogFieldLabels))if(before[key]!==after[key]){const from=agendaLogHasValue(before[key])?before[key]:"",to=agendaLogHasValue(after[key])?after[key]:"",textBefore=agendaLogFieldLabels[key]+": "+from,textAfter=agendaLogFieldLabels[key]+": "+to;if(from)lines.push({label:"DE",text:textBefore,kind:"before"});if(to)lines.push({label:"PARA",text:textAfter,kind:"after"})}
  }
  const metadata=`Paciente: ${context.patient} · Agenda: ${context.agenda}`;
  return {title,lines,metadata,search:[title,metadata,a.actorName,a.actorRole==="general_manager"?"Gerência":roleLabel(a.actorRole),snapshotText(before),snapshotText(after)].filter(Boolean).join(" ")};
@@ -684,14 +684,14 @@ async function saveAppointmentDetailChanges(id,button){
   anesthetistId:(owner&&!isAnesthesiologist(owner))?$("detailRelatedProfessional").value:a.anesthetistId
  };
  if(!updates.procedure||!updates.hospitalId||!updates.date||!updates.time)return appNotice("Dados incompletos","Informe procedimento, hospital, data e horário.");
- const changed=Object.keys(updates).some(k=>String(updates[k]??"")!==String(a[k]??""));
+ const statusChanged=canEditStatus&&Boolean(selectedStatus)&&selectedStatus!==a.status,changed=Object.keys(updates).some(k=>String(updates[k]??"")!==String(a[k]??"")),otherChanged=Object.keys(updates).some(k=>k!=="status"&&k!=="statusUpdatedAt"&&String(updates[k]??"")!==String(a[k]??""));
  try{validateNativeFinance()}catch(error){nativeFinanceError(error.message);return}
  const detailReason=(window.AgendaAuth||{}).role==="doctor"?$("detailSuggestionReason")?.value.trim():"";if((window.AgendaAuth||{}).role==="doctor"&&!detailReason)return appNotice("Motivo necessário","Explique o motivo da alteração para enviar a sugestão.");const updated={...a,...updates,suggestionReason:detailReason||"Alteração do agendamento"};
  if(updated.forma_cobranca==="CONVENIO"&&!updated.insurance?.trim()&&(a.forma_cobranca!=="CONVENIO"||appointmentInsurance(a)!==updated.insurance))return appNotice("Convênio necessário","Informe o convênio do atendimento.");
  const oldText=button.textContent;button.dataset.saving="true";button.disabled=true;button.setAttribute("aria-busy","true");button.textContent=(window.AgendaAuth||{}).role==="doctor"?"Enviando…":"Salvando…";
  try{
   if((window.AgendaAuth||{}).role==="doctor"){const sent=await sendAgendaSuggestion("update",updated,id,button);if(sent){closeModals();toast("Sugestão enviada, aguarde aprovação.")}return}
-  if(changed){Object.assign(a,updated);hist(a.patientId,"Agendamento alterado",`${a.procedure} · ${a.date} às ${a.time}`,id);if(await persist()===false)return}
+  if(changed){const previousStatus=a.status;Object.assign(a,updated);if(otherChanged)hist(a.patientId,"Agendamento alterado",`${a.procedure} · ${a.date} às ${a.time}`,id);if(statusChanged)hist(a.patientId,"Status alterado",`${statusLabel(previousStatus)} → ${statusLabel(a.status)}`,id);if(await persist()===false)return}
   try{await saveNativeFinance(id)}catch(error){nativeFinanceError((changed?"Agendamento salvo. ":"")+error.message);return}
   renderAll();renderAppointmentDetail(state.appointments.find(x=>x.id===id)||a);toast("Agendamento salvo.")
  }finally{if(button.isConnected){delete button.dataset.saving;button.disabled=false;button.removeAttribute("aria-busy");button.textContent=oldText}}

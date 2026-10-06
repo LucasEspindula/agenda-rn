@@ -51,7 +51,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
     if (!ready || !cssReady) return;
     let cancelled = false;
     const script = document.createElement("script");
-    script.src = "/legacy-app.js?v=logs-nav-print-20261006";
+    script.src = "/legacy-app.js?v=logs-status-history-20261006";
     script.dataset.agendaRuntime = "true";
     script.onload = () => { if (!cancelled) setRuntimeReady(true); };
     script.onerror = () => { if (!cancelled) setError("Não foi possível carregar sua agenda."); };
