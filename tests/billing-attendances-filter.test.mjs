@@ -27,12 +27,6 @@ test('filtered reports preserve the particular patient filter while invoice paye
  assert.equal(buildReport(data,{kind:'filtered',doctor:'',entity:'',start:'',end:'',insurance:'PARTICULAR',patient:'lucas'}).summary.total,1);
  assert.equal(matchesInvoice({id:'nf',billing_entity_id:'e',payer:'UNIMED',issue_date:'2026-10-01',paid_at:null,total_amount:null,net_amount:null,invoice_number:'1',notes:null,created_at:'',created_by:null,updated_at:'',updated_by:null},data,filters({insurance:'UNIMED'})),true);
 });
-test('attendance table keeps its minimum width inside the scrolling panel',()=>{
- const css=readFileSync('app/billing/billing.css','utf8');
- assert.match(css,/\.billing-main\{max-width:100%;overflow-x:clip\}/);
- assert.match(css,/\.billing-panel>\.billing-table\{min-width:1120px/);
-});
-
 test('attendance context sanitizes an invoice payer and only retains particular patient text for Particular',()=>{
  const rows=[row({insurance:'CESA',forma_cobranca:'CONVENIO',record:null})];
  assert.deepEqual(sanitizeAttendanceFilters(rows,'Lucas Espindula','Lucas'),{insurance:'',patient:''});
@@ -41,11 +35,19 @@ test('attendance context sanitizes an invoice payer and only retains particular 
 });
 test('attendance patient field is stable, disabled outside Particular and CSS stays scoped',()=>{
  const client=readFileSync('app/billing/billing-client.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
- assert.match(client,/<label>Paciente<input type="search" disabled=\{insurance!=='PARTICULAR'\}/);
+ assert.match(client,/<label className="billing-filter-patient">Paciente<input type="search" disabled=\{insurance!=='PARTICULAR'\}/);
  assert.match(client,/placeholder=\{insurance==='PARTICULAR'\?'Buscar por nome':'Selecione Particular para filtrar'\}/);
  assert.match(client,/className="billing-table billing-attendance-table"/);
  assert.match(css,/\.billing-panel>\.billing-attendance-table\{min-width:1120px/);
  assert.match(css,/\.billing-attendance-table td\{max-width:260px/);
  assert.doesNotMatch(css,/\.billing-panel>\.billing-table\{min-width:1120px/);
  assert.doesNotMatch(css,/\.billing-table td\{max-width:260px/);
+ assert.match(css,/\.billing-filter-patient input:disabled\{background:/);
+});
+
+test('billing logs keep the workflow-card composition instead of timeline card styles',()=>{
+ const logs=readFileSync('app/billing/billing-logs.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
+ for(const name of ['workflow-card','workflow-heading','workflow-status','workflow-changes','workflow-change','workflow-log-context','workflow-log-authorship'])assert.match(logs,new RegExp(name));
+ assert.match(css,/Billing logs mirror the Agenda workflow-card tokens/);
+ assert.match(css,/\.billing-log-event \.workflow-status\{display:inline-block;[^}]*padding:3px 7px;[^}]*font-size:9px/);
 });
