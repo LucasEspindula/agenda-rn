@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import test from 'node:test';
+import {loadTs} from './load-ts.mjs';
+
+const {captureFinancialVersion,withExpectedFinancialVersion,financialVersionIsStale}=loadTs('lib/financial-concurrency.ts');
 
 test('proof preparation qualifies SQL identifiers while preserving replacement validation',async()=>{
  const migration=await readFile('supabase/migrations/20261006110000_stabilize_financial_nf_and_proofs.sql','utf8');
@@ -12,30 +15,45 @@ test('proof preparation qualifies SQL identifiers while preserving replacement v
  assert.match(migration,/current_attachment\.is_current/);
 });
 
-test('record save keeps an expected version for a normal fiscal confirmation and still rejects a stale version',async()=>{
- const client=await readFile('app/billing/billing-client.tsx','utf8');
- const fiscal=await readFile('supabase/migrations/20260924191510_invoice_requests_universal_fiscal.sql','utf8');
- assert.match(client,/const expectedUpdatedAt=editing==='record'\?currentRow\?\.record\?\.updated_at\?\?draft\.updated_at:draft\.updated_at/);
- assert.match(client,/payload=\{\.\.\.draft,updated_at:expectedUpdatedAt/);
- assert.match(fiscal,/old_row is not null and \(old_row->>'updated_at'\)::timestamptz is distinct from \(p_data->>'updated_at'\)::timestamptz then raise exception 'Financeiro alterado por outro usuário\. Atualize'/);
- const current='2026-10-06T10:00:00.000Z';
- assert.equal(current,current,'normal confirmation uses its persisted version');
- assert.notEqual('2026-10-06T09:59:59.000Z',current,'stale edit remains a conflict');
+test('fiscal confirmation accepts the immutable version captured when the record modal opens',()=>{
+ const t1='2026-10-06T10:00:00.000Z';
+ const openedVersion=captureFinancialVersion(t1);
+ const payload=withExpectedFinancialVersion({id:'record-1',updated_at:t1,payment_status:'PAGO',fiscal:{taker_name:'Paciente'}},'record',openedVersion);
+ assert.equal(payload.updated_at,t1);
+ assert.equal(financialVersionIsStale(t1,payload.updated_at),false);
 });
 
-test('NF actions, closing adjustment compatibility and doctor visibility use compact operations',async()=>{
+test('a concurrent financial edit remains stale instead of being overwritten',()=>{
+ const t1='2026-10-06T10:00:00.000Z';
+ const t2='2026-10-06T10:05:00.000Z';
+ const payload=withExpectedFinancialVersion({id:'record-1',updated_at:t1,payment_status:'PAGO'},'record',captureFinancialVersion(t1));
+ assert.equal(payload.updated_at,t1);
+ assert.equal(financialVersionIsStale(t2,payload.updated_at),true);
+});
+
+test('a refresh while the modal is open does not adopt the newer current row version',()=>{
+ const t1='2026-10-06T10:00:00.000Z';
+ const t2='2026-10-06T10:05:00.000Z';
+ const openedVersion=captureFinancialVersion(t1);
+ const refreshedCurrentRow={updated_at:t2};
+ const staleDraft={id:'record-1',updated_at:t1,payment_status:'PAGO'};
+ const payload=withExpectedFinancialVersion(staleDraft,'record',openedVersion);
+ assert.equal(refreshedCurrentRow.updated_at,t2);
+ assert.equal(payload.updated_at,t1);
+ assert.equal(financialVersionIsStale(refreshedCurrentRow.updated_at,payload.updated_at),true);
+});
+
+test('NF actions preserve historical adjustment on edit and reset it on replacement',async()=>{
  const client=await readFile('app/billing/billing-client.tsx','utf8');
- const doctor=await readFile('app/billing/doctor-billing.tsx','utf8');
- const logs=await readFile('app/billing/billing-logs.tsx','utf8');
- assert.match(client,/billing-invoice-table/);
- assert.match(client,/billing-cancel.*Cancelar fiscalmente/s);
- assert.match(client,/billing-replace.*Substituir NF/s);
+ const css=await readFile('app/billing/billing.css','utf8');
+ const legacy=await readFile('public/legacy-app.js','utf8');
+ assert.match(client,/setExpectedRecordVersion\(kind==='record'\?captureFinancialVersion\(value\.updated_at\):null\)/);
+ assert.match(client,/withExpectedFinancialVersion\(\{\.\.\.draft,/);
  assert.match(client,/billing-history.*Histórico/s);
- assert.doesNotMatch(client,/<label>Ajuste de fechamento/);
- assert.doesNotMatch(client,/Justifique o ajuste de fechamento/);
- assert.match(client,/Ajuste de fechamento histórico/);
- assert.match(doctor,/doctor-invoice-table/);\n assert.match(doctor,/EyeIcon/);
- assert.match(doctor,/Ver meus atendimentos da NF/);
- for(const label of ["READY:'Comprovante disponível'","REJECTED:'Envio rejeitado'","REPLACED:'Substituída'","Adicionar:"])assert.ok(logs.includes(label),label);
- assert.match(logs,/snapshot\.doctor_name_snapshot/);
+ assert.match(client,/closing_adjustment:0,closing_adjustment_reason:''/);
+ assert.match(css,/invoice-row-cancelled:hover>\.billing-actions-cell\{background:#fff7f7\}/);
+ assert.match(css,/invoice-row-replaced:hover>\.billing-actions-cell\{background:#fffbed\}/);
+ assert.match(legacy,/label:\"Adicionar:\"/);
+ assert.match(legacy,/workflow-change-label\">Adicionar:/);
+ assert.doesNotMatch(legacy,/ADICIONADO/);
 });

@@ -51,7 +51,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
     if (!ready || !cssReady) return;
     let cancelled = false;
     const script = document.createElement("script");
-    script.src = "/legacy-app.js?v=agenda-operational-logs-20261005";
+    script.src = "/legacy-app.js?v=financial-concurrency-20261006";
     script.dataset.agendaRuntime = "true";
     script.onload = () => { if (!cancelled) setRuntimeReady(true); };
     script.onerror = () => { if (!cancelled) setError("Não foi possível carregar sua agenda."); };

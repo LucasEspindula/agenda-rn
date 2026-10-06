@@ -59,7 +59,7 @@ test('billing timeline presents add/remove without empty opposite sides or actor
  const logs=[{id:'l',actor_id:1,actor_name:'Roseni',actor_email:'hidden@example.test',kind:'record',created_at:'2026-09-22',changes:[change(1,null,{origin:'AGENDA',amount:0},'one'),change(2,{origin:'FATURAMENTO_MANUAL'},null,'two'),change(3,{origin:'FISCAL_MANUAL'},{origin:'AGENDA'},'three'),change(4,{payment_status:'PAGO'},{payment_status:'PENDENTE'},'four'),change(5,{payment_status:'PENDENTE'},{payment_status:'PAGO'},'four'),change(6,null,{billing_entity_id:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13'},'five')]}];
  let index=0;const Component=loadTs('app/billing/billing-logs.tsx',{react:{...React,useEffect:()=>{},useState:initial=>[index++===0?logs:initial,()=>{}]}}).default;
  const html=renderToStaticMarkup(React.createElement(Component,{data:{rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:'secretary',name:'Roseni'}]}}));
- for(const text of ['ADICIONADO','REMOVIDO','<b>DE</b>','<b>PARA</b>','Agenda','Faturamento · cadastro manual','Fiscal · cadastro manual'])assert.ok(html.includes(text),text);
+ for(const text of ['Adicionar:','REMOVIDO','<b>DE</b>','<b>PARA</b>','Agenda','Faturamento · cadastro manual','Fiscal · cadastro manual'])assert.ok(html.includes(text),text);
  assert.doesNotMatch(html,/hidden@example|Novo registro|PENDENTE|FATURAMENTO_MANUAL|FISCAL_MANUAL|c0a80101/);
  assert.equal((html.match(/class="billing-log-line /g)||[]).length,5);
 });
