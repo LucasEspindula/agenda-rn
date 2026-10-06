@@ -30,12 +30,47 @@ const Storage={
   this.saving=true;
   try{while(this.pending){const body=this.pending;this.pending=null;const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json","if-match":window.AgendaRevision||"new"},body}),result=await response.json();if(!response.ok)throw Error(result.error||"Não foi possível salvar no servidor.");if(result.revision)window.AgendaRevision=result.revision;}return true}
   catch(error){this.pending=null;await appNotice("Alteração não salva",error.message+" A agenda será recarregada. Confira os dados antes de repetir a alteração.");const response=await fetch("/api/state",{cache:"no-store"});if(response.ok){const snapshot=await response.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);closeModals();renderAll()}return false}
-  finally{this.saving=false}
+  finally{this.saving=false;window.AgendaSyncAfterSave?.()}
  }
 
 };
 let state=Storage.load(),calendarMode="week",currentDate=startOfWeek(new Date()),detailPatientId=null,workflowData={requests:[],notifications:[],audit:[]};
 const $=id=>document.getElementById(id),qsa=s=>[...document.querySelectorAll(s)];
+let remoteAgendaUpdatePending=false,remoteAgendaRevision=null,agendaSyncInFlight=false,agendaSyncTimer=null,agendaSyncDelay=3000;
+function agendaRevisionIsNewer(serverRevision,currentRevision){if(!serverRevision)return false;if(!currentRevision)return true;return Date.parse(serverRevision)>Date.parse(currentRevision)}
+function agendaSyncDecision({serverRevision,currentRevision,editorOpen=false,saving=false,pending=false}={}){if(!agendaRevisionIsNewer(serverRevision,currentRevision))return "ignore";return editorOpen||saving||pending?"pending":"apply"}
+function agendaEditorOpen(){return !!document.querySelector(".modal:not(.hidden),dialog[open]")}
+function remoteAgendaNotice(show){let notice=$("remoteAgendaUpdateNotice");if(show&&!notice){notice=document.createElement("div");notice.id="remoteAgendaUpdateNotice";notice.className="remote-agenda-update-notice";notice.setAttribute("role","status");notice.textContent="A agenda foi atualizada por outra pessoa. Conclua ou feche esta edição para carregar as alterações.";document.body.appendChild(notice)}if(notice)notice.hidden=!show}
+function rememberRemoteAgendaUpdate(revision){remoteAgendaUpdatePending=true;remoteAgendaRevision=revision||remoteAgendaRevision;remoteAgendaNotice(true)}
+function calendarScrollPosition(){const calendar=$("calendar");return calendar?{left:calendar.scrollLeft,top:calendar.scrollTop}:null}
+function restoreCalendarScroll(position){if(!position)return;const calendar=$("calendar");if(calendar){calendar.scrollLeft=position.left;calendar.scrollTop=position.top}}
+async function applyRemoteAgendaUpdate(expectedRevision){
+ if(agendaSyncInFlight)return;agendaSyncInFlight=true;
+ try{const response=await fetch("/api/state",{cache:"no-store"});if(!response.ok)return;const snapshot=await response.json(),decision=agendaSyncDecision({serverRevision:snapshot.revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
+  if(decision==="ignore"){if(snapshot.revision===window.AgendaRevision){remoteAgendaUpdatePending=false;remoteAgendaRevision=null;remoteAgendaNotice(false)}return}
+  if(decision==="pending"){rememberRemoteAgendaUpdate(snapshot.revision||expectedRevision);return}
+  const scroll=calendarScrollPosition();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);remoteAgendaUpdatePending=false;remoteAgendaRevision=null;remoteAgendaNotice(false);renderAll();restoreCalendarScroll(scroll);refreshWorkflow();
+ }catch{/* A próxima verificação recupera falhas temporárias sem tocar no estado local. */}finally{agendaSyncInFlight=false}
+}
+async function checkAgendaRevision(){
+ if(agendaSyncInFlight||document.visibilityState!=="visible")return;
+ agendaSyncInFlight=true;
+ try{const response=await fetch("/api/state/revision",{cache:"no-store"});if(!response.ok)throw Error("revision");const revision=(await response.json()).revision;
+  const decision=agendaSyncDecision({serverRevision:revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
+  if(decision==="pending")rememberRemoteAgendaUpdate(revision);else if(decision==="apply"){agendaSyncInFlight=false;await applyRemoteAgendaUpdate(revision);return}
+  agendaSyncDelay=3000;
+ }catch{agendaSyncDelay=Math.min(30000,Math.max(3000,agendaSyncDelay*2))}finally{agendaSyncInFlight=false}
+}
+function startAgendaSync(){
+ window.AgendaSyncCleanup?.();let stopped=false;
+ const schedule=delay=>{clearTimeout(agendaSyncTimer);if(!stopped)agendaSyncTimer=setTimeout(async()=>{await checkAgendaRevision();schedule(agendaSyncDelay)},delay)};
+ const wake=()=>{if(document.visibilityState==="visible"){void checkAgendaRevision();schedule(agendaSyncDelay)}};
+ const onVisibility=()=>{if(document.visibilityState==="visible")wake()};
+ document.addEventListener("visibilitychange",onVisibility);window.addEventListener("focus",wake);window.addEventListener("online",wake);
+ window.AgendaSyncAfterModalClose=()=>{if(remoteAgendaUpdatePending)wake()};window.AgendaSyncAfterSave=()=>{if(remoteAgendaUpdatePending)wake()};
+ window.AgendaSyncCleanup=()=>{stopped=true;clearTimeout(agendaSyncTimer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("focus",wake);window.removeEventListener("online",wake);delete window.AgendaSyncAfterModalClose;delete window.AgendaSyncAfterSave};
+ schedule(3000);
+}
 function pad(n){return String(n).padStart(2,"0")}function ds(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
 function parseDate(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}function startOfWeek(x){const d=new Date(x),day=d.getDay();d.setDate(d.getDate()-day);d.setHours(0,0,0,0);return d}
 function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}function sameDay(a,b){return ds(a)===ds(b)}function mins(t){const[h,m]=t.split(":").map(Number);return h*60+m}function hhmm(v){return `${pad(Math.floor(v/60))}:${pad(v%60)}`}
@@ -601,7 +636,7 @@ function money(v){return window.RNMoney.formatBRL(v==null?null:Number(v))}
 function renderAll(){renderProfessionalOptions();renderAppointmentOptions();renderCalendar();renderPatients();renderCancelled();renderSettings();renderRules();if((window.AgendaAuth||{}).role==="general_manager")renderAccess()}
 let lastFocusedElement=null;
 function openModal(id){lastFocusedElement=document.activeElement;const modal=$(id);$("modalBackdrop").classList.remove("hidden");modal.classList.remove("hidden");modal.setAttribute("role","dialog");modal.setAttribute("aria-modal","true");requestAnimationFrame(()=>{if(id==="appointmentModal"&&modal.classList.contains("appointment-view-mode")){const title=$("appointmentModalTitle");title.tabIndex=-1;title.focus({preventScroll:true})}else modal.querySelector("input:not([type=hidden]):not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not([data-close])")?.focus()})}
-function closeModals(){$("modalBackdrop").classList.add("hidden");qsa(".modal").forEach(m=>m.classList.add("hidden"));if(systemDialogResolve){const done=systemDialogResolve;systemDialogResolve=null;done(false)}if(lastFocusedElement?.isConnected)lastFocusedElement.focus();lastFocusedElement=null}
+function closeModals(){$("modalBackdrop").classList.add("hidden");qsa(".modal").forEach(m=>m.classList.add("hidden"));if(systemDialogResolve){const done=systemDialogResolve;systemDialogResolve=null;done(false)}if(lastFocusedElement?.isConnected)lastFocusedElement.focus();lastFocusedElement=null;window.AgendaSyncAfterModalClose?.()}
 function renderHistory(pid,target,limit=999){
  const list=state.patientHistory.filter(h=>h.patientId===pid).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,limit);
  $(target).innerHTML=list.length?list.map(h=>`<div class="history-item"><strong>${esc(h.type)}</strong><span>${esc(h.text)}</span><span>${new Date(h.at).toLocaleString("pt-BR")}</span></div>`).join(""):'<div class="history-empty">Nenhum histórico registrado ainda.</div>'
@@ -948,6 +983,7 @@ initMobileUI();applyRoleRestrictions();renderAll();
 if(window.AgendaDoctorId){$("professionalFilter").value=window.AgendaDoctorId;renderAll()}
 window.addEventListener("rn-directory-changed",e=>{window.AgendaRevision=e.detail.revision;state=Storage.migrate(e.detail.state);renderAll()});
 showView(window.AgendaInitialView||'agenda');
+startAgendaSync();
 if(location.hash==='#settings'&&window.AgendaInitialView!=='settings'&&(window.AgendaAuth||{}).role==='general_manager')window.location.replace('/settings');
 
 const menuSizeObserver=new ResizeObserver(entries=>{document.documentElement.style.setProperty("--desktop-nav-height",`${entries[0].target.getBoundingClientRect().height}px`)});
@@ -967,26 +1003,6 @@ let calendarHeaderFrame=0;function scheduleCalendarHeader(){cancelAnimationFrame
 document.addEventListener("scroll",scheduleCalendarHeader,true);window.addEventListener("resize",scheduleCalendarHeader);
 new MutationObserver(scheduleCalendarHeader).observe($("calendar"),{childList:true});
 scheduleCalendarHeader();
-let liveConnection=null;
-function connectLive(){
- if(liveConnection||document.hidden)return;
- liveConnection=new EventSource("/api/live");
- liveConnection.addEventListener("unauthorized",()=>{liveConnection?.close();window.location.assign("/")});
- liveConnection.onmessage=event=>{
-  const snapshot=JSON.parse(event.data);
-  workflowData=snapshot.workflow;renderWorkflow();
-  if(Storage.saving||Storage.pending)return;
-  if(snapshot.revision===window.AgendaRevision)return;
-  if(Date.parse(snapshot.revision)<Date.parse(window.AgendaRevision))return;
-  window.AgendaRevision=snapshot.revision;
-  state=Storage.migrate(snapshot.state);
-  renderAll();
- };
-}
-document.addEventListener("visibilitychange",()=>{if(document.hidden){liveConnection?.close();liveConnection=null}else connectLive()});
-window.addEventListener("pagehide",()=>{liveConnection?.close();menuSizeObserver.disconnect()});
-connectLive();
-
 let __lastRenderedMinute="";
 setInterval(()=>{
  const now=new Date(),stamp=`${ds(now)}-${pad(now.getHours())}:${pad(now.getMinutes())}`;
