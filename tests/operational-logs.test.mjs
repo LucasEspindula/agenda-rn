@@ -29,7 +29,7 @@ test('agenda timeline renders INSERT, UPDATE and DELETE with meaningful nonempty
  const {context:c,elements}=agendaFixture();
  c.workflowData.audit=[event,{...event,action:'appointment_updated',description:'Roseni alterou um agendamento.',before:appointment,after:{...appointment,time:'09:00'}},{...event,action:'appointment_removed',before:appointment,after:null}];
  c.renderAgendaLogs();const html=elements.auditList.innerHTML;
- for(const text of ['ADICIONADO','REMOVIDO','<b>DE</b>','<b>PARA</b>','Data e horário: 22/09/2026 às 08:00','Roseni Nunes','Secretaria','Dra. Rosa','Duração:'])assert.ok(html.includes(text),text);
+ for(const text of ['Adicionar:','REMOVIDO','<b>DE</b>','<b>PARA</b>','Data e horário: 22/09/2026 às 08:00','Roseni Nunes','Secretaria','Dra. Rosa','Duração:'])assert.ok(html.includes(text),text);
  assert.doesNotMatch(html,/Novo registro|uuid|scheduled|Roseni Nunes criou/);
  assert.equal(c.agendaLogContent({...event,before:appointment,after:{...appointment}}).lines.length,0);
  assert.equal(c.agendaLogContent({...event,before:appointment,after:{...appointment,updatedAt:'ignored'}}).lines.length,0);
