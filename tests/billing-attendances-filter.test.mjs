@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {loadTs} from './load-ts.mjs';
-const {attendanceInsuranceOptions,matchesRow,matchesInvoice}=loadTs('lib/billing-row.ts');
+const {attendanceInsuranceOptions,sanitizeAttendanceFilters,matchesRow,matchesInvoice}=loadTs('lib/billing-row.ts');
 const {buildReport}=loadTs('lib/billing-reports.ts');
 const base={attendance_id:'a',appointment_id:'a',patient_id:'p',origin:'AGENDA',date:'2026-10-01',time:'08:00',doctor_id:'d',anesthetist_id:'',procedure:'Consulta',status_atendimento:'realized',billing_entity_id:'e',legacy_payment:null,legacy_invoice:null,created_at:'',created_by:null,updated_at:'',updated_by:null,invoice:null,invoice_item:null};
 const row=values=>({...base,...values});
@@ -31,4 +31,21 @@ test('attendance table keeps its minimum width inside the scrolling panel',()=>{
  const css=readFileSync('app/billing/billing.css','utf8');
  assert.match(css,/\.billing-main\{max-width:100%;overflow-x:clip\}/);
  assert.match(css,/\.billing-panel>\.billing-table\{min-width:1120px/);
+});
+
+test('attendance context sanitizes an invoice payer and only retains particular patient text for Particular',()=>{
+ const rows=[row({insurance:'CESA',forma_cobranca:'CONVENIO',record:null})];
+ assert.deepEqual(sanitizeAttendanceFilters(rows,'Lucas Espindula','Lucas'),{insurance:'',patient:''});
+ assert.deepEqual(sanitizeAttendanceFilters(rows,'cEsa','Lucas'),{insurance:'CESA',patient:''});
+ assert.deepEqual(sanitizeAttendanceFilters(rows,'PARTICULAR','Lucas'),{insurance:'PARTICULAR',patient:'Lucas'});
+});
+test('attendance patient field is stable, disabled outside Particular and CSS stays scoped',()=>{
+ const client=readFileSync('app/billing/billing-client.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
+ assert.match(client,/<label>Paciente<input type="search" disabled=\{insurance!=='PARTICULAR'\}/);
+ assert.match(client,/placeholder=\{insurance==='PARTICULAR'\?'Buscar por nome':'Selecione Particular para filtrar'\}/);
+ assert.match(client,/className="billing-table billing-attendance-table"/);
+ assert.match(css,/\.billing-panel>\.billing-attendance-table\{min-width:1120px/);
+ assert.match(css,/\.billing-attendance-table td\{max-width:260px/);
+ assert.doesNotMatch(css,/\.billing-panel>\.billing-table\{min-width:1120px/);
+ assert.doesNotMatch(css,/\.billing-table td\{max-width:260px/);
 });

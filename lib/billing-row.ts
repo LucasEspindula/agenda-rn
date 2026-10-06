@@ -10,6 +10,7 @@ export function isInsurancePending(row:BillingRow){
 }
 export const normalizeBillingKey=(value:string|undefined|null)=>String(value||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
 export function attendanceInsuranceOptions(rows:BillingRow[]){const labels=new Map<string,string>();for(const row of rows){const label=String(row.insurance||'').trim(),key=normalizeBillingKey(label),method=row.forma_cobranca||row.record?.billing_method||'';if(method==='CONVENIO'&&label&&key&&!labels.has(key))labels.set(key,label)}return [...labels.values()].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));}
+export function sanitizeAttendanceFilters(rows:BillingRow[],insurance:string,patient:string){const selected=String(insurance||'').trim();if(normalizeBillingKey(selected)==='particular')return {insurance:'PARTICULAR',patient};const option=attendanceInsuranceOptions(rows).find(value=>normalizeBillingKey(value)===normalizeBillingKey(selected));return option?{insurance:option,patient:''}:{insurance:'',patient:''};}
 const billingMethod=(row:BillingRow)=>row.forma_cobranca||row.record?.billing_method||'';
 const includesPatient=(row:BillingRow,query:string|undefined)=>!query||normalizeBillingKey(row.patient).includes(normalizeBillingKey(query));
 export type RowFilters={entity:string;doctor:string;insurance?:string;patient?:string;status?:string;start:string;end:string};

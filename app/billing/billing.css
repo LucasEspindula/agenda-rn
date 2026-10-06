@@ -82,4 +82,4 @@
 
 
 /* Attendance table owns its horizontal scroll without widening the page. */
-.billing-main{max-width:100%;overflow-x:clip}.billing-panel{max-width:100%;min-width:0}.billing-panel>.billing-table{min-width:1120px;table-layout:auto}.billing-table td{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.billing-table td.no-print{max-width:none;overflow:visible}.billing-table .billing-origin{white-space:normal}.billing-row-actions{min-width:max-content}@media(max-width:900px){.billing-panel>.billing-table{min-width:1040px}.billing-main{padding-inline:14px}}
+.billing-main{max-width:100%;overflow-x:clip}.billing-panel{max-width:100%;min-width:0}.billing-panel>.billing-attendance-table{min-width:1120px;table-layout:auto}.billing-attendance-table td{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.billing-attendance-table td.no-print{max-width:none;overflow:visible}.billing-attendance-table .billing-origin{white-space:normal}.billing-row-actions{min-width:max-content}@media(max-width:900px){.billing-panel>.billing-attendance-table{min-width:1040px}.billing-main{padding-inline:14px}}
