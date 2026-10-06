@@ -18,7 +18,7 @@ const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
 const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','agendaLogNormalize','agendaLogLocalDay','agendaLogMatchesFilters','agendaLogFilterOptions','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowAuthorship','suggestionReason','roleLabel']);
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
- const elements={auditList:{innerHTML:''},auditStart:{value:''},auditEnd:{value:''},auditActor:{value:'',innerHTML:''},auditProfessional:{value:'',innerHTML:''},auditPatient:{value:''},auditAction:{value:''},auditSearch:{value:''}};
+ const elements={auditList:{innerHTML:''},auditStart:{value:''},auditEnd:{value:''},auditActor:{value:'',innerHTML:''},auditProfessional:{value:'',innerHTML:''},auditAction:{value:''},auditSearch:{value:''}};
  const context={state:{professionals:[{id:'doctor-uuid',name:'Dra. Rosa'}]},patient:id=>id==='patient-uuid'?{name:'Paciente Lucas'}:null,hospital:()=>({name:'CONS'}),hospitalAcronym:x=>x,doctorName:x=>String(x||'Médico'),suggestionReason:a=>a?.cancelReason||'',statusLabel:s=>({scheduled:'Agendado',confirmed:'Confirmado',cancelled:'Cancelado'})[s],parseDate:d=>new Date(d+'T12:00:00'),workflowDate:d=>d,esc:s=>String(s??'').replaceAll('<','&lt;'),$:id=>elements[id],workflowData:{audit:[]}};
  vm.createContext(context);vm.runInContext(code,context);
  return {context,elements};
@@ -44,7 +44,7 @@ test('agenda search covers patient, doctor, actor, procedure, action and before/
  for(const query of ['Lucas','Rosa','Roseni','Consulta','Cirurgia','novo','Confirmado','Secretaria']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.match(elements.auditList.innerHTML,/agenda-log-event/,query)}
  for(const query of ['patient-uuid','doctor-uuid','appointment-uuid','scheduled','appointment_created']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.doesNotMatch(elements.auditList.innerHTML,/agenda-log-event/,query)}
 });
-test('agenda log filters combine local date, user, agenda, patient and action criteria without exposing technical IDs',()=>{
+test('agenda log filters combine date, user, agenda, action and the single general search without exposing technical IDs',()=>{
  const {context:c,elements}=agendaFixture();
  const changed={...event,action:'appointment_updated',createdAt:'2026-09-23T11:00:00Z',before:appointment,after:{...appointment,time:'09:00'}};
  const removed={...event,action:'appointment_removed',actorName:'João Secretário',createdAt:'2026-09-24T11:00:00Z',before:appointment,after:null};
@@ -52,19 +52,20 @@ test('agenda log filters combine local date, user, agenda, patient and action cr
  const hidden={...event,action:'appointment_updated',createdAt:'2026-09-26T11:00:00Z',before:appointment,after:{...appointment}};
  c.workflowData.audit=[event,changed,removed,request,hidden];
  const shown=()=>((elements.auditList.innerHTML.match(/agenda-log-event/g)||[]).length);
- c.renderAgendaLogs();assert.equal(shown(),4);
- elements.auditPatient.value='LÚCAS';c.renderAgendaLogs();assert.equal(shown(),4);
- elements.auditProfessional.value='Dra. Rosa';c.renderAgendaLogs();assert.equal(shown(),4);
+ c.renderAgendaLogs();assert.equal(shown(),4);assert.equal(elements.auditPatient,undefined);
+ elements.auditSearch.value='LÚCAS';c.renderAgendaLogs();assert.equal(shown(),4);
+ elements.auditSearch.value='';elements.auditProfessional.value='Dra. Rosa';c.renderAgendaLogs();assert.equal(shown(),4);
  elements.auditActor.value='Roseni Nunes';c.renderAgendaLogs();assert.equal(shown(),2);
  elements.auditActor.value='';elements.auditAction.value='created';c.renderAgendaLogs();assert.equal(shown(),1);
  elements.auditAction.value='changed';c.renderAgendaLogs();assert.equal(shown(),1);
  elements.auditAction.value='removed';c.renderAgendaLogs();assert.equal(shown(),1);
  elements.auditAction.value='request';c.renderAgendaLogs();assert.equal(shown(),1);
  elements.auditAction.value='';elements.auditStart.value='2026-09-23';elements.auditEnd.value='2026-09-24';c.renderAgendaLogs();assert.equal(shown(),2);
- elements.auditPatient.value='';elements.auditSearch.value='appointment_created';c.renderAgendaLogs();assert.equal(shown(),0);
+ elements.auditSearch.value='appointment_created';c.renderAgendaLogs();assert.equal(shown(),0);
  elements.auditSearch.value='';elements.auditStart.value='';elements.auditEnd.value='';c.renderAgendaLogs();assert.equal(shown(),4);
- assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{patient:'lucas',action:'created'}),true);
- assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{patient:'lucas',action:'removed'}),false);
+ assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{search:'lucas',action:'created'}),true);
+ assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{search:'lucas',action:'removed'}),false);
+ const source=readFileSync('public/legacy-app.js','utf8');assert.doesNotMatch(source,/auditPatient/);assert.match(source,/<label class="agenda-log-search">Buscar<input id="auditSearch" type="search" placeholder="Buscar">/);
 });
 test('agenda and billing logs keep aligned workflow tokens without duplicate billing authorship rules',()=>{
  const agendaCss=readFileSync('public/legacy.css','utf8'),billingCss=readFileSync('app/billing/billing.css','utf8'),billing=readFileSync('app/billing/billing-logs.tsx','utf8');
@@ -102,6 +103,17 @@ test('native Agenda issued Particular composition remains read-only',()=>{
  const root={innerHTML:''};const context={nativeFinance:{row:{record:{id:'b'},invoice:{invoice_number:'10',recipient_type:'PARTICULAR',paid_at:'2026-09-22'}},data:{payment_parts:[{billing_record_id:'b',method:'PIX',amount:1000},{billing_record_id:'b',method:'CREDIT_CARD',amount:500,installments:3},{billing_record_id:'other',method:'CASH',amount:99}]}},nativeFinanceRoot:()=>root,captureNativeFinance:()=>{},esc:v=>String(v??''),money:v=>String(v),window:{RNFinance:{individualReceived:()=>1500,paymentMethods:{PIX:'PIX',CREDIT_CARD:'Cartão de crédito',CASH:'Dinheiro'}}}};
  vm.createContext(context);vm.runInContext(fn+';paintNativeFinance()',context);
  assert.match(root.innerHTML,/somente leitura/);assert.match(root.innerHTML,/PIX/);assert.match(root.innerHTML,/3 parcelas/);assert.doesNotMatch(root.innerHTML,/<input|<select|Dinheiro/);
+});
+
+test('billing log change groups render each field on its own row',async()=>{
+ const React=await import('react'),{renderToStaticMarkup}=await import('react-dom/server');
+ const render=change=>{let index=0;const Component=loadTs('app/billing/billing-logs.tsx',{react:{...React,useEffect:()=>{},useState:initial=>[index++===0?[{id:'multi',actor_id:1,actor_name:'Roseni',kind:'invoice',created_at:'2026-10-06',changes:[change]}]:initial,()=>{}]}}).default;return renderToStaticMarkup(React.createElement(Component,{data:{rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:'secretary',name:'Roseni'}]}}))};
+ const inserted=render(change(1,null,{invoice_number:'995',payer:'Lucas Espindula',net_amount:150000,total_amount:150000},'invoice'));
+ assert.equal((inserted.match(/Adicionar:/g)||[]).length,1);assert.equal((inserted.match(/class="workflow-change to"/g)||[]).length,4);assert.doesNotMatch(inserted,/Número da NF: 995 · Pagador/);
+ const deleted=render(change(1,{invoice_number:'995',payer:'Lucas Espindula',total_amount:150000},null,'invoice'));
+ assert.equal((deleted.match(/REMOVIDO/g)||[]).length,1);assert.equal((deleted.match(/class="workflow-change from"/g)||[]).length,3);
+ const updated=render(change(1,{payer:'Antes',net_amount:100000},{payer:'Depois',net_amount:150000},'invoice'));
+ assert.equal((updated.match(/>DE</g)||[]).length,1);assert.equal((updated.match(/>PARA</g)||[]).length,1);assert.equal((updated.match(/class="workflow-change from"/g)||[]).length,2);assert.equal((updated.match(/class="workflow-change to"/g)||[]).length,2);
 });
 
 test("semantic log diffs omit empty sides and retain real updates",()=>{const rows=presentLogDifferences([{field:"payer",before:null,after:"CaberGS"},{field:"notes",before:"Antes",after:null},{field:"status",before:"PENDENTE",after:"PAGO"},{field:"empty",before:"",after:null}]);assert.deepEqual(rows,[{field:"payer",before:null,after:"CaberGS"},{field:"notes",before:"Antes",after:null},{field:"status",before:"PENDENTE",after:"PAGO"}])});
