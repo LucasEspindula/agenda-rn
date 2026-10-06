@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import {readFileSync} from 'node:fs';
 import {loadTs} from './load-ts.mjs';
-const {collapseChanges}=loadTs('lib/billing-logs.ts');
+const {collapseChanges,presentLogDifferences}=loadTs('lib/billing-logs.ts');
 const change=(id,before,after,record='record')=>({id,record_type:'billing_records',record_id:record,action:!before?'INSERT':!after?'DELETE':'UPDATE',before_data:before,after_data:after});
 test('financial logs collapse net-zero subevents and transient insert/delete without dropping real changes',()=>{
  const changes=collapseChanges([change(1,{payment_status:'PAGO'},{payment_status:'PENDENTE'}),change(2,{payment_status:'PENDENTE'},{payment_status:'PAGO'}),change(3,{notes:'Antes'},{notes:'Depois'},'invoice')]);
@@ -15,7 +15,7 @@ test('financial logs collapse net-zero subevents and transient insert/delete wit
 });
 const source=readFileSync('public/legacy-app.js','utf8');
 const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
-const wanted=new Set(['agendaLogSnapshot','agendaLogContext','agendaLogSnapshotText','agendaLogTitle','agendaLogContent','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','suggestionReason','roleLabel']);
+const wanted=new Set(['agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogContent','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','suggestionReason','roleLabel']);
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
  const elements={auditList:{innerHTML:''},auditSearch:{value:''}};
@@ -33,7 +33,7 @@ test('agenda timeline renders INSERT, UPDATE and DELETE with meaningful nonempty
  assert.doesNotMatch(html,/Novo registro|uuid|scheduled|Roseni Nunes criou/);
  assert.equal(c.agendaLogContent({...event,before:appointment,after:{...appointment}}).lines.length,0);
  assert.equal(c.agendaLogContent({...event,before:appointment,after:{...appointment,updatedAt:'ignored'}}).lines.length,0);
- const partial=c.agendaLogContent({...event,action:'appointment_updated',before:appointment,after:{...appointment,duration:90}});assert.match(partial.lines[0].text,/Duração: 60 min/);assert.match(partial.lines[1].text,/Duração: 90 min/);
+ const partial=c.agendaLogContent({...event,action:'appointment_updated',before:appointment,after:{...appointment,duration:90}});assert.equal(partial.lines[0].label,'DE');assert.match(partial.lines[0].text,/Duração: 60 min/);assert.equal(partial.lines[1].label,'PARA');assert.match(partial.lines[1].text,/Duração: 90 min/);
  const unresolved=c.agendaLogContent({...event,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',professionalId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',before:null,after:{...appointment,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',doctorId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13'}});assert.doesNotMatch(unresolved.metadata,/c0a80101/);
  assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação de novo agendamento para Paciente Lucas/);
 });
@@ -70,3 +70,7 @@ test('native Agenda issued Particular composition remains read-only',()=>{
  vm.createContext(context);vm.runInContext(fn+';paintNativeFinance()',context);
  assert.match(root.innerHTML,/somente leitura/);assert.match(root.innerHTML,/PIX/);assert.match(root.innerHTML,/3 parcelas/);assert.doesNotMatch(root.innerHTML,/<input|<select|Dinheiro/);
 });
+
+test("semantic log diffs omit empty sides and retain real updates",()=>{const rows=presentLogDifferences([{field:"payer",before:null,after:"CaberGS"},{field:"notes",before:"Antes",after:null},{field:"status",before:"PENDENTE",after:"PAGO"},{field:"empty",before:"",after:null}]);assert.deepEqual(rows,[{field:"payer",before:null,after:"CaberGS"},{field:"notes",before:"Antes",after:null},{field:"status",before:"PENDENTE",after:"PAGO"}])});
+test("appointment detail saves status with the normal save action",()=>{assert.doesNotMatch(source,/appointmentStatusSaveBtn/);assert.match(source,/statusUpdatedAt:selectedStatus!==a\.status\?new Date\(\)\.toISOString\(\):a\.statusUpdatedAt/)});
+test("agenda control positions swap mode and cancelled actions",()=>{assert.match(source,/const modeControl=document\.querySelector\("\.filters \.segmented"\);document\.querySelector\("\.date-wrap"\)\?\.append\(modeControl\)/);assert.match(source,/insertAdjacentElement\("beforeend",\$\("cancelledPageBtn"\)\)/)});
