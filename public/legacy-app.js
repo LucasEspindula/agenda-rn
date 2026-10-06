@@ -44,7 +44,9 @@ function remoteAgendaNotice(show){let notice=$("remoteAgendaUpdateNotice");if(sh
 function clearRemoteAgendaUpdate(){remoteAgendaUpdatePending=false;remoteAgendaRevision=null;remoteAgendaNotice(false)}
 function agendaRemotePendingDecision(remoteRevision,currentRevision){return agendaRevisionIsNewer(remoteRevision,currentRevision)?"keep":"clear"}
 function reconcileRemoteAgendaUpdate(){if(!remoteAgendaUpdatePending)return true;if(agendaRemotePendingDecision(remoteAgendaRevision,window.AgendaRevision)==="clear"){clearRemoteAgendaUpdate();return true}return false}
-function rememberRemoteAgendaUpdate(revision){if(!agendaRevisionIsNewer(revision,window.AgendaRevision)){reconcileRemoteAgendaUpdate();return}remoteAgendaUpdatePending=true;remoteAgendaRevision=revision||remoteAgendaRevision;remoteAgendaNotice(true)}
+function agendaRemoteNoticeMode({saving=false,pending=false}={}){return saving||pending?"silent":"show"}
+function agendaRemoteUpdateAfterSave({remoteRevision,currentRevision,editorOpen=false}={}){return agendaRemotePendingDecision(remoteRevision,currentRevision)==="clear"?"clear":editorOpen?"notice":"apply"}
+function rememberRemoteAgendaUpdate(revision,{silent=false}={}){if(!agendaRevisionIsNewer(revision,window.AgendaRevision)){reconcileRemoteAgendaUpdate();return}remoteAgendaUpdatePending=true;remoteAgendaRevision=revision||remoteAgendaRevision;if(silent)remoteAgendaNotice(false);else remoteAgendaNotice(true)}
 function calendarScrollPosition(){const card=document.querySelector(".agenda-card");return card&&card.offsetParent!==null?{left:card.scrollLeft,top:card.scrollTop,pageX:window.scrollX,pageY:window.scrollY}:null}
 function restoreCalendarScroll(position){if(!position)return;const card=document.querySelector(".agenda-card");if(card){card.scrollLeft=position.left;card.scrollTop=position.top}window.scrollTo(position.pageX,position.pageY)}
 async function refreshWorkflowRevision(workflowRevision){if(Object.prototype.hasOwnProperty.call(window,"AgendaWorkflowRevision")&&window.AgendaWorkflowRevision===workflowRevision)return false;const refreshed=await refreshWorkflow();if(refreshed)window.AgendaWorkflowRevision=workflowRevision;return refreshed}
@@ -52,7 +54,7 @@ async function applyRemoteAgendaUpdate(expectedRevision,workflowRevision,workflo
  if(agendaSyncInFlight)return;agendaSyncInFlight=true;
  try{const response=await fetch("/api/state",{cache:"no-store"});if(!response.ok)return;const snapshot=await response.json(),decision=agendaSyncDecision({serverRevision:snapshot.revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
   if(decision==="ignore"){reconcileRemoteAgendaUpdate();return}
-  if(decision==="pending"){rememberRemoteAgendaUpdate(snapshot.revision||expectedRevision);return}
+  if(decision==="pending"){rememberRemoteAgendaUpdate(snapshot.revision||expectedRevision,{silent:agendaRemoteNoticeMode({saving:Storage.saving,pending:Storage.pending})==="silent"});return}
   const scroll=calendarScrollPosition();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);clearRemoteAgendaUpdate();renderAll();restoreCalendarScroll(scroll);if(!workflowRefreshed)await refreshWorkflowRevision(workflowRevision);
  }catch{/* A próxima verificação recupera falhas temporárias sem tocar no estado local. */}finally{agendaSyncInFlight=false}
 }
@@ -62,7 +64,7 @@ async function checkAgendaRevision(){
  try{const response=await fetch("/api/state/revision",{cache:"no-store"});if(!response.ok)throw Error("revision");const signal=await response.json(),revision=signal.revision,workflowRevision=signal.workflowRevision;
   const workflowRefreshed=await refreshWorkflowRevision(workflowRevision);
   const decision=agendaSyncDecision({serverRevision:revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
-  if(decision==="pending")rememberRemoteAgendaUpdate(revision);else if(decision==="apply"){agendaSyncInFlight=false;await applyRemoteAgendaUpdate(revision,workflowRevision,workflowRefreshed);return}else reconcileRemoteAgendaUpdate();
+  if(decision==="pending")rememberRemoteAgendaUpdate(revision,{silent:agendaRemoteNoticeMode({saving:Storage.saving,pending:Storage.pending})==="silent"});else if(decision==="apply"){agendaSyncInFlight=false;await applyRemoteAgendaUpdate(revision,workflowRevision,workflowRefreshed);return}else reconcileRemoteAgendaUpdate();
   agendaSyncDelay=3000;
  }catch{agendaSyncDelay=Math.min(30000,Math.max(3000,agendaSyncDelay*2))}finally{agendaSyncInFlight=false}
 }
@@ -72,7 +74,7 @@ function startAgendaSync(){
  const wake=()=>{if(document.visibilityState==="visible"){void checkAgendaRevision();schedule(agendaSyncDelay)}};
  const onVisibility=()=>{if(document.visibilityState==="visible")wake()};
  document.addEventListener("visibilitychange",onVisibility);window.addEventListener("focus",wake);window.addEventListener("online",wake);
- window.AgendaSyncAfterModalClose=()=>{if(remoteAgendaUpdatePending&&!reconcileRemoteAgendaUpdate())wake()};window.AgendaSyncAfterSave=()=>{if(remoteAgendaUpdatePending&&!reconcileRemoteAgendaUpdate())wake()};
+ window.AgendaSyncAfterModalClose=()=>{if(remoteAgendaUpdatePending&&!reconcileRemoteAgendaUpdate())wake()};window.AgendaSyncAfterSave=()=>{if(!remoteAgendaUpdatePending)return;const next=agendaRemoteUpdateAfterSave({remoteRevision:remoteAgendaRevision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen()});if(next==="clear"){clearRemoteAgendaUpdate();return}if(next==="notice"){remoteAgendaNotice(true);return}void applyRemoteAgendaUpdate(remoteAgendaRevision)};
  window.AgendaSyncCleanup=()=>{stopped=true;clearTimeout(agendaSyncTimer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("focus",wake);window.removeEventListener("online",wake);clearRemoteAgendaUpdate();$("remoteAgendaUpdateNotice")?.remove();delete window.AgendaSyncAfterModalClose;delete window.AgendaSyncAfterSave};
  schedule(3000);
 }
