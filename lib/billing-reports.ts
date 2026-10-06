@@ -12,7 +12,7 @@ export function summarize(rows:BillingRow[]) {
  const paid=rows.filter(r=>r.invoice&&r.invoice.recipient_type!=='PARTICULAR'?!!r.invoice.paid_at:r.record?.payment_status==='PAGO').length;
  return {total:rows.length,private:rows.filter(r=>(r.forma_cobranca||r.record?.billing_method)==='PARTICULAR').length,insurance:rows.filter(r=>(r.forma_cobranca||r.record?.billing_method)==='CONVENIO').length,paid,pending:rows.length-paid,received:rows.reduce((c,r)=>c+cents(individualReceived(r)??0),0)/100,unidentified:rows.filter(r=>individualReceived(r)==null).length};
 }
-export type ReportScope={kind:'filtered'|'doctor'|'entity'|'invoices'|'pending';doctor:string;entity:string;start:string;end:string;insurance?:string;status?:string;issued_at?:string};
+export type ReportScope={kind:'filtered'|'doctor'|'entity'|'invoices'|'pending';doctor:string;entity:string;start:string;end:string;insurance?:string;patient?:string;status?:string;issued_at?:string};
 export function buildReport(data:BillingData,scope:ReportScope){
  if((['doctor','entity'].includes(scope.kind)&&(!scope.start||!scope.end))||(scope.start&&scope.end&&scope.start>scope.end))throw new Error('Selecione um período válido para o relatório.');
  if(scope.kind==='doctor'&&!data.doctors.some(d=>d.id===scope.doctor))throw new Error('Selecione o médico para gerar o relatório.');

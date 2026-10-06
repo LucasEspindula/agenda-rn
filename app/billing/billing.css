@@ -79,3 +79,7 @@
 
 /* Explicit, readable authorship and grouped directional changes. */
 .billing-log-event .workflow-log-authorship{display:grid;gap:3px;margin-top:10px;font-size:12px;line-height:1.4;color:#516875}.billing-log-event .workflow-log-authorship>div{color:#314b5b}.billing-log-event .workflow-log-authorship strong{color:#263f4f;font-weight:800}.billing-log-event .workflow-log-authorship small{margin:0;font-size:11px;color:#71828c}.billing-log-event .workflow-change-group{display:grid;gap:5px}.billing-log-event .workflow-change-group+.workflow-change-group{margin-top:6px}.billing-log-event .workflow-change-label:empty{visibility:hidden}
+
+
+/* Attendance table owns its horizontal scroll without widening the page. */
+.billing-main{max-width:100%;overflow-x:clip}.billing-panel{max-width:100%;min-width:0}.billing-panel>.billing-table{min-width:1120px;table-layout:auto}.billing-table td{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.billing-table td.no-print{max-width:none;overflow:visible}.billing-table .billing-origin{white-space:normal}.billing-row-actions{min-width:max-content}@media(max-width:900px){.billing-panel>.billing-table{min-width:1040px}.billing-main{padding-inline:14px}}
