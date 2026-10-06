@@ -31,7 +31,7 @@ export default function InsurancePending({data,rows,onResolve,printAll,onClosePr
  const emptyCompanies=data.entities.filter(e=>!occupied.has(e.id)).sort((a,b)=>(a.trade_name||a.name).localeCompare(b.trade_name||b.name,'pt-BR'));
  const toggle=(key:string)=>setExpanded(values=>({...values,[key]:!values[key]}));
  return <section className="insurance-pending" aria-label="Fila de pendências de convênio">
-  <header className="pending-page-heading"><h1>Pendências de Convênio</h1><p>Atendimentos realizados que ainda aguardam resolução financeira pelo convênio.</p></header>
+  <header className="pending-page-heading page-description"><p>Atendimentos realizados que ainda aguardam resolução financeira pelo convênio.</p></header>
   <div className="pending-summary" aria-label="Resumo dos filtros">
    <article className="pending-total"><span>Total pendente</span><strong>{summary.total}</strong><small>atendimentos aguardando resolução</small></article>
    <article className="pending-oldest-card"><span>Mais antiga</span><strong>{summary.total?ageLabel(summary.oldest):'—'}</strong><small>{groups[0]?`${groups[0].payers[0].name} · ${groups[0].name}`:'Nenhuma pendência nos filtros'}</small></article>

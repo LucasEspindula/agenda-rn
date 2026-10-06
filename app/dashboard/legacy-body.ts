@@ -21,7 +21,7 @@ export const legacyBody = `<div class="agenda-shell">
 
 <section id="patientsView" class="view">
  <div class="content-card">
-  <div class="section-head"><div><h2>Pacientes</h2><p>Cadastro, convênio e histórico de atendimentos.</p></div><button id="newPatientBtn" class="primary-btn">+ Novo paciente</button></div>
+  <div class="section-head page-description-head"><p class="page-description">Cadastro, convênio e histórico dos pacientes.</p><button id="newPatientBtn" class="primary-btn">+ Novo paciente</button></div>
   <div class="search-row"><input id="patientSearch" type="search" placeholder="Buscar por nome, telefone, convênio ou carteirinha"></div>
   <div id="patientsTableWrap"></div>
  </div>
@@ -29,7 +29,7 @@ export const legacyBody = `<div class="agenda-shell">
 
 <section id="settingsView" class="view">
  <div class="settings-grid">
-  <div class="content-card hospital-panel"><div class="section-head"><div><h2>Hospitais</h2><p>Lista global disponível para todos os profissionais.</p></div><button id="newHospitalBtn" class="secondary-btn">+ Adicionar hospital</button></div><div id="hospitalsList" class="stack"></div><div class="scroll-help" aria-hidden="true">Role para ver mais hospitais</div></div>
+  <div class="content-card hospital-panel"><div class="section-head page-description-head"><p class="page-description">Cadastro compartilhado entre as agendas.</p><button id="newHospitalBtn" class="secondary-btn">+ Adicionar hospital</button></div><div id="hospitalsList" class="stack"></div><div class="scroll-help" aria-hidden="true">Role para ver mais hospitais</div></div>
 
   <div class="content-card wide rules-panel">
     <div class="section-head">
