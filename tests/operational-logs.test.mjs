@@ -15,10 +15,10 @@ test('financial logs collapse net-zero subevents and transient insert/delete wit
 });
 const source=readFileSync('public/legacy-app.js','utf8');
 const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
-const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowAuthorship','suggestionReason','roleLabel']);
+const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','agendaLogNormalize','agendaLogLocalDay','agendaLogMatchesFilters','agendaLogFilterOptions','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowAuthorship','suggestionReason','roleLabel']);
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
- const elements={auditList:{innerHTML:''},auditSearch:{value:''}};
+ const elements={auditList:{innerHTML:''},auditStart:{value:''},auditEnd:{value:''},auditActor:{value:'',innerHTML:''},auditProfessional:{value:'',innerHTML:''},auditPatient:{value:''},auditAction:{value:''},auditSearch:{value:''}};
  const context={state:{professionals:[{id:'doctor-uuid',name:'Dra. Rosa'}]},patient:id=>id==='patient-uuid'?{name:'Paciente Lucas'}:null,hospital:()=>({name:'CONS'}),hospitalAcronym:x=>x,doctorName:x=>String(x||'Médico'),suggestionReason:a=>a?.cancelReason||'',statusLabel:s=>({scheduled:'Agendado',confirmed:'Confirmado',cancelled:'Cancelado'})[s],parseDate:d=>new Date(d+'T12:00:00'),workflowDate:d=>d,esc:s=>String(s??'').replaceAll('<','&lt;'),$:id=>elements[id],workflowData:{audit:[]}};
  vm.createContext(context);vm.runInContext(code,context);
  return {context,elements};
@@ -44,6 +44,37 @@ test('agenda search covers patient, doctor, actor, procedure, action and before/
  for(const query of ['Lucas','Rosa','Roseni','Consulta','Cirurgia','novo','Confirmado','Secretaria']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.match(elements.auditList.innerHTML,/agenda-log-event/,query)}
  for(const query of ['patient-uuid','doctor-uuid','appointment-uuid','scheduled','appointment_created']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.doesNotMatch(elements.auditList.innerHTML,/agenda-log-event/,query)}
 });
+test('agenda log filters combine local date, user, agenda, patient and action criteria without exposing technical IDs',()=>{
+ const {context:c,elements}=agendaFixture();
+ const changed={...event,action:'appointment_updated',createdAt:'2026-09-23T11:00:00Z',before:appointment,after:{...appointment,time:'09:00'}};
+ const removed={...event,action:'appointment_removed',actorName:'João Secretário',createdAt:'2026-09-24T11:00:00Z',before:appointment,after:null};
+ const request={...event,action:'request_created',actorName:'Mariana',createdAt:'2026-09-25T11:00:00Z',before:null,after:appointment};
+ const hidden={...event,action:'appointment_updated',createdAt:'2026-09-26T11:00:00Z',before:appointment,after:{...appointment}};
+ c.workflowData.audit=[event,changed,removed,request,hidden];
+ const shown=()=>((elements.auditList.innerHTML.match(/agenda-log-event/g)||[]).length);
+ c.renderAgendaLogs();assert.equal(shown(),4);
+ elements.auditPatient.value='LÚCAS';c.renderAgendaLogs();assert.equal(shown(),4);
+ elements.auditProfessional.value='Dra. Rosa';c.renderAgendaLogs();assert.equal(shown(),4);
+ elements.auditActor.value='Roseni Nunes';c.renderAgendaLogs();assert.equal(shown(),2);
+ elements.auditActor.value='';elements.auditAction.value='created';c.renderAgendaLogs();assert.equal(shown(),1);
+ elements.auditAction.value='changed';c.renderAgendaLogs();assert.equal(shown(),1);
+ elements.auditAction.value='removed';c.renderAgendaLogs();assert.equal(shown(),1);
+ elements.auditAction.value='request';c.renderAgendaLogs();assert.equal(shown(),1);
+ elements.auditAction.value='';elements.auditStart.value='2026-09-23';elements.auditEnd.value='2026-09-24';c.renderAgendaLogs();assert.equal(shown(),2);
+ elements.auditPatient.value='';elements.auditSearch.value='appointment_created';c.renderAgendaLogs();assert.equal(shown(),0);
+ elements.auditSearch.value='';elements.auditStart.value='';elements.auditEnd.value='';c.renderAgendaLogs();assert.equal(shown(),4);
+ assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{patient:'lucas',action:'created'}),true);
+ assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{patient:'lucas',action:'removed'}),false);
+});
+test('agenda and billing logs keep aligned workflow tokens without duplicate billing authorship rules',()=>{
+ const agendaCss=readFileSync('public/legacy.css','utf8'),billingCss=readFileSync('app/billing/billing.css','utf8'),billing=readFileSync('app/billing/billing-logs.tsx','utf8');
+ assert.match(agendaCss,/\.agenda-log-filters\{display:grid/);
+ assert.match(billingCss,/\.billing-logs,.billing-logs :is\(input,select,button\)\{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif\}/);
+ for(const token of ['padding:14px','border:1px solid #e4eaf0','border-radius:12px','padding:3px 7px','font-size:9px','font-weight:850','minmax(70px,auto) 18px minmax(0,1fr)'])assert.ok(billingCss.includes(token),token);
+ assert.equal((billingCss.match(/\.billing-log-event \.workflow-log-authorship\{/g)||[]).length,1);
+ for(const name of ['workflow-card','workflow-heading','workflow-status','workflow-changes','workflow-change','workflow-log-context','workflow-log-authorship'])assert.match(billing,new RegExp(name));
+});
+
 function workflowRoute(role,agendaIds,leaky=false){
  const calls=[];
  const audit=[{id:'one',professional_id:'d1',metadata:{before:null,after:{procedure:'Consulta'}}},{id:'two',professional_id:'d2',metadata:{after:{procedure:'Cirurgia'}}},{id:'none',professional_id:null}];
