@@ -15,31 +15,33 @@ test('financial logs collapse net-zero subevents and transient insert/delete wit
 });
 const source=readFileSync('public/legacy-app.js','utf8');
 const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
-const wanted=new Set(['agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogContent','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','suggestionReason','roleLabel']);
+const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowAuthorship','suggestionReason','roleLabel']);
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
  const elements={auditList:{innerHTML:''},auditSearch:{value:''}};
- const context={state:{professionals:[{id:'doctor-uuid',name:'Dra. Rosa'}]},patient:id=>id==='patient-uuid'?{name:'Paciente Lucas'}:null,hospital:()=>({name:'CONS'}),hospitalAcronym:x=>x,suggestionReason:a=>a?.cancelReason||'',statusLabel:s=>({scheduled:'Agendado',confirmed:'Confirmado',cancelled:'Cancelado'})[s],parseDate:d=>new Date(d+'T12:00:00'),workflowDate:d=>d,esc:s=>String(s??'').replaceAll('<','&lt;'),$:id=>elements[id],workflowData:{audit:[]}};
+ const context={state:{professionals:[{id:'doctor-uuid',name:'Dra. Rosa'}]},patient:id=>id==='patient-uuid'?{name:'Paciente Lucas'}:null,hospital:()=>({name:'CONS'}),hospitalAcronym:x=>x,doctorName:x=>String(x||'Médico'),suggestionReason:a=>a?.cancelReason||'',statusLabel:s=>({scheduled:'Agendado',confirmed:'Confirmado',cancelled:'Cancelado'})[s],parseDate:d=>new Date(d+'T12:00:00'),workflowDate:d=>d,esc:s=>String(s??'').replaceAll('<','&lt;'),$:id=>elements[id],workflowData:{audit:[]}};
  vm.createContext(context);vm.runInContext(code,context);
  return {context,elements};
 }
 const appointment={id:'appointment-uuid',patientId:'patient-uuid',doctorId:'doctor-uuid',date:'2026-09-22',time:'08:00',procedure:'Consulta',duration:60,status:'scheduled'};
 const event={actorName:'Roseni Nunes',actorRole:'secretary',createdAt:'2026-09-22T11:00:00Z',action:'appointment_created',description:'Roseni Nunes criou um agendamento.',professionalId:'doctor-uuid',patientId:'patient-uuid',before:null,after:appointment};
-test('agenda timeline renders INSERT, UPDATE and DELETE with meaningful nonempty differences',()=>{
+test('agenda logs group operational changes, resolve fields and discard technical-only updates',()=>{
  const {context:c,elements}=agendaFixture();
- c.workflowData.audit=[event,{...event,action:'appointment_updated',description:'Roseni alterou um agendamento.',before:appointment,after:{...appointment,time:'09:00'}},{...event,action:'appointment_removed',before:appointment,after:null}];
+ const updated={...appointment,time:'09:00',insurance:'CESA',forma_cobranca:'CONVENIO',guideExpiry:'2026-10-10',careType:'inpatient',opme:true,reports:false,exams:true,anesthetistId:'doctor-uuid'};
+ c.workflowData.audit=[event,{...event,action:'appointment_updated',description:'Roseni alterou um agendamento.',before:appointment,after:updated},{...event,action:'appointment_removed',before:appointment,after:null},{...event,action:'appointment_updated',before:{...appointment},after:{...appointment,rescheduleHistory:[]}}];
  c.renderAgendaLogs();const html=elements.auditList.innerHTML;
- for(const text of ['Adicionar:','REMOVIDO','<b>DE</b>','<b>PARA</b>','Data e horário: 22/09/2026 às 08:00','Roseni Nunes','Secretaria','Dra. Rosa','Duração:'])assert.ok(html.includes(text),text);
- assert.doesNotMatch(html,/Novo registro|uuid|scheduled|Roseni Nunes criou/);
- assert.equal(c.agendaLogContent({...event,before:appointment,after:{...appointment}}).lines.length,0);
- assert.equal(c.agendaLogContent({...event,before:appointment,after:{...appointment,updatedAt:'ignored'}}).lines.length,0);
- const partial=c.agendaLogContent({...event,action:'appointment_updated',before:appointment,after:{...appointment,duration:90}});assert.equal(partial.lines[0].label,'DE');assert.match(partial.lines[0].text,/Duração: 60 min/);assert.equal(partial.lines[1].label,'PARA');assert.match(partial.lines[1].text,/Duração: 90 min/);
+ for(const text of ['Adicionar:','REMOVIDO','workflow-change-label">DE','workflow-change-label">PARA','Convênio / plano: CESA','Forma de cobrança: Convênio','Validade da guia: 10/10/2026','Tipo de atendimento: Internado','OPME: Sim','Laudos: Não','Exames: Sim','Anestesista: Dra. Rosa','Responsável:','Roseni Nunes','Secretaria','Dra. Rosa'])assert.ok(html.includes(text),text);
+ assert.doesNotMatch(html,/Novo registro|uuid|scheduled|rescheduleHistory|Roseni Nunes criou/);
+ const created=c.agendaLogContent(event);assert.equal(created.lines.length,1);assert.equal(created.lines[0].label,'Adicionar:');assert.ok(created.lines[0].values.length>1);
+ const partial=c.agendaLogContent({...event,action:'appointment_updated',before:appointment,after:updated});assert.deepEqual(partial.lines.map(x=>x.label),['DE','PARA']);assert.ok(partial.lines[0].values.some(v=>v==='Data e horário: 22/09/2026 às 08:00'));assert.ok(partial.lines[1].values.some(v=>v==='Data e horário: 22/09/2026 às 09:00'));assert.ok(partial.lines[1].values.some(v=>v==='Convênio / plano: CESA'));
+ const removed=c.agendaLogContent({...event,before:appointment,after:null});assert.equal(removed.lines.length,1);assert.equal(removed.lines[0].label,'REMOVIDO');
+ const technical=c.agendaLogContent({...event,action:'appointment_updated',before:{...appointment},after:{...appointment,rescheduleHistory:[]}});assert.equal(technical.lines.length,0);assert.equal(technical.meaningful,false);assert.equal((html.match(/agenda-log-event/g)||[]).length,3);
  const unresolved=c.agendaLogContent({...event,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',professionalId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',before:null,after:{...appointment,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',doctorId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13'}});assert.doesNotMatch(unresolved.metadata,/c0a80101/);
- assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação de novo agendamento para Paciente Lucas/);
+ assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Novo agendamento na agenda de Dra\. Rosa/);assert.doesNotMatch(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação/);assert.match(c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05\/10\/2026',deciderName:'Roseni Nunes',decidedAt:'05\/10\/2026'}),/Solicitante:.*Dr\. Heitor[\s\S]*Decidido por:.*Roseni Nunes/);
 });
 test('agenda search covers patient, doctor, actor, procedure, action and before/after, never technical IDs',()=>{
  const {context:c,elements}=agendaFixture();c.workflowData.audit=[{...event,before:appointment,after:{...appointment,procedure:'Cirurgia',status:'confirmed'}}];
- for(const query of ['Lucas','Rosa','Roseni','Consulta','Cirurgia','criado','Confirmado','Secretaria']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.match(elements.auditList.innerHTML,/agenda-log-event/,query)}
+ for(const query of ['Lucas','Rosa','Roseni','Consulta','Cirurgia','novo','Confirmado','Secretaria']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.match(elements.auditList.innerHTML,/agenda-log-event/,query)}
  for(const query of ['patient-uuid','doctor-uuid','appointment-uuid','scheduled','appointment_created']){elements.auditSearch.value=query;c.renderAgendaLogs();assert.doesNotMatch(elements.auditList.innerHTML,/agenda-log-event/,query)}
 });
 function workflowRoute(role,agendaIds,leaky=false){
@@ -59,7 +61,7 @@ test('billing timeline presents add/remove without empty opposite sides or actor
  const logs=[{id:'l',actor_id:1,actor_name:'Roseni',actor_email:'hidden@example.test',kind:'record',created_at:'2026-09-22',changes:[change(1,null,{origin:'AGENDA',amount:0},'one'),change(2,{origin:'FATURAMENTO_MANUAL'},null,'two'),change(3,{origin:'FISCAL_MANUAL'},{origin:'AGENDA'},'three'),change(4,{payment_status:'PAGO'},{payment_status:'PENDENTE'},'four'),change(5,{payment_status:'PENDENTE'},{payment_status:'PAGO'},'four'),change(6,null,{billing_entity_id:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13'},'five')]}];
  let index=0;const Component=loadTs('app/billing/billing-logs.tsx',{react:{...React,useEffect:()=>{},useState:initial=>[index++===0?logs:initial,()=>{}]}}).default;
  const html=renderToStaticMarkup(React.createElement(Component,{data:{rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:'secretary',name:'Roseni'}]}}));
- for(const text of ['Adicionar:','REMOVIDO','workflow-change-label">DE</b>','workflow-change-label">PARA</b>','Agenda','Faturamento · cadastro manual','Fiscal · cadastro manual'])assert.ok(html.includes(text),text);
+ for(const text of ['Adicionar:','REMOVIDO','workflow-change-label">DE</b>','workflow-change-label">PARA</b>','Responsável:','Agenda','Faturamento · cadastro manual','Fiscal · cadastro manual'])assert.ok(html.includes(text),text);
  assert.doesNotMatch(html,/hidden@example|Novo registro|PENDENTE|FATURAMENTO_MANUAL|FISCAL_MANUAL|c0a80101/);
  assert.equal((html.match(/class="workflow-change /g)||[]).length,5);
 });
