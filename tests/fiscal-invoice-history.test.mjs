@@ -137,6 +137,7 @@ test('doctor invoice table keeps the regular page width and equal-height local a
  assert.doesNotMatch(compact,/doctor-invoice-table th:nth-child/);
  assert.match(compact,/\.doctor-invoice-table\{width:100%;min-width:980px\}/);
  assert.match(compact,/\.doctor-invoice-actions \.billing-icon-action\{width:32px;height:32px;flex:0 0 32px;margin:0\}/);
+ assert.match(compact,/\.doctor-invoice-table td:last-child\{padding-top:4px;padding-bottom:4px\}/);
  assert.match(css,/\.billing-icon-action\{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;[^}]*margin:2px\}/);
  const source=readFileSync('app/billing/doctor-billing.tsx','utf8');
  assert.match(source,/hasDetails&&<button className="billing-icon-action"/);
