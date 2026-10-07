@@ -1,6 +1,7 @@
 import {getSession} from '@/app/authz';
 import {loadBillingData} from '@/lib/billing-data';
 import {doctorCanReadFinancialAttachment} from '@/lib/billing-projection';
+import type {FinancialAttachment} from '@/lib/billing-types';
 import {invoiceRows} from '@/lib/billing-row';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {consumeLimit} from '@/lib/security/rate-limit';
@@ -12,7 +13,7 @@ const BUCKET='financial-documents',MAX_SIZE=10*1024*1024;
 const MIME=new Set(['application/pdf','image/jpeg','image/png']);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Session=NonNullable<Awaited<ReturnType<typeof getSession>>>;
-type Attachment={id:string;invoice_id:string|null;billing_record_id:string|null;storage_path:string;created_by:number;status:string;is_current:boolean;deactivated_at:string|null};
+type Attachment={id:string;invoice_id:string|null;billing_record_id:string|null;storage_path:string;created_by:number;status:FinancialAttachment['status'];is_current:boolean;deactivated_at:string|null};
 function validId(value:unknown){return typeof value==='string'&&uuid.test(value);}
 function cleanName(value:unknown){
  if(typeof value!=='string'||value!==value.trim()||!value||value.length>200||/[\\/\x00-\x1f]/.test(value))throw new HttpError(400,'Nome do comprovante inválido.');
