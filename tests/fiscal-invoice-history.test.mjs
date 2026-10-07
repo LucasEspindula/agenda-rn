@@ -40,3 +40,14 @@ test('invoice relation states remain explicit in the report and replacements res
  assert.match(html,/Cancelada/);
  assert.match(html,/Total líquido válido \(NFs ativas\): R\$ 100,00/);
 });
+
+
+test('doctor invoice relation uses the same historical list and numeric order',()=>{
+ const {visibleDoctorInvoices}=loadTs('app/billing/doctor-billing.tsx');
+ const invoices=[invoice('105','105'),invoice('104','104','CANCELLED'),invoice('103','103','REPLACED'),invoice('102','102','ACTIVE',{voided_at:'2026-10-05'})];
+ const data={doctors:[],entities:[],rows:[],links:[],items:[],invoices,expenses:[],payers:[]};
+ const filters={entity:'',insurance:'',status:'',start:'',end:'',doctor:''};
+ assert.deepEqual(visibleDoctorInvoices(data,filters).map(i=>i.invoice_number),['105','104','103']);
+ const natural=['9','100','20','101','099'].map((number,index)=>invoice(String(index),number));
+ assert.deepEqual(visibleDoctorInvoices({...data,invoices:natural},filters).map(i=>i.invoice_number),['101','100','099','20','9']);
+});
