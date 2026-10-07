@@ -74,3 +74,42 @@ test('SQL and API derive anesthetist access from the canonical appointment state
  assert.match(migration,/and not exists\(/);
  assert.match(migration,/grant execute.*service_role/);
 });
+
+
+test('doctor projection exposes only safe current proof metadata and read authorization follows it',()=>{
+ const {doctorBillingProjection,doctorCanReadFinancialAttachment}=loadTs('lib/billing-projection.ts');
+ const own= {id:'i-own',billing_entity_id:'e',payer:'Convênio',issue_date:'2026-10-01',paid_at:'2026-10-02'};
+ const shared={id:'i-shared',billing_entity_id:'e',payer:'Convênio',issue_date:'2026-10-01',paid_at:'2026-10-02'};
+ const data={rows:[
+  {attendance_id:'a1',doctor_id:'d1',anesthetist_id:'',insurance:'Convênio',record:{id:'r1',billing_entity_id:'e'},invoice:own},
+  {attendance_id:'a2',doctor_id:'d2',anesthetist_id:'',insurance:'Convênio',record:{id:'r2',billing_entity_id:'e'},invoice:shared},
+ ],items:[
+  {invoice_id:'i-own',billing_record_id:'r1'},
+  {invoice_id:'i-shared',billing_record_id:'r1'},
+  {invoice_id:'i-shared',billing_record_id:'r2'},
+ ],invoices:[own,shared],entities:[],doctors:[{id:'d1',name:'Médico'},{id:'d2',name:'Outro'}],links:[],expenses:[],associates:[],payers:[],attachments:[
+  {id:'record-own',document_type:'PAYMENT_PROOF',invoice_id:null,billing_record_id:'r1',original_filename:'own.pdf',mime_type:'application/pdf',file_size:1,status:'READY',is_current:true,deactivated_at:null},
+  {id:'record-other',document_type:'PAYMENT_PROOF',invoice_id:null,billing_record_id:'r2',original_filename:'other.pdf',mime_type:'application/pdf',file_size:1,status:'READY',is_current:true,deactivated_at:null},
+  {id:'invoice-own',document_type:'PAYMENT_PROOF',invoice_id:'i-own',billing_record_id:null,original_filename:'invoice.pdf',mime_type:'application/pdf',file_size:1,status:'READY',is_current:true,deactivated_at:null},
+  {id:'invoice-shared',document_type:'PAYMENT_PROOF',invoice_id:'i-shared',billing_record_id:null,original_filename:'shared.pdf',mime_type:'application/pdf',file_size:1,status:'READY',is_current:true,deactivated_at:null},
+  {id:'pending',document_type:'PAYMENT_PROOF',invoice_id:null,billing_record_id:'r1',original_filename:'pending.pdf',mime_type:'application/pdf',file_size:1,status:'PENDING',is_current:true,deactivated_at:null},
+ ]};
+ const principal={account:{id:7,role:'doctor',doctorId:'d1'},agendaIds:['d1'],services:{billing_enabled:true,invoice_enabled:true,scheduling_enabled:true}};
+ const projected=doctorBillingProjection(data,principal,true);
+ assert.deepEqual(projected.attachments.map(a=>a.id).sort(),['invoice-own','record-own']);
+ assert.equal(projected.attachments.some(a=>'storage_path' in a),false);
+ const byId=id=>data.attachments.find(a=>a.id===id);
+ assert.equal(doctorCanReadFinancialAttachment(data,principal,byId('record-own')),true);
+ assert.equal(doctorCanReadFinancialAttachment(data,principal,byId('invoice-own')),true);
+ assert.equal(doctorCanReadFinancialAttachment(data,principal,byId('record-other')),false);
+ assert.equal(doctorCanReadFinancialAttachment(data,principal,byId('invoice-shared')),false);
+ assert.equal(doctorCanReadFinancialAttachment(data,principal,byId('pending')),false);
+});
+
+test('attachment GET uses dedicated doctor read authorization while mutations remain forbidden',async()=>{
+ const route=await readFile('app/api/financial-attachments/route.ts','utf8');
+ assert.match(route,/async function canReadFinancialAttachment/);
+ assert.match(route,/doctorCanReadFinancialAttachment\(data,session,attachment\)/);
+ assert.match(route,/const doctorRead=session\.account\.role==='doctor'/);
+ assert.match(route,/session\.account\.role==='doctor'\)throw new HttpError\(403,'Acesso negado\.'\);/);
+});

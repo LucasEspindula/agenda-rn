@@ -6,7 +6,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {readFileSync} from 'node:fs';
 
 const {historicalInvoice,compareInvoiceNumbersDesc}=loadTs('lib/fiscal-document.ts');
-const {doctorInvoiceProcedure,doctorInvoiceStatusClass,visibleDoctorInvoices}=loadTs('app/billing/doctor-billing.tsx');
+const {doctorInvoiceProcedure,doctorInvoiceProcedureDate,doctorInvoiceProof,doctorInvoiceStatusClass,visibleDoctorInvoices}=loadTs('app/billing/doctor-billing.tsx');
 const {INVOICE_STATUSES}=loadTs('lib/billing-row.ts');
 const {buildReport,companyCash}=loadTs('lib/billing-reports.ts');
 const Report=loadTs('app/billing/billing-report.tsx').default;
@@ -85,12 +85,46 @@ test('doctor invoice relationship presents procedure, restricted details and sem
  assert.doesNotMatch(source,/<h1>Consulta financeira<\/h1>/);
  assert.doesNotMatch(source,/Somente leitura ·/);
  assert.match(source,/<th>Procedimento<\/th>/);
- assert.match(source,/i\.recipient_type==='CONVENIO'\?<button className="billing-icon-action"/);
- assert.match(source,/<th>Detalhes<\/th>/);
+ assert.match(source,/hasDetails=i\.recipient_type==='CONVENIO'/);
+ assert.match(source,/hasDetails&&<button className="billing-icon-action"/);
+ assert.match(source,/<th>Ações<\/th>/);
+ assert.match(source,/\{!invoiceOnly&&<div className="billing-subnav no-print">/);
+ assert.match(source,/aria-current=\{tab==='records'\?'page':undefined\}.*?Relação de Notas Fiscais/s);
  assert.equal(doctorInvoiceStatusClass('Pago'),'doctor-invoice-status paid');
  assert.equal(doctorInvoiceStatusClass('Aguardando pagamento'),'doctor-invoice-status pending');
  assert.equal(doctorInvoiceStatusClass('Cancelada'),'doctor-invoice-status cancelled');
  assert.equal(doctorInvoiceStatusClass('Substituída'),'doctor-invoice-status replaced');
  assert.match(css,/\.doctor-invoice-status\.paid\{background:#e9f8f1;color:#237354\}/);
  assert.match(css,/\.doctor-invoice-status\.pending\{background:#fff3d9;color:#8c6210\}/);
+});
+
+
+test('doctor invoice procedure dates and proof action retain privacy boundaries',()=>{
+ const single=invoice('single','201','ACTIVE',{recipient_type:'CONVENIO'});
+ const sameDates=invoice('same','202','ACTIVE',{recipient_type:'CONVENIO'});
+ const manyDates=invoice('many','203','ACTIVE',{recipient_type:'CONVENIO'});
+ const shared=invoice('shared-date','204','ACTIVE',{recipient_type:'CONVENIO',shared:true});
+ const data={doctors:[],entities:[],links:[],invoices:[single,sameDates,manyDates,shared],expenses:[],payers:[],rows:[
+  {attendance_id:'a1',date:'2026-10-01',procedure:'Exame',record:{id:'r1'},invoice:single},
+  {attendance_id:'a2',date:'2026-10-02',procedure:'A',record:{id:'r2'},invoice:sameDates},
+  {attendance_id:'a3',date:'2026-10-02',procedure:'B',record:{id:'r3'},invoice:sameDates},
+  {attendance_id:'a4',date:'2026-10-03',procedure:'C',record:{id:'r4'},invoice:manyDates},
+  {attendance_id:'a5',date:'2026-10-04',procedure:'D',record:{id:'r5'},invoice:manyDates},
+  {attendance_id:'a6',date:'2026-10-05',procedure:'E',record:{id:'r6'},invoice:shared},
+ ],items:[
+  {invoice_id:'single',billing_record_id:'r1'},{invoice_id:'same',billing_record_id:'r2'},{invoice_id:'same',billing_record_id:'r3'},
+  {invoice_id:'many',billing_record_id:'r4'},{invoice_id:'many',billing_record_id:'r5'},{invoice_id:'shared-date',billing_record_id:'r6'},
+ ],attachments:[
+  {id:'invoice-proof',invoice_id:'single',billing_record_id:null,status:'READY',is_current:true,deactivated_at:null},
+  {id:'record-proof',invoice_id:null,billing_record_id:'r6',status:'READY',is_current:true,deactivated_at:null},
+  {id:'pending',invoice_id:null,billing_record_id:'r1',status:'PENDING',is_current:true,deactivated_at:null},
+ ]};
+ assert.equal(doctorInvoiceProcedureDate(single,data),'2026-10-01');
+ assert.equal(doctorInvoiceProcedureDate(sameDates,data),'2026-10-02');
+ assert.equal(doctorInvoiceProcedureDate(manyDates,data),'Várias datas');
+ assert.equal(doctorInvoiceProcedureDate(shared,data),'Várias datas');
+ assert.equal(doctorInvoiceProcedureDate(invoice('none','205'),{...data,rows:[],items:[]}),'—');
+ assert.equal(doctorInvoiceProof(single,data)?.id,'invoice-proof');
+ assert.equal(doctorInvoiceProof(shared,data)?.id,'record-proof');
+ assert.equal(doctorInvoiceProof(manyDates,data),undefined);
 });

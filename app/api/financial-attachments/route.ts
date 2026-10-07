@@ -1,5 +1,6 @@
 import {getSession} from '@/app/authz';
 import {loadBillingData} from '@/lib/billing-data';
+import {doctorCanReadFinancialAttachment} from '@/lib/billing-projection';
 import {invoiceRows} from '@/lib/billing-row';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {consumeLimit} from '@/lib/security/rate-limit';
@@ -11,7 +12,7 @@ const BUCKET='financial-documents',MAX_SIZE=10*1024*1024;
 const MIME=new Set(['application/pdf','image/jpeg','image/png']);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Session=NonNullable<Awaited<ReturnType<typeof getSession>>>;
-type Attachment={id:string;invoice_id:string|null;billing_record_id:string|null;storage_path:string;created_by:number;status:string};
+type Attachment={id:string;invoice_id:string|null;billing_record_id:string|null;storage_path:string;created_by:number;status:string;is_current:boolean;deactivated_at:string|null};
 function validId(value:unknown){return typeof value==='string'&&uuid.test(value);}
 function cleanName(value:unknown){
  if(typeof value!=='string'||value!==value.trim()||!value||value.length>200||/[\\/\x00-\x1f]/.test(value))throw new HttpError(400,'Nome do comprovante inválido.');
@@ -33,6 +34,13 @@ async function permitted(session:Session,invoiceId:string|null,recordId:string|n
  const invoice=data.invoices.find(i=>i.id===invoiceId);if(!invoice)return false;
  const rows=invoiceRows(invoice,data).map(({row})=>row);
  return rows.length>0&&rows.every(row=>[row.doctor_id,row.anesthetist_id].some(id=>session.agendaIds.includes(id)));
+}
+async function canReadFinancialAttachment(session:Session,attachment:Attachment){
+ if(session.account.role==='general_manager')return true;
+ if(session.account.role==='secretary')return permitted(session,attachment.invoice_id,attachment.billing_record_id);
+ if(session.account.role!=='doctor')return false;
+ const {data}=await loadBillingData();
+ return doctorCanReadFinancialAttachment(data,session,attachment);
 }
 async function attachmentFor(id:string){
  const {data,error}=await getSupabaseAdmin().from('financial_attachments').select('*').eq('id',id).maybeSingle();
@@ -61,10 +69,11 @@ function failure(error:unknown){
 export async function GET(request:Request){
  try{
   const session=await getSession(),id=new URL(request.url).searchParams.get('id');
-  if(!session||session.account.role==='doctor')throw new HttpError(403,'Acesso negado.');
+  if(!session)throw new HttpError(403,'Acesso negado.');
   if(!id||!validId(id))throw new HttpError(400,'Comprovante inválido.');
   const attachment=await attachmentFor(id);
-  if(!attachment||attachment.status!=='READY'||!(await permitted(session,attachment.invoice_id,attachment.billing_record_id)))throw new HttpError(404,'Comprovante não disponível.');
+  const doctorRead=session.account.role==='doctor';
+  if(!attachment||attachment.status!=='READY'||(doctorRead&&(!attachment.is_current||!!attachment.deactivated_at))||!(await canReadFinancialAttachment(session,attachment)))throw new HttpError(404,'Comprovante não disponível.');
   const {data,error}=await getSupabaseAdmin().storage.from(BUCKET).createSignedUrl(attachment.storage_path,60);
   if(error||!data)throw error||new Error('signed-url');
   return new Response(null,{status:302,headers:{Location:data.signedUrl,'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer'}});

@@ -10,3 +10,5 @@ export function CancelFiscalIcon(){return <svg width="19" height="19" viewBox="0
 export function ReplaceInvoiceIcon(){return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M7 7h10l-3-3m3 3-3 3M17 17H7l3 3m-3-3 3-3"/><path d="M19 7a7 7 0 0 0-12-3M5 17a7 7 0 0 0 12 3"/></svg>}
 export function HistoryIcon(){return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2L4 8.5M4 4v4.5h4.5M12 8v4l2.8 1.8"/></svg>}
 export function EyeIcon(){return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>}
+
+export function DocumentIcon(){return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg>}

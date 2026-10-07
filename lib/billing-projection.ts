@@ -1,4 +1,4 @@
-import type {BillingData,BillingRow} from './billing-types';
+import type {BillingData,BillingRow,FinancialAttachment} from './billing-types';
 import {payerKey} from './billing-eligibility';
 type RecordData=Record<string,unknown>;
 export type FinancialPrincipal={account:{id:number;role:string;doctorId?:string|null};agendaIds:string[];services?:{scheduling_enabled:boolean;billing_enabled:boolean;invoice_enabled:boolean}};
@@ -13,8 +13,19 @@ export function doctorBillingProjection(data:BillingData,principal:FinancialPrin
   return {...i,recipient_tax_id:null,recipient_address:null,notes:null,total_amount:shared?null:i.total_amount,net_amount:shared?null:i.net_amount,shared,created_by:null,updated_by:null};
  });
  const entities=new Set([...rows.map(r=>r.record?.billing_entity_id),...invoices.map(i=>i.billing_entity_id)]);
- return {rows:rows.map(r=>({...r,invoice:r.invoice?invoices.find(i=>i.id===r.invoice?.id)||null:null,record:r.record?{...r.record,notes:null,created_by:null,updated_by:null}:null,created_by:null,updated_by:null})),doctors:data.doctors.filter(d=>d.id===id),entities:data.entities.filter(e=>entities.has(e.id)),links:[],invoices,items:visibleItems,payers:[...new Set(rows.map(r=>payerKey(r.insurance)).filter(Boolean))],expenses:[],associates:[],attachments:[],patients:[],users:[],read_only:true,doctor_id:id||undefined,services:principal.services};
+ const attachments=(data.attachments||[]).filter(attachment=>attachment.status==='READY'&&attachment.is_current&&!attachment.deactivated_at&&(
+  !!attachment.billing_record_id&&recordIds.has(attachment.billing_record_id)||
+  !!attachment.invoice_id&&invoiceIds.has(attachment.invoice_id)&&!invoices.find(invoice=>invoice.id===attachment.invoice_id)?.shared
+ )).map(({id,document_type,invoice_id,billing_record_id,original_filename,mime_type,file_size,status,is_current,replaces_attachment_id,replaced_by_attachment_id,deactivated_at,deactivation_reason,created_at,created_by,updated_at,updated_by})=>({id,document_type,invoice_id,billing_record_id,original_filename,mime_type,file_size,status,is_current,replaces_attachment_id,replaced_by_attachment_id,deactivated_at,deactivation_reason,created_at,created_by,updated_at,updated_by}));
+ return {rows:rows.map(r=>({...r,invoice:r.invoice?invoices.find(i=>i.id===r.invoice?.id)||null:null,record:r.record?{...r.record,notes:null,created_by:null,updated_by:null}:null,created_by:null,updated_by:null})),doctors:data.doctors.filter(d=>d.id===id),entities:data.entities.filter(e=>entities.has(e.id)),links:[],invoices,items:visibleItems,payers:[...new Set(rows.map(r=>payerKey(r.insurance)).filter(Boolean))],expenses:[],associates:[],attachments,patients:[],users:[],read_only:true,doctor_id:id||undefined,services:principal.services};
 }
+export function doctorCanReadFinancialAttachment(data:BillingData,principal:FinancialPrincipal,attachment:Pick<FinancialAttachment,'invoice_id'|'billing_record_id'|'status'|'is_current'|'deactivated_at'>){
+ if(attachment.status!=='READY'||!attachment.is_current||attachment.deactivated_at)return false;
+ const projected=doctorBillingProjection(data,principal,true);
+ if(attachment.billing_record_id)return projected.rows.some(row=>row.record?.id===attachment.billing_record_id);
+ return !!attachment.invoice_id&&projected.invoices.some(invoice=>invoice.id===attachment.invoice_id&&!invoice.shared);
+}
+
 export function projectFinancialRow(t:RecordData,record:BillingRow['record'],invoice:BillingRow['invoice'],item:BillingRow['invoice_item'],patient:string):BillingRow{
  return {...t,attendance_id:String(t.id),appointment_id:t.appointment_id as string|null,patient_id:t.patient_id as string|null,origin:String(t.origin),date:String(t.date),time:'',patient,doctor_id:String(t.doctor_id),anesthetist_id:String(t.anesthetist_id||''),procedure:String(t.procedure),insurance:String(t.insurance||''),status_atendimento:String(t.status),forma_cobranca:t.billing_method as string|null,record,invoice,invoice_item:item,legacy_payment:null,legacy_invoice:null} as BillingRow;
 }
