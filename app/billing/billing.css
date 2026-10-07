@@ -106,3 +106,13 @@
 .billing-link-history strong{color:#4b5e6b;font-size:12px}
 .billing-link-history span{border-radius:999px;background:#f3f6f8;padding:4px 8px}
 @media(max-width:600px){.billing-link-doctor{padding:15px}.billing-link-options{grid-template-columns:1fr}}
+
+
+/* Doctor invoice states use the same compact semantic language as operational logs. */
+.doctor-invoice-table{min-width:980px}
+.doctor-invoice-status{display:inline-block;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:850;letter-spacing:.03em;line-height:1.2;text-transform:uppercase;white-space:nowrap}
+.doctor-invoice-status.paid{background:#e9f8f1;color:#237354}
+.doctor-invoice-status.pending{background:#fff3d9;color:#8c6210}
+.doctor-invoice-status.cancelled{background:#fff0f0;color:#a33f3f}
+.doctor-invoice-status.replaced{background:#fff7df;color:#806117}
+.doctor-invoice-status.neutral{background:#eef5f8;color:#3b6478}

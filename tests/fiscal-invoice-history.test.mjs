@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
+import {readFileSync} from 'node:fs';
 
 const {historicalInvoice,compareInvoiceNumbersDesc}=loadTs('lib/fiscal-document.ts');
+const {doctorInvoiceProcedure,doctorInvoiceStatusClass,visibleDoctorInvoices}=loadTs('app/billing/doctor-billing.tsx');
 const {INVOICE_STATUSES}=loadTs('lib/billing-row.ts');
 const {buildReport,companyCash}=loadTs('lib/billing-reports.ts');
 const Report=loadTs('app/billing/billing-report.tsx').default;
@@ -43,11 +45,52 @@ test('invoice relation states remain explicit in the report and replacements res
 
 
 test('doctor invoice relation uses the same historical list and numeric order',()=>{
- const {visibleDoctorInvoices}=loadTs('app/billing/doctor-billing.tsx');
  const invoices=[invoice('105','105'),invoice('104','104','CANCELLED'),invoice('103','103','REPLACED'),invoice('102','102','ACTIVE',{voided_at:'2026-10-05'})];
  const data={doctors:[],entities:[],rows:[],links:[],items:[],invoices,expenses:[],payers:[]};
  const filters={entity:'',insurance:'',status:'',start:'',end:'',doctor:''};
  assert.deepEqual(visibleDoctorInvoices(data,filters).map(i=>i.invoice_number),['105','104','103']);
  const natural=['9','100','20','101','099'].map((number,index)=>invoice(String(index),number));
  assert.deepEqual(visibleDoctorInvoices({...data,invoices:natural},filters).map(i=>i.invoice_number),['101','100','099','20','9']);
+});
+
+
+test('doctor invoice procedure stays specific only for a single non-shared projected attendance',()=>{
+ const one=invoice('one','101','ACTIVE',{recipient_type:'PARTICULAR'});
+ const convenio=invoice('convenio','102','ACTIVE',{recipient_type:'CONVENIO'});
+ const convenioSingle=invoice('convenio-single','105','ACTIVE',{recipient_type:'CONVENIO'});
+ const shared=invoice('shared','103','ACTIVE',{recipient_type:'CONVENIO',shared:true});
+ const data={doctors:[],entities:[],links:[],invoices:[one,convenio,convenioSingle,shared],expenses:[],payers:[],rows:[
+  {attendance_id:'a1',procedure:'Colonoscopia',record:{id:'r1'},invoice:one},
+  {attendance_id:'a2',procedure:'Endoscopia',record:{id:'r2'},invoice:convenio},
+  {attendance_id:'a3',procedure:'Consulta',record:{id:'r3'},invoice:convenio},
+  {attendance_id:'a4',procedure:'Procedimento autorizado',record:{id:'r4'},invoice:shared},
+  {attendance_id:'a5',procedure:'Ecocardiograma',record:{id:'r5'},invoice:convenioSingle},
+ ],items:[
+  {invoice_id:'one',billing_record_id:'r1'},
+  {invoice_id:'convenio',billing_record_id:'r2'},
+  {invoice_id:'convenio',billing_record_id:'r3'},
+  {invoice_id:'shared',billing_record_id:'r4'},
+  {invoice_id:'convenio-single',billing_record_id:'r5'},
+ ]};
+ assert.equal(doctorInvoiceProcedure(one,data),'Colonoscopia');
+ assert.equal(doctorInvoiceProcedure(convenio,data),'Diversos');
+ assert.equal(doctorInvoiceProcedure(convenioSingle,data),'Ecocardiograma');
+ assert.equal(doctorInvoiceProcedure(shared,data),'Diversos');
+ assert.equal(doctorInvoiceProcedure(invoice('empty','104'),{...data,items:[],rows:[]}),'—');
+});
+
+test('doctor invoice relationship presents procedure, restricted details and semantic status badges',()=>{
+ const source=readFileSync('app/billing/doctor-billing.tsx','utf8');
+ const css=readFileSync('app/billing/billing.css','utf8');
+ assert.doesNotMatch(source,/<h1>Consulta financeira<\/h1>/);
+ assert.doesNotMatch(source,/Somente leitura ·/);
+ assert.match(source,/<th>Procedimento<\/th>/);
+ assert.match(source,/i\.recipient_type==='CONVENIO'\?<button className="billing-icon-action"/);
+ assert.match(source,/<th>Detalhes<\/th>/);
+ assert.equal(doctorInvoiceStatusClass('Pago'),'doctor-invoice-status paid');
+ assert.equal(doctorInvoiceStatusClass('Aguardando pagamento'),'doctor-invoice-status pending');
+ assert.equal(doctorInvoiceStatusClass('Cancelada'),'doctor-invoice-status cancelled');
+ assert.equal(doctorInvoiceStatusClass('Substituída'),'doctor-invoice-status replaced');
+ assert.match(css,/\.doctor-invoice-status\.paid\{background:#e9f8f1;color:#237354\}/);
+ assert.match(css,/\.doctor-invoice-status\.pending\{background:#fff3d9;color:#8c6210\}/);
 });
