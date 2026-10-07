@@ -111,8 +111,9 @@ export default function BillingClient({appointmentId,administration=false}:{appo
    if(!r.ok)throw Error(response.error||'Não foi possível atualizar o vínculo.');
    setMessage('Vínculos atualizados.');notifyFinancialChange();await load();
   }catch(e){
-   setError(e instanceof Error?e.message:'Não foi possível atualizar o vínculo.');
+   const errorMessage=e instanceof Error?e.message:'Não foi possível atualizar o vínculo.';
    await load();
+   setError(errorMessage);
   }finally{setSavingLinks(values=>{const next={...values};delete next[key];return next})}
  }
  const set=(key:string,value:string|boolean)=>setDraft(d=>({...d,[key]:value}));

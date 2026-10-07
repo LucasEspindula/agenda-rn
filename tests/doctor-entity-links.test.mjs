@@ -47,3 +47,26 @@ test('links UI is doctor-based multi-control editing without the old modal or de
  assert.doesNotMatch(source,/askDelete\('link'/);
  assert.doesNotMatch(source,/editing==='link'/);
 });
+
+
+test('link toggle preserves the API error after reloading the server state',()=>{
+ const source=readFileSync('app/billing/billing-client.tsx','utf8');
+ const start=source.indexOf('async function toggleDoctorEntityLink');
+ const end=source.indexOf(' const set=',start);
+ assert.notEqual(start,-1);
+ assert.notEqual(end,-1);
+ const handler=source.slice(start,end);
+ const catchStart=handler.indexOf('}catch(e){');
+ const finallyStart=handler.indexOf('}finally{',catchStart);
+ assert.notEqual(catchStart,-1);
+ assert.notEqual(finallyStart,-1);
+ const failure=handler.slice(catchStart,finallyStart);
+ const capture=failure.indexOf("const errorMessage=e instanceof Error?e.message:'Não foi possível atualizar o vínculo.';");
+ const reload=failure.indexOf('await load();');
+ const restore=failure.indexOf('setError(errorMessage);');
+ assert.ok(capture>=0,'the API error is captured');
+ assert.ok(capture<reload,'the error is kept before the reload');
+ assert.ok(reload<restore,'the error is restored after the reload clears it');
+ assert.match(handler,/finally\{setSavingLinks\(values=>\{const next=\{\.\.\.values\};delete next\[key\];return next\}\)\}/);
+ assert.doesNotMatch(handler,/delete_link/);
+});
