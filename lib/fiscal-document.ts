@@ -1,6 +1,8 @@
 import {cents} from './fiscal-money';
 import type {BillingData,Invoice} from './billing-types';
 export const activeInvoice=(i:Invoice)=>!i.voided_at&&(!i.status||i.status==='ACTIVE');
+export const historicalInvoice=(i:Invoice)=>!i.voided_at;
+export const compareInvoiceNumbersDesc=(a:Invoice,b:Invoice)=>b.invoice_number.localeCompare(a.invoice_number,'pt-BR',{numeric:true,sensitivity:'base'})||String(b.issue_date||'').localeCompare(String(a.issue_date||''))||String(b.id).localeCompare(String(a.id));
 export const fiscalStatus=(i:Invoice)=>i.voided_at?'Lançamento desfeito':i.status==='CANCELLED'?'Cancelada':i.status==='REPLACED'?'Substituída':'Ativa';
 export function invoiceSources(i:Invoice,data:BillingData){
  const items=data.items.filter(x=>x.invoice_id===i.id);

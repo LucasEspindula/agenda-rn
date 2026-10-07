@@ -1,4 +1,4 @@
-import {activeInvoice} from './fiscal-document';
+import {activeInvoice,historicalInvoice,compareInvoiceNumbersDesc} from './fiscal-document';
 import {cents} from './fiscal-money';
 import {isInsurancePending,matchesRow,matchesInvoice,rowEntityId} from './billing-row';
 import type {BillingData,BillingRow} from './billing-types';
@@ -18,7 +18,7 @@ export function buildReport(data:BillingData,scope:ReportScope){
  if(scope.kind==='doctor'&&!data.doctors.some(d=>d.id===scope.doctor))throw new Error('Selecione o médico para gerar o relatório.');
  if(scope.kind==='entity'&&!data.entities.some(e=>e.id===scope.entity))throw new Error('Selecione a empresa para gerar o relatório.');
  const rows=data.rows.filter(r=>r.status_atendimento!=='cancelled'&&(scope.kind==='filtered'||r.status_atendimento==='realized')&&matchesRow(r,scope)&&(scope.kind!=='pending'||isInsurancePending(r))).sort((a,b)=>a.date.localeCompare(b.date)||a.patient.localeCompare(b.patient));
- const invoices=data.invoices.filter(i=>activeInvoice(i)&&matchesInvoice(i,data,scope));
+ const invoices=data.invoices.filter(i=>(scope.kind==='invoices'?historicalInvoice(i):activeInvoice(i))&&matchesInvoice(i,data,scope)).sort(compareInvoiceNumbersDesc);
  const groups=[...new Set(rows.map(r=>scope.kind==='doctor'?rowEntityId(r):r.doctor_id))].map(id=>{
   const items=rows.filter(r=>(scope.kind==='doctor'?rowEntityId(r):r.doctor_id)===id);
   return {id,rows:items,summary:summarize(items)};
