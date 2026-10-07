@@ -88,3 +88,21 @@
 
 /* Fiscal history remains visible without being counted as active revenue. */
 .report-invoice-table tbody tr.report-invoice-cancelled>td{background:#fff7f7}.report-invoice-table tbody tr.report-invoice-replaced>td{background:#fffbed}.billing-badge.fiscal-cancelled{background:#fdebec;color:#a13f49}.billing-badge.fiscal-replaced{background:#fff3d9;color:#8a6516}.report-invoice-replacement{display:block;margin-top:4px;font-size:10px;color:#776226;line-height:1.35}@media print{.report-invoice-table tbody tr.report-invoice-cancelled>td,.report-invoice-table tbody tr.report-invoice-replaced>td{background:transparent}.billing-badge.fiscal-cancelled,.billing-badge.fiscal-replaced{border:1px solid currentColor;background:transparent}}
+
+
+/* Doctor/entity links are managed in-place so each choice remains independent. */
+.billing-link-doctors{display:grid;gap:12px}
+.billing-link-doctor{border:1px solid #e4eaf0;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(18,55,79,.08);padding:18px}
+.billing-link-doctor header{display:flex;justify-content:space-between;gap:12px;margin-bottom:14px}
+.billing-link-doctor h3{margin:0;color:#173a4b;font-size:15px;font-weight:700}
+.billing-link-doctor header p,.billing-link-empty{margin:4px 0 0;color:#6b7280;font-size:12px;line-height:1.45}
+.billing-link-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px 14px}
+.billing-link-option{display:flex;align-items:center;gap:8px;min-width:0;color:#31495a;font-size:13px;cursor:pointer}
+.billing-link-option input{width:17px;height:17px;min-height:17px;margin:0;accent-color:#18a7a0;flex:0 0 auto}
+.billing-link-option input:disabled{cursor:wait}
+.billing-link-option span{overflow-wrap:anywhere}
+.billing-link-option small{color:#6b7280;font-size:11px}
+.billing-link-history{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid #edf1f4;color:#6b7280;font-size:12px}
+.billing-link-history strong{color:#4b5e6b;font-size:12px}
+.billing-link-history span{border-radius:999px;background:#f3f6f8;padding:4px 8px}
+@media(max-width:600px){.billing-link-doctor{padding:15px}.billing-link-options{grid-template-columns:1fr}}

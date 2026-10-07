@@ -15,7 +15,7 @@ test('page descriptions are scoped, left-aligned and preserve actions',()=>{
 
  const billing=read('app/billing/billing-client.tsx');
  assert.match(billing,/adminView==='entities'.*?page-description">Cadastre e gerencie as entidades recebedoras utilizadas no faturamento\..*?<button className="billing-primary"/s);
- assert.match(billing,/adminView==='links'.*?page-description">Defina quais empresas cada médico pode utilizar como entidade recebedora\..*?<button className="billing-primary"/s);
+ assert.match(billing,/adminView==='links'.*?page-description">Defina quais empresas cada médico pode utilizar como entidade recebedora\..*?billing-link-doctors/s);
  assert.doesNotMatch(billing,/adminView==='entities'.*?<h2>Empresas \/ entidades recebedoras<\/h2>/s);
  assert.doesNotMatch(billing,/adminView==='links'.*?<h2>Vínculos com médicos<\/h2>/s);
 
