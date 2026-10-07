@@ -128,3 +128,17 @@ test('doctor invoice procedure dates and proof action retain privacy boundaries'
  assert.equal(doctorInvoiceProof(shared,data)?.id,'record-proof');
  assert.equal(doctorInvoiceProof(manyDates,data),undefined);
 });
+
+test('doctor invoice table keeps the regular page width and equal-height local actions',()=>{
+ const css=readFileSync('app/billing/billing.css','utf8');
+ const compact=css.match(/\/\* Doctor invoice relation uses[\s\S]*?\.doctor-invoice-actions \.billing-icon-action\{[^}]*\}/)?.[0]||'';
+ assert.doesNotMatch(compact,/doctor-invoice-main\{max-width:1180px/);
+ assert.doesNotMatch(compact,/table-layout:fixed/);
+ assert.doesNotMatch(compact,/doctor-invoice-table th:nth-child/);
+ assert.match(compact,/\.doctor-invoice-table\{width:100%;min-width:980px\}/);
+ assert.match(compact,/\.doctor-invoice-actions \.billing-icon-action\{width:32px;height:32px;flex:0 0 32px;margin:0\}/);
+ assert.match(css,/\.billing-icon-action\{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;[^}]*margin:2px\}/);
+ const source=readFileSync('app/billing/doctor-billing.tsx','utf8');
+ assert.match(source,/hasDetails&&<button className="billing-icon-action"/);
+ assert.match(source,/proof&&<a className="billing-icon-action"/);
+});

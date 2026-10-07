@@ -116,7 +116,6 @@
 .doctor-invoice-status.cancelled{background:#fff0f0;color:#a33f3f}
 .doctor-invoice-status.replaced{background:#fff7df;color:#806117}
 .doctor-invoice-status.neutral{background:#eef5f8;color:#3b6478}
-/* Doctor invoice relation stays compact on desktop and scrolls safely on smaller screens. */
-.doctor-invoice-main{max-width:1180px;margin-inline:auto}
-.doctor-invoice-table{width:100%;min-width:980px;table-layout:fixed}
-.doctor-invoice-table th:nth-child(1){width:72px}.doctor-invoice-table th:nth-child(2){width:130px}.doctor-invoice-table th:nth-child(3){width:150px}.doctor-invoice-table th:nth-child(4){width:132px}.doctor-invoice-table th:nth-child(5),.doctor-invoice-table th:nth-child(6){width:96px}.doctor-invoice-table th:nth-child(7){width:132px}.doctor-invoice-table th:nth-child(8){width:142px}.doctor-invoice-table th:last-child,.doctor-invoice-table td:last-child{position:sticky;right:0;z-index:2;width:88px;text-align:center;background:#fff;box-shadow:-8px 0 12px -12px #12374f66}.doctor-invoice-table th:last-child{z-index:3;background:#f8fafc}.doctor-invoice-table tbody tr:hover td:last-child{background:#f5fbfb}.doctor-invoice-actions{display:flex;justify-content:center;gap:4px}.doctor-invoice-actions .billing-icon-action{flex:0 0 auto;margin:0}
+/* Doctor invoice relation uses the regular content width and scrolls safely on smaller screens. */
+.doctor-invoice-table{width:100%;min-width:980px}
+.doctor-invoice-table th:last-child,.doctor-invoice-table td:last-child{position:sticky;right:0;z-index:2;width:88px;text-align:center;background:#fff;box-shadow:-8px 0 12px -12px #12374f66}.doctor-invoice-table th:last-child{z-index:3;background:#f8fafc}.doctor-invoice-table tbody tr:hover td:last-child{background:#f5fbfb}.doctor-invoice-actions{display:flex;justify-content:center;gap:4px}.doctor-invoice-actions .billing-icon-action{width:32px;height:32px;flex:0 0 32px;margin:0}
