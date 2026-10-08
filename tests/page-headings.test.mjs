@@ -14,10 +14,8 @@ test('page descriptions are scoped, left-aligned and preserve actions',()=>{
  assert.doesNotMatch(doctors,/tab==='doctors'\?'Médicos':'Agenda'/);
 
  const billing=read('app/billing/billing-client.tsx');
- assert.match(billing,/adminView==='entities'.*?page-description">Cadastre e gerencie as entidades recebedoras utilizadas no faturamento\..*?<button className="billing-primary"/s);
- assert.match(billing,/adminView==='links'.*?page-description">Defina quais empresas cada médico pode utilizar como entidade recebedora\..*?billing-link-doctors/s);
- assert.doesNotMatch(billing,/adminView==='entities'.*?<h2>Empresas \/ entidades recebedoras<\/h2>/s);
- assert.doesNotMatch(billing,/adminView==='links'.*?<h2>Vínculos com médicos<\/h2>/s);
+ assert.match(billing,/tab==='entities'.*?page-description">Cadastre os CPF\\/CNPJ utilizados para receber pagamentos e emitir notas fiscais\..*?\\+ Cadastrar entidade/s);
+ assert.doesNotMatch(billing,/adminView|Vínculos médico ↔ entidade|Empresas e vínculos/);
 
  const finance=read('app/billing/company-finance.tsx');
  assert.match(finance,/<section><p className="page-description billing-page-description">Controle das despesas das empresas e seus pagamentos\.<\/p><div className="billing-filter-bar">/);

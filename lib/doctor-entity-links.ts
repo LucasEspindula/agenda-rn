@@ -19,7 +19,7 @@ export const doctorEntityLink=(links:Link[],doctorId:string,entityId:string)=>
 export const activeEntityLinkCount=(data:BillingData,doctorId:string)=>
  data.links.filter(link=>link.doctor_id===doctorId&&link.active&&data.entities.some(entity=>entity.id===link.billing_entity_id&&entity.active)).length;
 
-export const inactiveEntityHistory=(data:BillingData,doctorId:string)=>
+export const inactiveEntityHistory=(data:Pick<BillingData,'entities'|'links'>,doctorId:string)=>
  data.links.flatMap(link=>{
   const entity=data.entities.find(value=>value.id===link.billing_entity_id);
   return link.doctor_id===doctorId&&entity&&!entity.active?[{link,entity}]:[];

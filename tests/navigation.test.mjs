@@ -16,6 +16,8 @@ for(const [name,s,expected] of [
  ['doctor no services',session('doctor'),[]],
  ['doctor no identity',{...session('doctor',true,true,true),account:{role:'doctor',doctorId:null}},[]]
 ])test('global navigation respects permissions: '+name,()=>assert.deepEqual(Array.from(moduleLinks(s),l=>l.href),expected));
+test('manager global navigation calls the master-data module Cadastros',()=>{const link=moduleLinks(session('general_manager')).find(link=>link.href==='/doctors');assert.equal(link?.label,'Cadastros')});
+
 test('central doctors API and settings deny non-managers without database access',async()=>{
  for(const role of ['doctor','secretary']){
   const s=session(role,true,true,true);
@@ -31,4 +33,14 @@ test('operational areas survive while redundant medical forms and monthly report
  for(const id of ['newBlockBtn','newRuleBtn','notificationBell','newPatientBtn'])assert.ok(body.includes('id="'+id+'"'),id);
  assert.doesNotMatch(js+body,/agendaReportBtn|generateMonthlyReport|professionalForm|professionalModal|Agenda RN/);
  assert.doesNotMatch(readFileSync('app/billing/billing-client.tsx','utf8'),/DoctorDirectory/);
+});
+
+
+test('Cadastros keeps only Médicos and Hospitais and redirects the former companies URL',async()=>{
+ const source=readFileSync('app/doctors/page.tsx','utf8');
+ assert.match(source,/aria-label="Cadastros"/);
+ assert.match(source,/\[\['doctors','Médicos'\],\['hospitals','Hospitais'\]\]/);
+ assert.doesNotMatch(source,/BillingClient/);
+ const page=loadTs('app/doctors/page.tsx',{'@/app/authz':{getSession:async()=>({account:{role:'general_manager'}})},'next/navigation':{redirect:url=>{throw Error('redirect:'+url)}},'@/components/site-header':()=>null,'@/components/billing-icons':{NavIcon:()=>null},'./doctor-directory':()=>null,'./agenda-settings':()=>null,'@/app/dashboard/legacy-app':{LegacyApp:()=>null}});
+ await assert.rejects(()=>page.default({searchParams:Promise.resolve({view:'companies'})}),/redirect:\/billing\?view=entities/);
 });
