@@ -1,11 +1,11 @@
 "use client";
-import {useEffect,useRef,useState,type ReactNode} from 'react';
-import {createPortal} from 'react-dom';
+import {useState,type ReactNode} from 'react';
 import type {BillingData,BillingRow} from '@/lib/billing-types';
 import {companyLabel,isInsurancePending,rowEntityId} from '@/lib/billing-row';
 import {formatDateBR} from '@/lib/date-format';
 import {groupPendingRows,pendingAction,pendingAge,pendingStatus,pendingSummary,pendingToday} from '@/lib/insurance-pending';
 import {NavIcon,PrintIcon,WalletIcon} from '@/components/billing-icons';
+import ReportPreview from '@/components/report-preview';
 import './insurance-pending.css';
 
 const date=formatDateBR;
@@ -16,9 +16,7 @@ function PendingTable({data,rows,today,onResolve}:{data:BillingData;rows:Billing
 }
 
 function PendingPrint({data,rows,today,onClose}:{data:BillingData;rows:BillingRow[];today:string;onClose:()=>void}){
- const ref=useRef<HTMLDialogElement>(null);
- useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close()},[]);
- return createPortal(<dialog ref={ref} className="insurance-pending-print" aria-label="Impressão de pendências de convênio" onCancel={e=>{e.preventDefault();onClose()}}><div className="pending-print-toolbar no-print"><button autoFocus className="billing-secondary" onClick={onClose}>Voltar às pendências</button><button className="billing-primary" onClick={()=>window.print()}><PrintIcon/> Imprimir</button></div><h1>Pendências de Convênio</h1><p>{rows.length} atendimento(s) · Emissão: {date(today)}</p>{groupPendingRows(data,rows,today).map(company=><section key={company.id}><h2>{company.name}</h2>{company.payers.map(payer=><section key={payer.key}><h3>{payer.name} · {payer.total} pendência(s)</h3><PendingTable data={data} rows={payer.rows} today={today}/></section>)}</section>)}{!rows.length&&<p>Nenhuma pendência nos filtros selecionados.</p>}</dialog>,document.body);
+ return <ReportPreview title="Pendências de Convênio" orientation="landscape" onClose={onClose}><article className="billing-report-document pending-report-document"><h1>Pendências de Convênio</h1><p>{rows.length} atendimento(s) · Emissão: {date(today)}</p>{groupPendingRows(data,rows,today).map(company=><section key={company.id}><h2>{company.name}</h2>{company.payers.map(payer=><section key={payer.key}><h3>{payer.name} · {payer.total} pendência(s)</h3><PendingTable data={data} rows={payer.rows} today={today}/></section>)}</section>)}{!rows.length&&<p>Nenhuma pendência nos filtros selecionados.</p>}</article></ReportPreview>;
 }
 
 function Chevron({open}:{open:boolean}){return <svg className={'pending-chevron'+(open?' is-open':'')} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>}
