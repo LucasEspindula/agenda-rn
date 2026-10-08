@@ -41,7 +41,8 @@ export function validateState(s: State) {
       seen.add(row.id);
       if(key==='patients'&&row.cpf){if(typeof row.cpf!=='string'||!validCPF(row.cpf))throw new HttpError(400,'CPF inválido. Deixe vazio se não informado.');row.cpf=normalizeCPF(row.cpf);}
       if(key==='patients'&&row.address!=null&&typeof row.address!=='string')throw new HttpError(400,'Endereço inválido.');
-      for (const field of ['name','email','phone','insurance','cardNumber','crm','specialty','category','notes','procedure','invoiceNumber','reason','text','type','at','severity','start','end','date','time','cancelReason','suggestionReason','rescheduleReason']) if (row[field] !== undefined && row[field] !== null && typeof row[field] !== 'string') throw new HttpError(400, 'Texto inválido.');
+      for (const field of ['name','email','phone','insurance','cardNumber','crm','specialty','category','notes','procedure','invoiceNumber','reason','text','type','at','severity','start','end','date','time','cancelReason','suggestionReason','rescheduleReason','abbreviation']) if (row[field] !== undefined && row[field] !== null && typeof row[field] !== 'string') throw new HttpError(400, 'Texto inválido.');
+      if(key==='hospitals'&&row.abbreviation!=null&&String(row.abbreviation).length>16)throw new HttpError(400,'Abreviação inválida.');
       for (const field of ['doctorId','anesthetistId','patientId','professionalId','hospitalId','appointmentId']) if (row[field] && !validId(row[field])) throw new HttpError(400, 'Vínculo inválido.');
     }
   }

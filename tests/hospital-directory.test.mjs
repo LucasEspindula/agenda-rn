@@ -53,3 +53,37 @@ test('hospital deletion keeps the compact table icon and uses a textual danger a
  assert.match(source,/<button className="billing-danger" disabled=\{busy\} onClick=\{\(\)=>void remove\(\)\}\>\{busy\?'Removendo…':'Remover'\}<\/button>/);
  assert.doesNotMatch(source,/<button className="billing-delete" disabled=\{busy\} onClick=\{\(\)=>void remove\(\)\}/);
 });
+
+
+test('hospital abbreviations preserve manual values and retain the legacy fallback',()=>{
+ const {automaticHospitalAbbreviation,hospitalAbbreviation}=loadTs('lib/hospital-directory.ts');
+ assert.equal(hospitalAbbreviation({id:'h1',name:'Hospital Moinhos de Vento',abbreviation:'Moinhos'}),'Moinhos');
+ assert.equal(hospitalAbbreviation({id:'h2',name:'Hospital Moinhos de Vento'}),'HMV');
+ assert.equal(hospitalAbbreviation({id:'h3',name:'Hospital Blanc'}),'Blanc');
+ assert.equal(automaticHospitalAbbreviation('Mirar Hospital de olhos'),'MHo');
+});
+
+test('native hospital UI collects and renders abbreviation instead of availability',()=>{
+ const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
+ assert.match(source,/<th>Hospital<\/th><th>Abreviação<\/th><th>Ações<\/th>/);
+ assert.doesNotMatch(source,/Disponibilidade|Todas as agendas/);
+ assert.match(source,/<label>Abreviação<input required maxLength=\{16\}/);
+ assert.match(source,/const name=draftName\.trim\(\),abbreviation=draftAbbreviation\.trim\(\);/);
+ assert.match(source,/name,abbreviation/);
+ assert.match(source,/hospitalAbbreviation\(hospital\)/);
+});
+
+test('Agenda resolves explicit hospital abbreviations before the legacy acronym fallback',()=>{
+ const source=readFileSync('public/legacy-app.js','utf8');
+ assert.match(source,/const abbreviation=typeof value==="object"&&value\?String\(value\.abbreviation\|\|""\)\.trim\(\):"";/);
+ assert.match(source,/hospitalAcronym\(h\|\|"Hospital"\)/);
+ assert.match(source,/place=hospitalAcronym\(h\)/);
+ assert.match(source,/h\?\.name\?hospitalAcronym\(h\)/);
+ assert.doesNotMatch(source,/hospitalAbbreviation/);
+});
+
+test('state validation accepts bounded abbreviation fields without changing hospital IDs',()=>{
+ const source=readFileSync('lib/security/state.ts','utf8');
+ assert.match(source,/'abbreviation'/);
+ assert.match(source,/key==='hospitals'&&row\.abbreviation!=null&&String\(row\.abbreviation\)\.length>16/);
+});
