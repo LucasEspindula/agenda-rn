@@ -45,3 +45,11 @@ test('Cadastros renders native hospitals while agenda rules keep LegacyApp',()=>
  assert.match(source,/view==='agenda'&&doctor_id\?<><AgendaSettings[^]*?<LegacyApp initialView="settings" adminSection="rules"/);
  assert.doesNotMatch(source,/view==='hospitals'\?<LegacyApp/);
 });
+
+
+test('hospital deletion keeps the compact table icon and uses a textual danger action in the modal',()=>{
+ const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
+ assert.match(source,/className="billing-icon-action billing-delete"[^>]*title="Remover hospital"/);
+ assert.match(source,/<button className="billing-danger" disabled=\{busy\} onClick=\{\(\)=>void remove\(\)\}\>\{busy\?'Removendo…':'Remover'\}<\/button>/);
+ assert.doesNotMatch(source,/<button className="billing-delete" disabled=\{busy\} onClick=\{\(\)=>void remove\(\)\}/);
+});
