@@ -41,11 +41,45 @@ test('agenda logs group operational changes, resolve fields and discard technica
  assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Novo agendamento na agenda de Dra\. Rosa/);assert.doesNotMatch(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação/);assert.match(c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05\/10\/2026',deciderName:'Roseni Nunes',decidedAt:'05\/10\/2026'}),/Solicitante:.*Dr\. Heitor[\s\S]*Decidido por:.*Roseni Nunes/);
 });
 
-test('workflow API returns the request decider role without changing decision authorization',()=>{
+function workflowPayload({users,audit}){
+ const requests=[{id:'request-1',requested_by:1,decided_by:2,professional_id:'doctor-1',appointment_id:'appointment-1',created_at:'2026-10-08T10:00:00Z',decided_at:'2026-10-08T10:05:00Z',decision_note:null,previous_payload:null,proposed_payload:null}];
+ const result=data=>Promise.resolve({data,error:null});
+ const ordered=data=>({order:()=>({limit:()=>result(data)})});
+ const db={from(table){
+   if(table==='agenda_requests')return {select:()=>ordered(requests)};
+   if(table==='users')return {select:()=>result(users)};
+   if(table==='audit_logs')return {select:()=>ordered(audit)};
+   if(table==='notifications')return {select:()=>({eq:()=>({order:()=>({limit:()=>result([])})})})};
+   throw new Error('Unexpected table: '+table);
+ }};
+ const {GET}=loadTs('app/api/workflow/route.ts',{
+   '@/lib/doctor-services':{canUseAgenda:()=>true},
+   '@/lib/security/state':{canReadAppointment:()=>true,withoutLegacyFinance:value=>value,validateAppointment:()=>{},validId:()=>true},
+   '@/lib/security/rate-limit':{consumeLimit:async()=>{}},
+   '@/lib/security/http':{readJson:async()=>({}),secureMutation:fn=>fn},
+   '@/app/authz':{getSession:async()=>({account:{id:99,role:'general_manager'},agendaIds:[]}),isManager:role=>role==='general_manager'},
+   '@/lib/supabase-admin':{dbError:error=>{if(error)throw error},getSupabaseAdmin:()=>db}
+ });
+ return GET().then(response=>response.json()).then(payload=>payload.requests[0]);
+}
+test('workflow API keeps historical decision authorship from audit logs',async()=>{
+ const users=[{id:1,name:'Dr. Heitor',email:'heitor@example.com',role:'doctor'},{id:2,name:'Roseni atualizada',email:'roseni@example.com',role:'general_manager'}];
+ const secretary=await workflowPayload({users,audit:[{action:'request_accepted',actor_name:'Roseni Nunes',actor_role:'secretary',metadata:{requestId:'request-1'}}]});
+ assert.equal(secretary.deciderName,'Roseni Nunes');
+ assert.equal(secretary.deciderRole,'secretary');
+ const manager=await workflowPayload({users,audit:[{action:'request_denied',actor_name:'Lucas',actor_role:'general_manager',metadata:{requestId:'request-1'}}]});
+ assert.equal(manager.deciderRole,'general_manager');
+ const fallback=await workflowPayload({users,audit:[{action:'appointment_updated',actor_name:'Outra pessoa',actor_role:'secretary',metadata:{requestId:'request-1'}}]});
+ assert.equal(fallback.deciderName,'Roseni atualizada');
+ assert.equal(fallback.deciderRole,null);
+});
+test('workflow API resolves decision authorship without querying users per request',()=>{
  const source=readFileSync('app/api/workflow/route.ts','utf8');
- assert.match(source,/db\.from\("users"\)\.select\("id,name,email,role"\)/);
- assert.match(source,/const usersById = new Map/);
- assert.match(source,/deciderName: decider\?\.name \|\| null, deciderRole: decider\?\.role \|\| null/);
+ assert.match(source,/db\.from\("users"\)\.select\("id,name,email"\)/);
+ assert.doesNotMatch(source,/db\.from\("users"\)\.select\("id,name,email,role"\)/);
+ assert.match(source,/const decisionAuditsByRequest = new Map/);
+ assert.match(source,/metadata\.requestId/);
+ assert.match(source,/row\.action === "request_accepted" \|\| row\.action === "request_denied"/);
  assert.match(source,/session\.account\.role === "doctor"/);
 });
 
