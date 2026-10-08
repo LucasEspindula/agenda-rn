@@ -19,7 +19,7 @@ const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
  const elements={auditList:{innerHTML:''},auditStart:{value:''},auditEnd:{value:''},auditActor:{value:'',innerHTML:''},auditProfessional:{value:'',innerHTML:''},auditAction:{value:''},auditSearch:{value:''}};
- const context={state:{professionals:[{id:'doctor-uuid',name:'Dra. Rosa'}]},patient:id=>id==='patient-uuid'?{name:'Paciente Lucas'}:null,hospital:()=>({name:'CONS'}),hospitalAcronym:x=>typeof x==='object'?(x.abbreviation||x.name):x,doctorName:x=>String(x||'Médico'),suggestionReason:a=>a?.cancelReason||'',statusLabel:s=>({scheduled:'Agendado',confirmed:'Confirmado',cancelled:'Cancelado'})[s],parseDate:d=>new Date(d+'T12:00:00'),workflowDate:d=>d,esc:s=>String(s??'').replaceAll('<','&lt;'),$:id=>elements[id],workflowData:{audit:[]}};
+ const context={state:{professionals:[{id:'doctor-uuid',name:'Dra. Rosa'}]},patient:id=>id==='patient-uuid'?{name:'Paciente Lucas'}:null,hospital:()=>({name:'CONS'}),hospitalAcronym:x=>typeof x==='object'?String(x.abbreviation||x.name).toLocaleUpperCase('pt-BR'):x,doctorName:x=>String(x||'Médico'),suggestionReason:a=>a?.cancelReason||'',statusLabel:s=>({scheduled:'Agendado',confirmed:'Confirmado',cancelled:'Cancelado'})[s],parseDate:d=>new Date(d+'T12:00:00'),workflowDate:d=>d,esc:s=>String(s??'').replaceAll('<','&lt;'),$:id=>elements[id],workflowData:{audit:[]}};
  vm.createContext(context);vm.runInContext(code,context);
  return {context,elements};
 }

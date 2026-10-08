@@ -55,31 +55,42 @@ test('hospital deletion keeps the compact table icon and uses a textual danger a
 });
 
 
-test('hospital abbreviations preserve manual values and retain the legacy fallback',()=>{
- const {automaticHospitalAbbreviation,hospitalAbbreviation}=loadTs('lib/hospital-directory.ts');
- assert.equal(hospitalAbbreviation({id:'h1',name:'Hospital Moinhos de Vento',abbreviation:'Moinhos'}),'Moinhos');
+test('hospital abbreviations are normalized while preserving legacy fallbacks',()=>{
+ const {automaticHospitalAbbreviation,hospitalAbbreviation,normalizeHospitalAbbreviation}=loadTs('lib/hospital-directory.ts');
+ assert.equal(normalizeHospitalAbbreviation('Mirar'),'MIRAR');
+ assert.equal(normalizeHospitalAbbreviation('hmv'),'HMV');
+ assert.equal(normalizeHospitalAbbreviation('Mãe Deus'),'MÃE DEUS');
+ assert.equal(hospitalAbbreviation({id:'h1',name:'Hospital Moinhos de Vento',abbreviation:'Moinhos'}),'MOINHOS');
  assert.equal(hospitalAbbreviation({id:'h2',name:'Hospital Moinhos de Vento'}),'HMV');
- assert.equal(hospitalAbbreviation({id:'h3',name:'Hospital Blanc'}),'Blanc');
- assert.equal(automaticHospitalAbbreviation('Mirar Hospital de olhos'),'MHo');
+ assert.equal(hospitalAbbreviation({id:'h3',name:'Hospital Blanc'}),'BLANC');
+ assert.equal(automaticHospitalAbbreviation('Mirar Hospital de olhos'),'MHO');
 });
 
-test('native hospital UI collects and renders abbreviation instead of availability',()=>{
+test('native hospital UI orders abbreviations first and persists normalized values',()=>{
  const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
- assert.match(source,/<th>Hospital<\/th><th>Abreviação<\/th><th>Ações<\/th>/);
+ assert.match(source,/className="billing-table billing-admin-table doctor-table hospital-table"/);
+ assert.match(source,/<th>Abreviação<\/th><th>Hospital<\/th><th>Ações<\/th>/);
+ assert.doesNotMatch(source,/<th>Hospital<\/th><th>Abreviação<\/th>/);
  assert.doesNotMatch(source,/Disponibilidade|Todas as agendas/);
- assert.match(source,/<label>Abreviação<input required maxLength=\{16\}/);
- assert.match(source,/const name=draftName\.trim\(\),abbreviation=draftAbbreviation\.trim\(\);/);
- assert.match(source,/name,abbreviation/);
+ assert.match(source,/const name=draftName\.trim\(\),abbreviation=normalizeHospitalAbbreviation\(draftAbbreviation\);/);
+ assert.match(source,/setDraftAbbreviation\(normalizeHospitalAbbreviation\(event\.target\.value\)\)/);
  assert.match(source,/hospitalAbbreviation\(hospital\)/);
 });
 
-test('Agenda resolves explicit hospital abbreviations before the legacy acronym fallback',()=>{
+test('Agenda uppercases saved hospital abbreviations in cards, workflow and snapshots',()=>{
  const source=readFileSync('public/legacy-app.js','utf8');
- assert.match(source,/const abbreviation=typeof value==="object"&&value\?String\(value\.abbreviation\|\|""\)\.trim\(\):"";/);
+ assert.match(source,/if\(abbreviation\)return abbreviation\.toLocaleUpperCase\("pt-BR"\);/);
  assert.match(source,/hospitalAcronym\(h\|\|"Hospital"\)/);
  assert.match(source,/place=hospitalAcronym\(h\)/);
  assert.match(source,/h\?\.name\?hospitalAcronym\(h\)/);
- assert.doesNotMatch(source,/hospitalAbbreviation/);
+});
+
+test('hospital sticky action column is scoped to the directory table',()=>{
+ const styles=readFileSync('app/billing/billing.css','utf8');
+ assert.match(styles,/\.hospital-table th:last-child,\.hospital-table td:last-child\{position:sticky;right:0/);
+ assert.match(styles,/\.hospital-table th:last-child\{z-index:4;background:#f8fafc\}/);
+ assert.match(styles,/\.hospital-table tbody tr:hover>td:last-child\{background:#f5fbfb\}/);
+ assert.doesNotMatch(styles,/\.billing-table th:last-child,\.billing-table td:last-child\{position:sticky/);
 });
 
 test('state validation accepts bounded abbreviation fields without changing hospital IDs',()=>{

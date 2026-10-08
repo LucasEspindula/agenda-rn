@@ -83,9 +83,9 @@ function parseDate(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m
 function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}function sameDay(a,b){return ds(a)===ds(b)}function mins(t){const[h,m]=t.split(":").map(Number);return h*60+m}function hhmm(v){return `${pad(Math.floor(v/60))}:${pad(v%60)}`}
 function hospitalAcronym(value=""){
  const abbreviation=typeof value==="object"&&value?String(value.abbreviation||"").trim():"";
- if(abbreviation)return abbreviation;
+ if(abbreviation)return abbreviation.toLocaleUpperCase("pt-BR");
  const name=typeof value==="object"&&value?value.name||"":value;
- if(String(name).trim().toLowerCase()==="hospital blanc")return "Blanc";
+ if(String(name).trim().toLowerCase()==="hospital blanc")return "BLANC";
  const words=String(name).trim().split(/\s+/).filter(w=>w&&!/^(de|da|do|das|dos)$/i.test(w));
  if(!words.length)return "H";
  if(words.length===1)return words[0].slice(0,4).toUpperCase();
