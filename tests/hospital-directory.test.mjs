@@ -109,3 +109,11 @@ test('abbreviation keeps internal spaces while typing and trims only when saved'
  assert.equal('Mãe Deus'.toLocaleUpperCase('pt-BR'),'MÃE DEUS');
  assert.equal(normalizeHospitalAbbreviation('  Mãe Deus  '),'MÃE DEUS');
 });
+
+
+test('hospital name keeps natural width while only actions stay sticky',()=>{
+ const styles=readFileSync('app/billing/billing.css','utf8');
+ assert.match(styles,/\.hospital-table\{table-layout:auto;min-width:600px\}/);
+ assert.match(styles,/\.hospital-table th:nth-last-child\(2\),\.hospital-table td:nth-last-child\(2\)\{width:auto;text-align:left;white-space:nowrap\}/);
+ assert.match(styles,/\.hospital-table th:last-child,\.hospital-table td:last-child\{position:sticky;right:0/);
+});
