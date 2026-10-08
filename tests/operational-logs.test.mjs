@@ -41,14 +41,18 @@ test('agenda logs group operational changes, resolve fields and discard technica
  assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Novo agendamento na agenda de Dra\. Rosa/);assert.doesNotMatch(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação/);assert.match(c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05\/10\/2026',deciderName:'Roseni Nunes',decidedAt:'05\/10\/2026'}),/Solicitante:.*Dr\. Heitor[\s\S]*Decidido por:.*Roseni Nunes/);
 });
 
-function workflowPayload({users,audit}){
- const requests=[{id:'request-1',requested_by:1,decided_by:2,professional_id:'doctor-1',appointment_id:'appointment-1',created_at:'2026-10-08T10:00:00Z',decided_at:'2026-10-08T10:05:00Z',decision_note:null,previous_payload:null,proposed_payload:null}];
+function workflowPayload({users,audit,role='general_manager',requests=[{id:'request-1',requested_by:1,decided_by:2,professional_id:'doctor-1',appointment_id:'appointment-1',created_at:'2026-10-08T10:00:00Z',decided_at:'2026-10-08T10:05:00Z',decision_note:null,previous_payload:null,proposed_payload:null}]}){
  const result=data=>Promise.resolve({data,error:null});
- const ordered=data=>({order:()=>({limit:()=>result(data)})});
+ const listQuery=data=>{const query={eq:()=>query,in:()=>query,order:()=>({limit:()=>result(data)})};return query};
+ const decisionFilters=[];let decisionQueryCount=0;
  const db={from(table){
-   if(table==='agenda_requests')return {select:()=>ordered(requests)};
+   if(table==='agenda_requests')return {select:()=>listQuery(requests)};
    if(table==='users')return {select:()=>result(users)};
-   if(table==='audit_logs')return {select:()=>ordered(audit)};
+   if(table==='audit_logs')return {select:fields=>{
+     if(fields==='*')return listQuery(audit);
+     const query={in:(field,values)=>{decisionFilters.push([field,values]);return query},then:(resolve,reject)=>{decisionQueryCount++;return result(audit).then(resolve,reject)}};
+     return query;
+   }};
    if(table==='notifications')return {select:()=>({eq:()=>({order:()=>({limit:()=>result([])})})})};
    throw new Error('Unexpected table: '+table);
  }};
@@ -57,32 +61,46 @@ function workflowPayload({users,audit}){
    '@/lib/security/state':{canReadAppointment:()=>true,withoutLegacyFinance:value=>value,validateAppointment:()=>{},validId:()=>true},
    '@/lib/security/rate-limit':{consumeLimit:async()=>{}},
    '@/lib/security/http':{readJson:async()=>({}),secureMutation:fn=>fn},
-   '@/app/authz':{getSession:async()=>({account:{id:99,role:'general_manager'},agendaIds:[]}),isManager:role=>role==='general_manager'},
+   '@/app/authz':{getSession:async()=>({account:{id:role==='doctor'?1:99,role},agendaIds:['doctor-1']}),isManager:accountRole=>accountRole==='general_manager'},
    '@/lib/supabase-admin':{dbError:error=>{if(error)throw error},getSupabaseAdmin:()=>db}
  });
- return GET().then(response=>response.json()).then(payload=>payload.requests[0]);
+ return GET().then(response=>response.json()).then(payload=>({payload,decisionQueryCount,decisionFilters}));
 }
 test('workflow API keeps historical decision authorship from audit logs',async()=>{
  const users=[{id:1,name:'Dr. Heitor',email:'heitor@example.com',role:'doctor'},{id:2,name:'Roseni atualizada',email:'roseni@example.com',role:'general_manager'}];
  const secretary=await workflowPayload({users,audit:[{action:'request_accepted',actor_name:'Roseni Nunes',actor_role:'secretary',metadata:{requestId:'request-1'}}]});
- assert.equal(secretary.deciderName,'Roseni Nunes');
- assert.equal(secretary.deciderRole,'secretary');
+ assert.equal(secretary.payload.requests[0].deciderName,'Roseni Nunes');
+ assert.equal(secretary.payload.requests[0].deciderRole,'secretary');
  const manager=await workflowPayload({users,audit:[{action:'request_denied',actor_name:'Lucas',actor_role:'general_manager',metadata:{requestId:'request-1'}}]});
- assert.equal(manager.deciderRole,'general_manager');
+ assert.equal(manager.payload.requests[0].deciderRole,'general_manager');
  const fallback=await workflowPayload({users,audit:[{action:'appointment_updated',actor_name:'Outra pessoa',actor_role:'secretary',metadata:{requestId:'request-1'}}]});
- assert.equal(fallback.deciderName,'Roseni atualizada');
- assert.equal(fallback.deciderRole,null);
+ assert.equal(fallback.payload.requests[0].deciderName,'Roseni atualizada');
+ assert.equal(fallback.payload.requests[0].deciderRole,null);
 });
-test('workflow API resolves decision authorship without querying users per request',()=>{
+test('doctor receives historical decision authorship without operational audit logs',async()=>{
+ const users=[{id:1,name:'Dr. Heitor',email:'heitor@example.com'},{id:2,name:'Roseni atualizada',email:'roseni@example.com'}];
+ const result=await workflowPayload({role:'doctor',users,audit:[{action:'request_accepted',actor_name:'Roseni Nunes',actor_role:'secretary',metadata:{requestId:'request-1'}}]});
+ assert.equal(result.payload.requests[0].deciderName,'Roseni Nunes');
+ assert.equal(result.payload.requests[0].deciderRole,'secretary');
+ assert.deepEqual(result.payload.audit,[]);
+ assert.equal(result.decisionQueryCount,1);
+ assert.deepEqual(result.decisionFilters,[['action',['request_accepted','request_denied']],['metadata->>requestId',['request-1']],['professional_id',['doctor-1']]]);
+});
+test('doctor skips the batched decision audit query without visible requests',async()=>{
+ const result=await workflowPayload({role:'doctor',users:[],audit:[],requests:[]});
+ assert.equal(result.decisionQueryCount,0);
+ assert.deepEqual(result.payload.audit,[]);
+});
+test('workflow API resolves decision authorship without users roles or per-request audit queries',()=>{
  const source=readFileSync('app/api/workflow/route.ts','utf8');
  assert.match(source,/db\.from\("users"\)\.select\("id,name,email"\)/);
  assert.doesNotMatch(source,/db\.from\("users"\)\.select\("id,name,email,role"\)/);
- assert.match(source,/const decisionAuditsByRequest = new Map/);
- assert.match(source,/metadata\.requestId/);
+ assert.match(source,/let decisionAuditRows = audit/);
+ assert.match(source,/session\.account\.role === "doctor" && visibleRequests\.length/);
+ assert.match(source,/\.in\("metadata->>requestId", visibleRequestIds\)/);
  assert.match(source,/row\.action === "request_accepted" \|\| row\.action === "request_denied"/);
  assert.match(source,/session\.account\.role === "doctor"/);
 });
-
 test('workflow authorship labels the actual decision maker role',()=>{
  const {context:c}=agendaFixture();
  const secretary=c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05/10/2026',deciderName:'Roseni Nunes',deciderRole:'secretary',decidedAt:'05/10/2026'});

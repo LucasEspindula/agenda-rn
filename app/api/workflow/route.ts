@@ -51,14 +51,21 @@ export async function GET() {
   const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>, audit = (auditRows.data || []) as Array<Record<string, any>>;
   const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
   const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null, action: row.action }]));
+  const scopedRequests = session.account.role === "doctor" ? requests.map(withoutLegacyFinance) : requests;
+  const visibleRequests = scopedRequests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
+  let decisionAuditRows = audit;
+  if (session.account.role === "doctor" && visibleRequests.length) {
+    const visibleRequestIds = visibleRequests.map((row) => String(row.id));
+    const decisionAudits = await db.from("audit_logs").select("actor_name,actor_role,action,metadata").in("action", ["request_accepted", "request_denied"]).in("metadata->>requestId", visibleRequestIds).in("professional_id", session.agendaIds);
+    dbError(decisionAudits.error, "Read decision authorship");
+    decisionAuditRows = (decisionAudits.data || []) as typeof audit;
+  }
   const decisionAuditsByRequest = new Map<string, (typeof audit)[number]>();
-  audit.forEach((row) => {
+  decisionAuditRows.forEach((row) => {
     const metadata = (row.metadata || {}) as Record<string, unknown>;
     const requestId = typeof metadata.requestId === "string" ? metadata.requestId : null;
     if (requestId && (row.action === "request_accepted" || row.action === "request_denied") && !decisionAuditsByRequest.has(requestId)) decisionAuditsByRequest.set(requestId, row);
   });
-  const scopedRequests = session.account.role === "doctor" ? requests.map(withoutLegacyFinance) : requests;
-  const visibleRequests = scopedRequests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
   return Response.json({
     requests: visibleRequests.map((row) => {
       const decisionAudit = decisionAuditsByRequest.get(String(row.id));
