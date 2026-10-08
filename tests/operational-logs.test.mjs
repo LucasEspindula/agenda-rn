@@ -15,7 +15,7 @@ test('financial logs collapse net-zero subevents and transient insert/delete wit
 });
 const source=readFileSync('public/legacy-app.js','utf8');
 const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
-const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','agendaLogNormalize','agendaLogLocalDay','agendaLogMatchesFilters','agendaLogFilterOptions','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowAuthorship','suggestionReason','roleLabel']);
+const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','agendaLogNormalize','agendaLogLocalDay','agendaLogMatchesFilters','agendaLogFilterOptions','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowRoleLabel','workflowAuthorship','suggestionReason','roleLabel']);
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
  const elements={auditList:{innerHTML:''},auditStart:{value:''},auditEnd:{value:''},auditActor:{value:'',innerHTML:''},auditProfessional:{value:'',innerHTML:''},auditAction:{value:''},auditSearch:{value:''}};
@@ -39,6 +39,26 @@ test('agenda logs group operational changes, resolve fields and discard technica
  const unresolved=c.agendaLogContent({...event,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',professionalId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',before:null,after:{...appointment,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',doctorId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13'}});assert.doesNotMatch(unresolved.metadata,/c0a80101/);
  assert.match(c.workflowAppointment(appointment).line,/22\\/09\\/2026 às 08:00/);
  assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Novo agendamento na agenda de Dra\. Rosa/);assert.doesNotMatch(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação/);assert.match(c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05\/10\/2026',deciderName:'Roseni Nunes',decidedAt:'05\/10\/2026'}),/Solicitante:.*Dr\. Heitor[\s\S]*Decidido por:.*Roseni Nunes/);
+});
+
+test('workflow API returns the request decider role without changing decision authorization',()=>{
+ const source=readFileSync('app/api/workflow/route.ts','utf8');
+ assert.match(source,/db\.from\("users"\)\.select\("id,name,email,role"\)/);
+ assert.match(source,/const usersById = new Map/);
+ assert.match(source,/deciderName: decider\?\.name \|\| null, deciderRole: decider\?\.role \|\| null/);
+ assert.match(source,/session\.account\.role === "doctor"/);
+});
+
+test('workflow authorship labels the actual decision maker role',()=>{
+ const {context:c}=agendaFixture();
+ const secretary=c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05/10/2026',deciderName:'Roseni Nunes',deciderRole:'secretary',decidedAt:'05/10/2026'});
+ assert.match(secretary,/Decidido por:.*Roseni Nunes.*Secretaria/);
+ assert.doesNotMatch(secretary,/Roseni Nunes.*Gerência/);
+ const manager=c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05/10/2026',deciderName:'Lucas',deciderRole:'general_manager',decidedAt:'05/10/2026'});
+ assert.match(manager,/Decidido por:.*Lucas.*Gerência/);
+ const unknown=c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05/10/2026',deciderName:'Decisor antigo',decidedAt:'05/10/2026'});
+ assert.match(unknown,/Decidido por:.*Decisor antigo/);
+ assert.doesNotMatch(unknown,/Decisor antigo.*Gerência/);
 });
 test('agenda search covers patient, doctor, actor, procedure, action and before/after, never technical IDs',()=>{
  const {context:c,elements}=agendaFixture();c.workflowData.audit=[{...event,before:appointment,after:{...appointment,procedure:'Cirurgia',status:'confirmed'}}];
