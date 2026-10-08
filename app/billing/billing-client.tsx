@@ -7,6 +7,7 @@ import {cents,validPaymentParts,type PaymentPart} from '@/lib/fiscal-money';
 import {financialRefresh} from '@/lib/financial-refresh';
 import {activeInvoice,historicalInvoice,compareInvoiceNumbersDesc,fiscalStatus} from '@/lib/fiscal-document';
 import {formatBRL as money,parseBRL,moneyInput} from '@/lib/money';
+import {formatDateBR} from '@/lib/date-format';
 import {notifyFinancialChange,isExternalFinancialChange} from '@/lib/financial-events';
 import {uploadFinancialAttachment} from '@/lib/financial-attachments-client';
 import PrivateInvoice from './private-invoice';
@@ -30,7 +31,7 @@ import {individualReceived,buildReport,type ReportScope} from '@/lib/billing-rep
 import {captureFinancialVersion,withExpectedFinancialVersion} from '@/lib/financial-concurrency';
 type Draft=Record<string,string|number|boolean|null|string[]>;
 const empty:BillingData={payers:[],rows:[],entities:[],links:[],invoices:[],items:[],doctors:[]};
-const date=(s:string|null|undefined)=>s?s.slice(0,10).split('-').reverse().join('/'):'—';
+const date=formatDateBR;
 const dr=(s:string)=>/^Dr\.?\s/i.test(s)?s:`Dr. ${s}`;
 export default function BillingClient({appointmentId,administration=false}:{appointmentId?:string;administration?:boolean}) {
  const [pendingSearch,setPendingSearch]=useState(''),[printPending,setPrintPending]=useState(false);

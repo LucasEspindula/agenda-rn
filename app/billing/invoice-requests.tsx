@@ -1,8 +1,9 @@
 'use client';
 import type {BillingData,InvoiceRequest,BillingRow} from '@/lib/billing-types';
 import {formatBRL} from '@/lib/money';
+import {formatDateBR} from '@/lib/date-format';
 import {formatCPF} from '@/lib/cpf';
-const date=(s:string)=>s.slice(0,10).split('-').reverse().join('/');
+const date=formatDateBR;
 export default function InvoiceRequests({data,onIssue,onReview}:{data:BillingData;onIssue:(r:InvoiceRequest)=>void;onReview:(r:BillingRow)=>void}){
  const requests=(data.requests||[]).filter(r=>r.status==='PENDING');
  const legacy=data.rows.filter(r=>r.record?.billing_method==='PARTICULAR'&&r.record.payment_status==='PAGO'&&!r.invoice&&!data.requests?.some(q=>q.billing_record_id===r.record?.id&&q.status!=='CANCELLED'));

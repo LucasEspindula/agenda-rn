@@ -3,11 +3,12 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import type {BillingData,BillingRow} from '@/lib/billing-types';
 import {companyLabel,isInsurancePending,rowEntityId} from '@/lib/billing-row';
+import {formatDateBR} from '@/lib/date-format';
 import {groupPendingRows,pendingAction,pendingAge,pendingStatus,pendingSummary,pendingToday} from '@/lib/insurance-pending';
 import {NavIcon,PrintIcon,WalletIcon} from '@/components/billing-icons';
 import './insurance-pending.css';
 
-const date=(value:string)=>value.slice(0,10).split('-').reverse().join('/');
+const date=formatDateBR;
 const taxLabel=(value:string)=>value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');
 const ageLabel=(age:number)=>`${age} ${age===1?'dia':'dias'}`;
 function PendingTable({data,rows,today,onResolve}:{data:BillingData;rows:BillingRow[];today:string;onResolve?:(row:BillingRow)=>void}){
