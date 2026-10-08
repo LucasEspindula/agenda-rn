@@ -7,6 +7,10 @@ const between=(source,start,end)=>source.slice(source.indexOf(start),source.inde
 
 test('reports use the shared internal preview instead of replacing their source screens',()=>{
  const preview=read('components/report-preview.tsx'),report=read('app/billing/billing-report.tsx'),client=read('app/billing/billing-client.tsx'),doctor=read('app/billing/doctor-billing.tsx'),pending=read('app/billing/insurance-pending.tsx');
+ assert.match(preview,/createPortal/);
+ assert.match(preview,/document\.body/);
+ assert.match(preview,/const \[mounted,setMounted\]=useState\(false\)/);
+ assert.match(preview,/if\(!mounted\)return null/);
  assert.match(preview,/title:string;orientation\?:"portrait"\|"landscape";onClose/);
  assert.match(preview,/Imprimir \/ Salvar PDF/);
  assert.match(preview,/report-preview-toolbar no-print/);
@@ -24,7 +28,10 @@ test('reports use the shared internal preview instead of replacing their source 
 
 test('preview print styles keep only documents and paginate tables naturally',()=>{
  const css=read('app/billing/billing.css');
- assert.match(css,/body:has\(\.report-preview\) \.rn-hub>\*:not\(\.report-preview\)/);
+ assert.match(css,/body:has\(\.report-preview\)>\*:not\(\.report-preview\)/);
+ assert.doesNotMatch(css,/\.rn-hub>\*:not\(\.report-preview\)/);
+ assert.match(css,/\.report-preview-landscape \.report-preview-page\{width:min\(100%,297mm\);min-height:210mm\}/);
+ assert.match(css,/\.report-preview-portrait \.report-preview-page\{width:min\(100%,210mm\);min-height:297mm\}/);
  assert.match(css,/\.report-preview-toolbar\{display:none!important\}/);
  assert.match(css,/\.billing-report-document thead\{display:table-header-group\}/);
  assert.match(css,/\.billing-report-document tr\{break-inside:avoid;page-break-inside:avoid\}/);
@@ -41,6 +48,7 @@ test('Agenda opens an internal preview and waits for an explicit print action',(
  assert.doesNotMatch(fn,/document\.write\(/);
  assert.doesNotMatch(fn,/\.onload=.*print/);
  const css=read('public/legacy.css');
+ assert.match(css,/\.agenda-report-document\{box-sizing:border-box;width:min\(100%,297mm\);min-height:210mm/);
  assert.match(css,/\.agenda-report-document thead\{display:table-header-group\}/);
  assert.match(css,/\.agenda-report-document tr\{break-inside:avoid;page-break-inside:avoid\}/);
 });
