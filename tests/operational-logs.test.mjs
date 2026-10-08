@@ -37,6 +37,7 @@ test('agenda logs group operational changes, resolve fields and discard technica
  const removed=c.agendaLogContent({...event,before:appointment,after:null});assert.equal(removed.lines.length,1);assert.equal(removed.lines[0].label,'REMOVIDO');
  const technical=c.agendaLogContent({...event,action:'appointment_updated',before:{...appointment},after:{...appointment,rescheduleHistory:[]}});assert.equal(technical.lines.length,0);assert.equal(technical.meaningful,false);assert.equal((html.match(/agenda-log-event/g)||[]).length,3);
  const unresolved=c.agendaLogContent({...event,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',professionalId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',before:null,after:{...appointment,patientId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13',doctorId:'c0a80101-7e5d-4ee3-8b2b-8a3d5db24f13'}});assert.doesNotMatch(unresolved.metadata,/c0a80101/);
+ assert.match(c.workflowAppointment(appointment).line,/22\\/09\\/2026 às 08:00/);
  assert.match(c.workflowRequestTitle({action:'create',proposed:appointment}),/Novo agendamento na agenda de Dra\. Rosa/);assert.doesNotMatch(c.workflowRequestTitle({action:'create',proposed:appointment}),/Solicitação/);assert.match(c.workflowAuthorship({requesterName:'Dr. Heitor',createdAt:'05\/10\/2026',deciderName:'Roseni Nunes',decidedAt:'05\/10\/2026'}),/Solicitante:.*Dr\. Heitor[\s\S]*Decidido por:.*Roseni Nunes/);
 });
 test('agenda search covers patient, doctor, actor, procedure, action and before/after, never technical IDs',()=>{
