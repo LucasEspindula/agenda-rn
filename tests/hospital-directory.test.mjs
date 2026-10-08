@@ -98,3 +98,14 @@ test('state validation accepts bounded abbreviation fields without changing hosp
  assert.match(source,/'abbreviation'/);
  assert.match(source,/key==='hospitals'&&row\.abbreviation!=null&&String\(row\.abbreviation\)\.length>16/);
 });
+
+
+test('abbreviation keeps internal spaces while typing and trims only when saved',()=>{
+ const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
+ assert.match(source,/onChange=\{event=>setDraftAbbreviation\(event\.target\.value\.toLocaleUpperCase\('pt-BR'\)\)\}/);
+ assert.doesNotMatch(source,/onChange=\{event=>setDraftAbbreviation\(normalizeHospitalAbbreviation\(event\.target\.value\)\)\}/);
+ assert.match(source,/const name=draftName\.trim\(\),abbreviation=normalizeHospitalAbbreviation\(draftAbbreviation\);/);
+ const {normalizeHospitalAbbreviation}=loadTs('lib/hospital-directory.ts');
+ assert.equal('Mãe Deus'.toLocaleUpperCase('pt-BR'),'MÃE DEUS');
+ assert.equal(normalizeHospitalAbbreviation('  Mãe Deus  '),'MÃE DEUS');
+});
