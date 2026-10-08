@@ -44,3 +44,17 @@ test('Cadastros keeps only Médicos and Hospitais and redirects the former compa
  const page=loadTs('app/doctors/page.tsx',{'@/app/authz':{getSession:async()=>({account:{role:'general_manager'}})},'next/navigation':{redirect:url=>{throw Error('redirect:'+url)}},'@/components/site-header':()=>null,'@/components/billing-icons':{NavIcon:()=>null},'./doctor-directory':()=>null,'./agenda-settings':()=>null,'@/app/dashboard/legacy-app':{LegacyApp:()=>null}});
  await assert.rejects(()=>page.default({searchParams:Promise.resolve({view:'companies'})}),/redirect:\/billing\?view=entities/);
 });
+
+
+test('Hub calls the module Cadastros and billing receives its initial view from the server',()=>{
+ const hub=readFileSync('app/hub/page.tsx','utf8');
+ const billingPage=readFileSync('app/billing/page.tsx','utf8');
+ const client=readFileSync('app/billing/billing-client.tsx','utf8');
+ assert.match(hub,/Agendamento, Faturamento ou Cadastros no menu superior\./);
+ assert.doesNotMatch(hub,/Agendamento, Faturamento ou Médicos no menu superior\./);
+ assert.match(billingPage,/<BillingClient initialView=\{params\.view\}\/>/);
+ assert.match(client,/function BillingClient\(\{appointmentId,initialView\}:\{appointmentId\?:string;initialView\?:string\}\)/);
+ assert.match(client,/useState\(initialView==='entities'\?'entities':'records'\)/);
+ assert.doesNotMatch(client,/window\.location\.search/);
+ assert.match(client,/appointmentId\?:string/);
+});

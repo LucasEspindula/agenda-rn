@@ -63,3 +63,14 @@ test('billing retains entity registration but no longer renders the old links ad
  assert.match(source,/\+ Cadastrar entidade/);
  assert.doesNotMatch(source,/adminView|administration|Vínculos médico ↔ entidade|toggleDoctorEntityLink/);
 });
+
+
+test('doctor ID is normalized once before the entity-link flow',()=>{
+ const source=readFileSync('app/doctors/doctor-directory.tsx','utf8');
+ assert.match(source,/const doctorId=typeof draft\.id==='string'\?draft\.id:'';/);
+ const handler=source.slice(source.indexOf('async function toggleDoctorEntityLink'),source.indexOf(' async function removeAccess'));
+ assert.match(handler,/if\(!doctorId\)return;/);
+ assert.match(handler,/const key=doctorId\+'\:'+entityId;/);
+ assert.match(handler,/buildDoctorEntityLinkMutation\(links,doctorId,entityId,desiredActive\)/);
+ assert.doesNotMatch(handler,/draft\.id as string/);
+});

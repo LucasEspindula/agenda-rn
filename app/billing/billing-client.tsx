@@ -32,8 +32,7 @@ type Draft=Record<string,string|number|boolean|null|string[]>;
 const empty:BillingData={payers:[],rows:[],entities:[],links:[],invoices:[],items:[],doctors:[]};
 const date=formatDateBR;
 const dr=(s:string)=>/^Dr\.?\s/i.test(s)?s:`Dr. ${s}`;
-const initialBillingTab=()=>typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('view')==='entities'?'entities':'records';
-export default function BillingClient({appointmentId}:{appointmentId?:string}) {
+export default function BillingClient({appointmentId,initialView}:{appointmentId?:string;initialView?:string}) {
  const [pendingSearch,setPendingSearch]=useState(''),[printPending,setPrintPending]=useState(false);
  const [pendingSource,setPendingSource]=useState<BillingRow|null>(null),[pendingContext,setPendingContext]=useState(false);
  const [parts,setParts]=useState<PaymentPart[]>([]);
@@ -46,7 +45,7 @@ export default function BillingClient({appointmentId}:{appointmentId?:string}) {
  const [manual,setManual]=useState<BillingRow|true|null>(null);
  const deepLinkHandled=useRef(false);
  const [report,setReport]=useState<ReportScope|null>(null),[amounts,setAmounts]=useState<Record<string,string>>({});
- const [data,setData]=useState<BillingData>(empty),[tab,setTab]=useState(initialBillingTab),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const [data,setData]=useState<BillingData>(empty),[tab,setTab]=useState(initialView==='entities'?'entities':'records'),[loading,setLoading]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
  const insurancePendingCount=data.rows.filter(isInsurancePending).length;
  const pendingCount=(data.requests||[]).filter(r=>r.status==='PENDING').length;
  const [statusFilter,setStatusFilter]=useState(''),[printError,setPrintError]=useState('');
