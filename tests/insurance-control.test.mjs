@@ -61,7 +61,7 @@ test('Perseu foundation stays document-only and exposes coherent states',()=>{
  assert.match(ui,/Estrutura identificada/);
  assert.match(ui,/Primeiras \{preview\.items\.length\} linhas/);
  assert.match(ui,/sourceMetadata/);
- assert.match(ui,/Aba: \$\{sheet\} · Linha: \$\{row\}/);
+ assert.match(ui,/Aba: '\+sheet\+' · Linha: '\+row/);
  assert.match(ui,/className="perseus-preview-dialog"/);
  assert.doesNotMatch(ui,/<AppDialog[^>]*compact/);
  assert.match(ui,/Pendências atuais/);
@@ -79,6 +79,25 @@ test('Perseu preview is a wide inspector with only its table scrolling horizonta
  assert.match(css,/\.perseus-preview-table\{min-width:760px/);
  assert.match(css,/\.perseus-preview \.perseus-fingerprint\{[^}]*word-break:break-all/);
  assert.doesNotMatch(css,/\.perseus-preview\{display:grid;gap:14px;min-width:min\(920px/);
+});
+
+test('Perseu drawer uses clear stages without blocking document actions',()=>{
+ const ui=read('app/billing/insurance-control.tsx');
+ const css=read('app/billing/billing.css');
+ assert.match(ui,/type PerseusStep='context'\|'file'\|'analysis'/);
+ assert.match(ui,/function openDrawer\(\)\{setStep\('context'\);setOpen\(true\);\}/);
+ assert.match(ui,/className="perseus-stepper"/);
+ assert.match(ui,/aria-current=\{step===item\.id\?'step':undefined\}/);
+ assert.match(ui,/Continuar para arquivo/);
+ assert.match(ui,/Selecionar arquivo/);
+ assert.match(ui,/Análise manual/);
+ assert.match(ui,/<PerseusMark size=\{38\} className="perseus-floating-mark"\/><span>Importar com Perseu<\/span>/);
+ assert.match(ui,/fileSize\(file\.size\)/);
+ assert.match(css,/\.rn-hub:has\(\.perseus-floating-action\) \.billing-main\{padding-bottom:116px\}/);
+ assert.match(css,/\.perseus-drawer-panel\{[^}]*width:min\(620px,100vw\)[^}]*overflow-x:hidden/);
+ assert.match(css,/\.perseus-form-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:16px\}/);
+ assert.match(css,/\.perseus-floating-mark,.perseus-drawer-mark,.perseus-status img,.perseus-analysis-mark\{[^}]*border:0!important[^}]*border-radius:0!important/);
+ assert.match(css,/\.perseus-form-grid\{grid-template-columns:1fr\}/);
 });
 
 test('Convênios keeps one operational filter and consolidates Perseu in Documents',()=>{
