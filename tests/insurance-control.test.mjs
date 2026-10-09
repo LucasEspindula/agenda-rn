@@ -47,8 +47,31 @@ test('Perseu foundation stays document-only and exposes coherent states',()=>{
  assert.match(ui,/Cancelar importação/);
  assert.match(ui,/insurance-document-state/);
  assert.match(ui,/Abrir \/ Baixar original/);
- assert.match(ui,/Importar com Perseu/);
+ assert.match(ui,/perseus-floating-action/);
+ assert.match(ui,/perseus-drawer/);
+ assert.match(ui,/PerseusMark/);
+ assert.match(ui,/Pendências atuais/);
+ assert.match(ui,/Documentos prontos\/importados/);
+ assert.doesNotMatch(ui,/AppDialog/);
  assert.match(billing,/['"]Convênios['"]/);
  assert.match(billing,/InsurancePending/);
+});
+
+test('Convênios keeps one operational filter and consolidates Perseu in Documents',()=>{
+ const billing=read('app/billing/billing-client.tsx');
+ const ui=read('app/billing/insurance-control.tsx');
+ const mark=read('components/perseus-mark.tsx');
+ assert.match(billing,/useState<'pending'\|'documents'>\('documents'\)/);
+ assert.doesNotMatch(billing,/insuranceView==='overview'/);
+ assert.doesNotMatch(billing,/>Visão geral</);
+ assert.match(billing,/tab!=='insurance'&&filterBar/);
+ assert.match(billing,/<InsurancePending filters=\{filterBar\}/);
+ assert.match(billing,/<InsuranceControl data=\{data\} view=\{insuranceView\}/);
+ assert.match(ui,/view==='documents'&&<section className="insurance-control">/);
+ assert.match(ui,/perseus-floating-action/);
+ assert.match(ui,/role="dialog"/);
+ assert.match(mark,/src="\/perseu\.png"/);
+ assert.doesNotMatch(ui,/PerseusIcon/);
+ assert.doesNotMatch(ui,/<svg/);
 });
 
