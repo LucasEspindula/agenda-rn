@@ -49,6 +49,11 @@ test('Perseu foundation stays document-only and exposes coherent states',()=>{
  assert.match(ui,/Abrir \/ Baixar original/);
  assert.match(ui,/perseus-floating-action/);
  assert.match(ui,/perseus-drawer/);
+ assert.match(ui,/<dialog/);
+ assert.match(ui,/showModal\(\)/);
+ assert.match(ui,/onCancel=\{handleCancel\}/);
+ assert.match(ui,/onClose=\{handleDialogClose\}/);
+ assert.match(ui,/triggerRef\.current\?\.focus\(\)/);
  assert.match(ui,/PerseusMark/);
  assert.match(ui,/Pendências atuais/);
  assert.match(ui,/Documentos prontos\/importados/);
@@ -69,7 +74,10 @@ test('Convênios keeps one operational filter and consolidates Perseu in Documen
  assert.match(billing,/<InsuranceControl data=\{data\} view=\{insuranceView\}/);
  assert.match(ui,/view==='documents'&&<section className="insurance-control">/);
  assert.match(ui,/perseus-floating-action/);
- assert.match(ui,/role="dialog"/);
+ assert.match(ui,/aria-haspopup="dialog"/);
+ assert.match(ui,/aria-expanded=\{open\}/);
+ assert.match(ui,/event\.currentTarget===event\.target/);
+ assert.match(mark,/width=\{size\} height=\{size\}/);
  assert.match(mark,/src="\/perseu\.png"/);
  assert.doesNotMatch(ui,/PerseusIcon/);
  assert.doesNotMatch(ui,/<svg/);
