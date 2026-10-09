@@ -1,44 +1,28 @@
-// @ts-nocheck
 import {getSession} from '@/app/authz';
 import {loadBillingData} from '@/lib/billing-data';
 import {doctorBillingProjection} from '@/lib/billing-projection';
 import {canOpenBilling,canOpenInvoices} from '@/lib/doctor-services';
-import {buildReport,type ReportScope} from '@/lib/billing-reports';
-import {companyLabel,invoiceStatus,rowEntityId,rowStatus} from '@/lib/billing-row';
+import {buildReport,individualReceived,type ReportScope} from '@/lib/billing-reports';
+import {companyLabel,expensePayer,invoiceStatus,rowEntityId,rowStatus} from '@/lib/billing-row';
 import {activeInvoice} from '@/lib/fiscal-document';
-import {PdfReport,brDate,brl,pdfResponse} from '@/lib/reports/pdf';
+import {PdfReport,brDate,brDateTime,brl,pdfResponse,type PdfColumn} from '@/lib/reports/pdf';
+import type {BillingData,BillingRow} from '@/lib/billing-types';
 
 export const dynamic='force-dynamic';
 const kinds=new Set<ReportScope['kind']>(['filtered','doctor','entity','invoices','pending']);
 const value=(params:URLSearchParams,key:string)=>params.get(key)||'';
-function scopeFrom(request:Request):ReportScope|null{
- const p=new URL(request.url).searchParams,kind=p.get('kind') as ReportScope['kind'];
- if(!kinds.has(kind))return null;
- return {kind,doctor:value(p,'doctor'),entity:value(p,'entity'),start:value(p,'start'),end:value(p,'end'),insurance:value(p,'insurance'),patient:value(p,'patient'),status:value(p,'status'),issued_at:new Date().toISOString()};
-}
-export async function GET(request:Request){
- const session=await getSession(),scope=scopeFrom(request);
- if(!session)return Response.json({error:'Acesso negado.'},{status:403});
- if(!scope)return Response.json({error:'Relatório inválido.'},{status:400});
- if(session.account.role==='secretary')return Response.json({error:'Área restrita à gerência.'},{status:403});
- if(session.account.role==='doctor'&&!(scope.kind==='invoices'?canOpenInvoices(session):canOpenBilling(session)))return Response.json({error:'Acesso negado.'},{status:403});
- try{
-  let {data}=await loadBillingData();
-  if(session.account.role==='doctor')data=doctorBillingProjection(data,session,scope.kind==='invoices');
-  const report=buildReport(data,scope),pdf=await new PdfReport().init();
-  const title={filtered:'Atendimentos filtrados',doctor:'Relatório do médico',entity:'Relatório da empresa / PJ',invoices:'Relação de Notas Fiscais',pending:'Pendências de Convênio'}[scope.kind];
-  const doctor=(id:string)=>data.doctors.find(d=>d.id===id)?.name||'—';
-  const entity=data.entities.find(e=>e.id===scope.entity);
-  const subject=entity?entity.name:scope.doctor?doctor(scope.doctor):'Período: '+(scope.start?brDate(scope.start):'início')+' a '+(scope.end?brDate(scope.end):'fim');
-  pdf.header(title,subject);
-  if(scope.kind==='invoices'){
-   pdf.table([{label:'NF',width:58},{label:'Empresa',width:132},{label:'Pagador',width:125},{label:'Emissão',width:63},{label:'Pagamento',width:70},{label:'Bruto',width:76,align:'right'},{label:'Líquido',width:76,align:'right'},{label:'Status',width:82}],report.invoices.map(i=>[i.invoice_number,data.entities.find(e=>e.id===i.billing_entity_id)?.name||'—',i.payer,brDate(i.issue_date),brDate(i.paid_at),i.shared?'NF compartilhada':brl(i.total_amount),i.shared?'Total restrito':brl(i.net_amount),invoiceStatus(i)]));
-   const active=report.invoices.filter(activeInvoice); pdf.text(active.length+' nota(s) ativa(s) · Total líquido válido: '+brl(active.reduce((n,i)=>n+Number(i.net_amount||0),0)),pdf.margin,pdf.y,8,true);
-  }else{
-   const rows=report.rows;
-   pdf.table([{label:'Paciente',width:104},{label:'Data',width:56},{label:'Procedimento',width:96},{label:'Médico',width:96},{label:'Empresa',width:96},{label:'Pagador',width:79},{label:'NF',width:52},{label:'Pagamento',width:60},{label:'Valor',width:62,align:'right'},{label:'Status',width:62}],rows.map(r=>[r.patient,brDate(r.date),r.procedure,doctor(r.doctor_id),companyLabel(data,rowEntityId(r)),r.insurance||'—',r.invoice?.invoice_number||r.record?.invoice_number||'—',brDate(r.invoice?.paid_at||r.record?.paid_at),brl(r.invoice_item?.received_amount??r.record?.received_amount),rowStatus(r)]));
-   pdf.text('Atendimentos: '+report.summary.total+' · Pagos: '+report.summary.paid+' · Pendentes: '+report.summary.pending+' · Valor individualizado: '+brl(report.summary.received),pdf.margin,pdf.y,8,true);
-  }
-  return pdfResponse(pdf,'rn-integra-'+scope.kind+'.pdf');
- }catch(error){return Response.json({error:error instanceof Error?error.message:'Não foi possível gerar o relatório.'},{status:400});}
-}
+const title:Record<ReportScope['kind'],string>={filtered:'Atendimentos filtrados',doctor:'Relatório do médico',entity:'Relatório da empresa / PJ',invoices:'Relação de Notas Fiscais',pending:'Pendências de Convênio'};
+function scopeFrom(request:Request):ReportScope|null{const params=new URL(request.url).searchParams,kind=params.get('kind') as ReportScope['kind'];if(!kinds.has(kind))return null;return {kind,doctor:value(params,'doctor'),entity:value(params,'entity'),start:value(params,'start'),end:value(params,'end'),insurance:value(params,'insurance'),patient:value(params,'patient'),status:value(params,'status'),issued_at:new Date().toISOString()}}
+const doctor=(data:BillingData,id:string)=>data.doctors.find(item=>item.id===id)?.name||'—';
+const entity=(data:BillingData,id:string)=>data.entities.find(item=>item.id===id);
+const attendanceColumns:PdfColumn[]=[{label:'Paciente',width:91},{label:'Data',width:52},{label:'Procedimento',width:84},{label:'Médico',width:79},{label:'Empresa',width:80},{label:'Pagador',width:68},{label:'NF',width:48},{label:'Pagamento',width:56},{label:'Valor',width:61,align:'right'},{label:'Status',width:62}];
+function attendanceRows(data:BillingData,rows:BillingRow[]):string[][]{return rows.map(row=>[row.patient,brDate(row.date),row.procedure,doctor(data,row.doctor_id),companyLabel(data,rowEntityId(row)),row.insurance||'—',row.invoice?.invoice_number||row.record?.invoice_number||'—',brDate(row.invoice?.paid_at||row.record?.paid_at),brl(individualReceived(row)),rowStatus(row)])}
+function headerDetails(scope:ReportScope,data:BillingData):string[]{const details=['Período: '+(scope.start?brDate(scope.start):'Início não limitado')+' a '+(scope.end?brDate(scope.end):'Fim não limitado')+(scope.kind==='invoices'?' · Emissão das NFs':' · Atendimentos realizados')];if(scope.insurance)details.push(scope.insurance==='PARTICULAR'?'Forma de cobrança: Particular':'Convênio / pagador: '+scope.insurance);if(scope.insurance==='PARTICULAR'&&scope.patient)details.push('Paciente: '+scope.patient);details.push('Emitido em: '+brDateTime(scope.issued_at||new Date().toISOString()));return details}
+export async function GET(request:Request){const session=await getSession(),scope=scopeFrom(request);if(!session)return Response.json({error:'Acesso negado.'},{status:403});if(!scope)return Response.json({error:'Relatório inválido.'},{status:400});if(session.account.role==='secretary')return Response.json({error:'Área restrita à gerência.'},{status:403});if(session.account.role==='doctor'&&!(scope.kind==='invoices'?canOpenInvoices(session):canOpenBilling(session)))return Response.json({error:'Acesso negado.'},{status:403});
+ try{let {data}=await loadBillingData();if(session.account.role==='doctor')data=doctorBillingProjection(data,session,scope.kind==='invoices');const report=buildReport(data,scope),pdf=await new PdfReport().init(),selectedEntity=entity(data,scope.entity),subject=selectedEntity?selectedEntity.name:scope.doctor?doctor(data,scope.doctor):title[scope.kind];const details=headerDetails(scope,data);if(selectedEntity)details.unshift('CPF/CNPJ: '+selectedEntity.tax_id);pdf.header(title[scope.kind],subject,details);
+ if(scope.kind==='invoices'){const replacement=(id:string|null|undefined)=>id?data.invoices.find(invoice=>invoice.id===id)?.invoice_number:null;pdf.table([{label:'NF',width:58},{label:'Empresa',width:132},{label:'Pagador',width:125},{label:'Emissão',width:63},{label:'Pagamento',width:70},{label:'Bruto',width:76,align:'right'},{label:'Líquido',width:76,align:'right'},{label:'Status',width:82}],report.invoices.map(invoice=>{const next=replacement(invoice.replaced_by_invoice_id);return [invoice.invoice_number,entity(data,invoice.billing_entity_id)?.name||'—',invoice.payer,brDate(invoice.issue_date),brDate(invoice.paid_at),invoice.shared?'NF compartilhada':brl(invoice.total_amount),invoice.shared?'Total restrito':brl(invoice.net_amount),invoiceStatus(invoice)+(next?' · Substituída por NF '+next:'')]}));const active=report.invoices.filter(activeInvoice),cancelled=report.invoices.filter(invoice=>invoice.status==='CANCELLED').length,replaced=report.invoices.filter(invoice=>invoice.status==='REPLACED').length;pdf.text(report.invoices.length+' notas · '+active.length+' ativas · '+cancelled+' cancelada(s) · '+replaced+' substituída(s)',pdf.margin,pdf.y,8,true);pdf.y-=12;pdf.text('Total líquido válido (NFs ativas): '+brl(active.reduce((sum,invoice)=>sum+Number(invoice.net_amount||0),0)),pdf.margin,pdf.y,8,true)}
+ else if(scope.kind==='pending'){const now=new Date(scope.issued_at||Date.now()).getTime();pdf.table([...attendanceColumns.slice(0,7),{label:'Emissão',width:56},{label:'Pagamento',width:56},{label:'Valor',width:58,align:'right'},{label:'Status',width:57},{label:'Em aberto',width:57}],report.rows.map(row=>[...attendanceRows(data,[row])[0].slice(0,7),brDate(row.invoice?.issue_date),brDate(row.invoice?.paid_at||row.record?.paid_at),brl(individualReceived(row)),rowStatus(row),Math.max(0,Math.floor((now-new Date(row.date+'T00:00:00Z').getTime())/86400000))+' dias']))}
+ else {const summary=report.summary;pdf.section('Resumo');pdf.table([{label:'Atendimentos',width:112},{label:'Particular',width:112},{label:'Convênio',width:112},{label:'Pagos',width:112},{label:'Pendentes',width:112},{label:'Valor individualizado',width:180,align:'right'}],[[String(summary.total),String(summary.private),String(summary.insurance),String(summary.paid),String(summary.pending),brl(summary.received)]]);pdf.text('Valores individuais informados. '+summary.unidentified+' atendimento(s) sem valor individualizado. Nenhum total de NF é rateado.',pdf.margin,pdf.y,7,false);pdf.y-=16;
+ const groups=['doctor','entity'].includes(scope.kind)?report.groups:[{id:'all',rows:report.rows,summary:report.summary}];for(const group of groups){const e=entity(data,group.id),name=scope.kind==='doctor'?e?.name||'Entidade recebedora não definida':scope.kind==='entity'?doctor(data,group.id):undefined;if(name)pdf.section(name,scope.kind==='doctor'&&e?'CPF/CNPJ: '+e.tax_id:undefined);pdf.table(attendanceColumns,attendanceRows(data,group.rows));if(name){pdf.text('Subtotal individualizado · '+group.summary.total+' atendimentos: '+brl(group.summary.received),pdf.margin,pdf.y,8,true);pdf.y-=16}}pdf.text('Total individualizado: '+brl(summary.received),pdf.margin,pdf.y,8,true);
+ if(report.cash){pdf.section('Caixa da empresa no período','Critério: data efetiva de pagamento. Resumo financeiro, não uma DRE contábil.');pdf.table([{label:'Receitas recebidas',width:220,align:'right'},{label:'Despesas pagas',width:220,align:'right'},{label:'Resultado financeiro',width:220,align:'right'}],[[brl(report.cash.revenue),brl(report.cash.paidExpenses),brl(report.cash.result)]]);if(report.cash.unknownInvoices)pdf.text('Resumo incompleto: '+report.cash.unknownInvoices+' NF(s) paga(s) sem valor líquido informado.',pdf.margin,pdf.y,7,false);pdf.y-=14;pdf.text('Pagamentos diretos + valor líquido de cada NF paga uma única vez. Os itens das NFs não são somados novamente ao caixa.',pdf.margin,pdf.y,7,false);pdf.y-=16;pdf.section('Despesas pagas');pdf.table([{label:'Despesa',width:230},{label:'Categoria',width:135},{label:'Pagamento',width:100},{label:'Pago por',width:160},{label:'Valor',width:70,align:'right'}],report.cash.expenses.map(expense=>[expense.description,expense.category,brDate(expense.paid_at),expensePayer(data,expense),brl(expense.amount)]))}}
+ return pdfResponse(pdf,'rn-integra-'+scope.kind+'.pdf')}catch(error){return Response.json({error:error instanceof Error?error.message:'Não foi possível gerar o relatório.'},{status:400})}}
