@@ -312,21 +312,16 @@ function openAgendaPrint(){
  const owner=selectedProf();if(!owner)return;
  document.getElementById("agendaPrintDialog")?.remove();
  const dialog=document.createElement("dialog");dialog.id="agendaPrintDialog";dialog.className="agenda-print-dialog";
- dialog.innerHTML=`<form method="dialog" class="print-dialog-content"><span class="print-dialog-eyebrow">Agenda</span><h3>Visualizar agenda</h3><p>${esc(owner.name)}</p><div class="print-dialog-fields"><label>Período<select id="agendaPrintPeriod"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option></select></label><label>Data de referência<input id="agendaPrintDate" type="date" required value="${ds(currentDate)}"></label></div><div class="print-dialog-actions"><button value="cancel" class="secondary-btn">Cancelar</button><button type="button" id="confirmAgendaPrint" class="primary-btn">Visualizar</button></div></form>`;
+ dialog.innerHTML=`<form method="dialog" class="print-dialog-content"><span class="print-dialog-eyebrow">Agenda</span><h3>Visualizar agenda</h3><p>${esc(owner.name)}</p><div class="print-dialog-fields"><label>Período<select id="agendaPrintPeriod"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option></select></label><label>Data de referência<input id="agendaPrintDate" type="date" required value="${ds(currentDate)}"></label></div><div class="print-dialog-actions"><button value="cancel" class="secondary-btn">Cancelar</button><button type="button" id="confirmAgendaPrint" class="primary-btn">Visualizar PDF</button></div></form>`;
  document.body.appendChild(dialog);dialog.showModal();
  $("confirmAgendaPrint").onclick=()=>{
   const input=$("agendaPrintDate");if(!input.reportValidity())return;
-  const mode=$("agendaPrintPeriod").value,date=parseDate(input.value),start=mode==="week"?startOfWeek(date):mode==="month"?new Date(date.getFullYear(),date.getMonth(),1):date,end=new Date(start);
-  if(mode==="week")end.setDate(end.getDate()+6);if(mode==="month")end.setMonth(end.getMonth()+1,0);
-  const from=ds(start),to=ds(end),rows=state.appointments.filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id)&&a.date>=from&&a.date<=to&&a.status!=="cancelled").sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  const blocks=state.scheduleBlocks.filter(b=>b.professionalId===owner.id&&b.date>=from&&b.date<=to).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
-  document.getElementById("agendaReportPreview")?.remove();
-  const preview=document.createElement("section");preview.id="agendaReportPreview";preview.className="agenda-report-preview";preview.setAttribute("role","dialog");preview.setAttribute("aria-modal","true");preview.setAttribute("aria-label","Visualização da agenda");
-  preview.innerHTML=`<div class="agenda-report-toolbar no-print"><strong>Visualização da agenda</strong><div><button type="button" id="agendaReportPrint" class="secondary-btn">Imprimir / Salvar PDF</button><button type="button" id="agendaReportClose" class="secondary-btn" aria-label="Fechar visualização">×</button></div></div><div class="agenda-report-scroll"><article class="agenda-report-document"><header><img class="report-logo" src="/agenda-rn-icon.jpg" alt="RN Integra"><h1>${esc(owner.name)}${owner.crm?" - CRM: "+esc(owner.crm):""}</h1><p>${start.toLocaleDateString("pt-BR")} a ${end.toLocaleDateString("pt-BR")}</p></header><table><thead><tr><th>Data</th><th>Horário</th><th>Paciente</th><th>${isAnesthesiologist(owner)?"Médico":"Anestesista"}</th><th>Procedimento</th><th>Convênio</th><th>Hospital</th><th>Status</th></tr></thead><tbody>${rows.map(a=>`<tr><td>${parseDate(a.date).toLocaleDateString("pt-BR")}</td><td>${esc(a.time)}</td><td>${esc(patient(a.patientId)?.name||"Não informado")}</td><td>${esc(appointmentPartner(a,owner))}</td><td>${esc(a.procedure)}</td><td>${esc(appointmentInsurance(a)||"—")}</td><td>${esc(state.hospitals.find(h=>h.id===a.hospitalId)?.name||"—")}</td><td>${esc(appointmentStatusLabel(a.status))}</td></tr>`).join("")||'<tr><td colspan="8">Nenhum atendimento no período.</td></tr>'}</tbody></table>${blocks.length?`<section class="agenda-report-blocks"><h2>Horários bloqueados</h2><table><thead><tr><th>Data</th><th>Horário</th><th>Motivo</th></tr></thead><tbody>${blocks.map(b=>`<tr><td>${parseDate(b.date).toLocaleDateString("pt-BR")}</td><td>${esc(b.start)} - ${esc(b.end)}</td><td>${esc(b.reason)}</td></tr>`).join("")}</tbody></table></section>`:""}</article></div>`;
-  document.body.appendChild(preview);dialog.close();
-  $("agendaReportPrint").onclick=()=>window.print();$("agendaReportClose").onclick=()=>preview.remove();
+  const params=new URLSearchParams({professional_id:owner.id,period:$("agendaPrintPeriod").value,date:input.value});
+  window.open("/api/reports/agenda?"+params.toString(),"_blank","noopener,noreferrer");
+  dialog.close();
  };
 }
+
 function mountAgendaOwnerSelector(owner){
  const display=$("agendaOwnerDisplay"),sel=$("professionalFilter");if(!display||!sel)return;
  document.querySelector(".agenda-owner")?.classList.add("agenda-owner-hidden");
