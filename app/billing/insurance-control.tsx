@@ -1,10 +1,105 @@
 "use client";
+
 import {useEffect,useState} from 'react';
 import type {BillingData} from '@/lib/billing-types';
 import AppDialog from '@/components/app-dialog';
 import PerseusIcon from '@/components/perseus-icon';
-import {INSURANCE_MOVEMENT_KINDS,insuranceMovementLabels} from '@/lib/insurance-control';
-import {uploadInsuranceDocument,insuranceDocumentAccept,INSURANCE_DOCUMENT_MAX_SIZE} from '@/lib/insurance-documents-client';
+import {INSURANCE_MOVEMENT_KINDS,insuranceDocumentState,insuranceMovementLabels} from '@/lib/insurance-control';
+import {cancelInsuranceDocument,uploadInsuranceDocument,insuranceDocumentAccept,INSURANCE_DOCUMENT_MAX_SIZE} from '@/lib/insurance-documents-client';
 import {formatDateBR,formatDateTimeBR} from '@/lib/date-format';
-type DocumentRow={id:string;originalFilename:string;detectedFormat:string|null;uploadStatus:string;perseusStatus:string;createdAt:string;importer:string;movement:{payer:string;competence:string|null;kind:keyof typeof insuranceMovementLabels;external_reference:string|null;billing_entity:{name:string;trade_name:string|null}}};
-export default function InsuranceControl({data,view,pendingCount,onView}:{data:BillingData;view:'overview'|'documents';pendingCount:number;onView:(view:'overview'|'documents')=>void}){const [documents,setDocuments]=useState<DocumentRow[]>([]),[error,setError]=useState(''),[open,setOpen]=useState(false),[busy,setBusy]=useState(false),[file,setFile]=useState<File|null>(null),[form,setForm]=useState({billingEntityId:'',payer:'',competence:'',kind:'UNKNOWN',externalReference:'',notes:''});const load=async()=>{const response=await fetch('/api/insurance-control',{cache:'no-store'}),payload=await response.json();if(!response.ok)throw Error(payload.error);setDocuments(payload.documents)};useEffect(()=>{void load().catch(e=>setError(e instanceof Error?e.message:'Não foi possível carregar os documentos.'))},[]);const ready=documents.filter(document=>document.uploadStatus==='READY');const submit=async(e:React.FormEvent)=>{e.preventDefault();if(!file)return;setBusy(true);setError('');try{await uploadInsuranceDocument(file,form);setOpen(false);setFile(null);await load()}catch(error){setError(error instanceof Error?error.message:'Não foi possível importar o arquivo.')}finally{setBusy(false)}};return <section className="insurance-control"><div className="billing-section-head page-description-head"><p className="page-description"><span className="perseus-label"><PerseusIcon/>Perseu</span>Importação e análise de documentos de convênios.</p>{view==='documents'&&<button className="billing-primary" onClick={()=>setOpen(true)}><PerseusIcon/>Importar com Perseu</button>}</div>{view==='overview'?<div className="insurance-overview"><article><span>Pendências atuais</span><strong>{pendingCount}</strong></article><article><span>Documentos importados</span><strong>{ready.length}</strong></article><article><span>Aguardando análise Perseu</span><strong>{ready.filter(document=>document.perseusStatus==='NOT_ANALYZED').length}</strong></article><article><span>Convênios / pagadores</span><strong>{new Set(ready.map(document=>document.movement.payer)).size}</strong></article></div>:<><div className="billing-panel"><table className="billing-table insurance-documents-table"><thead><tr><th>Importado em</th><th>Empresa/PJ</th><th>Convênio/Pagador</th><th>Competência</th><th>Tipo informado</th><th>Referência externa</th><th>Arquivo</th><th>Formato identificado</th><th>Perseu</th><th>Importado por</th><th>Ação</th></tr></thead><tbody>{documents.map(document=><tr key={document.id}><td>{formatDateTimeBR(document.createdAt)}</td><td>{document.movement.billing_entity.trade_name||document.movement.billing_entity.name}</td><td>{document.movement.payer}</td><td>{document.movement.competence?formatDateBR(document.movement.competence):'—'}</td><td>{insuranceMovementLabels[document.movement.kind]}</td><td>{document.movement.external_reference||'—'}</td><td>{document.originalFilename}</td><td>{document.detectedFormat?'Formato identificado: '+document.detectedFormat:'Aguardando upload'}</td><td><span className="perseus-status"><PerseusIcon size={16}/>{document.uploadStatus==='READY'?'Aguardando análise':'Upload pendente'}</span></td><td>{document.importer}</td><td>{document.uploadStatus==='READY'?<a className="billing-secondary" href={'/api/insurance-control/documents?id='+encodeURIComponent(document.id)} target="_blank" rel="noreferrer">Abrir/Baixar original</a>:'—'}</td></tr>)}</tbody></table>{!documents.length&&<p className="billing-empty">Nenhum documento importado.</p>}</div></>}{error&&<p className="billing-error" role="alert">{error}</p>}{open&&<AppDialog label="Importar com Perseu" onClose={()=>setOpen(false)} busy={busy}><form onSubmit={submit}><div className="perseus-dialog-head"><PerseusIcon size={28}/><div><h2>Perseu</h2><p>Importação e análise de documentos de convênios</p></div></div><div className="billing-form-grid"><label>Empresa / entidade recebedora<select required value={form.billingEntityId} onChange={e=>setForm({...form,billingEntityId:e.target.value})}><option value="">Selecione</option>{data.entities.map(entity=><option key={entity.id} value={entity.id}>{entity.trade_name||entity.name}</option>)}</select></label><label>Convênio / pagador<input required list="insurance-payers" value={form.payer} onChange={e=>setForm({...form,payer:e.target.value})}/><datalist id="insurance-payers">{data.payers.map(payer=><option key={payer} value={payer}/>)}</datalist></label><label>Competência<input type="month" value={form.competence} onChange={e=>setForm({...form,competence:e.target.value})}/></label><label>Tipo do movimento/documento<select value={form.kind} onChange={e=>setForm({...form,kind:e.target.value})}>{INSURANCE_MOVEMENT_KINDS.map(kind=><option key={kind} value={kind}>{insuranceMovementLabels[kind]}</option>)}</select></label><label>Referência externa / protocolo<input value={form.externalReference} onChange={e=>setForm({...form,externalReference:e.target.value})}/></label><label>Arquivo<input required type="file" accept={insuranceDocumentAccept} onChange={e=>setFile(e.target.files?.[0]||null)}/><small>PDF, XLSX, XLS, CSV, XML, TXT ou ZIP · até 25 MB</small></label></div><label>Observação<textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label>{file&&file.size>INSURANCE_DOCUMENT_MAX_SIZE&&<p className="billing-error">O arquivo excede 25 MB.</p>}<div className="billing-modal-actions"><button type="button" className="billing-secondary" disabled={busy} onClick={()=>setOpen(false)}>Cancelar</button><button className="billing-primary" disabled={busy||!file||file.size>INSURANCE_DOCUMENT_MAX_SIZE}>{busy?'Importando…':'Importar com Perseu'}</button></div></form></AppDialog>}</section>}
+
+type DocumentRow={id:string;originalFilename:string;detectedFormat:string|null;uploadStatus:string;perseusStatus:string;createdAt:string;importer:string;rejectionReason:string|null;movement:{payer:string;competence:string|null;kind:keyof typeof insuranceMovementLabels;external_reference:string|null;billing_entity:{name:string;trade_name:string|null}}};
+type Props={data:BillingData;view:'overview'|'documents';pendingCount:number};
+
+export default function InsuranceControl({data,view,pendingCount}:Props){
+ const [documents,setDocuments]=useState<DocumentRow[]>([]);
+ const [error,setError]=useState('');
+ const [open,setOpen]=useState(false);
+ const [busy,setBusy]=useState(false);
+ const [file,setFile]=useState<File|null>(null);
+ const [form,setForm]=useState({billingEntityId:'',payer:'',competence:'',kind:'UNKNOWN',externalReference:'',notes:''});
+
+ async function load(){
+  const response=await fetch('/api/insurance-control',{cache:'no-store'});
+  const payload=await response.json();
+  if(!response.ok)throw Error(payload.error||'Não foi possível carregar os documentos.');
+  setDocuments(payload.documents);
+ }
+
+ useEffect(()=>{
+  let active=true;
+  void fetch('/api/insurance-control',{cache:'no-store'})
+   .then(async response=>{const payload=await response.json();if(!response.ok)throw Error(payload.error||'Não foi possível carregar os documentos.');if(active)setDocuments(payload.documents);})
+   .catch(reason=>{if(active)setError(reason instanceof Error?reason.message:'Não foi possível carregar os documentos.');});
+  return()=>{active=false};
+ },[]);
+
+ const ready=documents.filter(document=>document.uploadStatus==='READY');
+ async function submit(event:React.FormEvent){
+  event.preventDefault();if(!file)return;
+  setBusy(true);setError('');
+  try{await uploadInsuranceDocument(file,form);setOpen(false);setFile(null);await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:'Não foi possível importar o arquivo.');}
+  finally{setBusy(false);}
+ }
+ async function cancel(document:DocumentRow){
+  if(!window.confirm('Cancelar importação? O documento ficará registrado como rejeitado para auditoria.'))return;
+  setBusy(true);setError('');
+  try{await cancelInsuranceDocument(document.id);await load();}
+  catch(reason){setError(reason instanceof Error?reason.message:'Não foi possível cancelar a importação.');}
+  finally{setBusy(false);}
+ }
+
+ return <section className="insurance-control">
+  <div className="billing-section-head page-description-head">
+   <p className="page-description"><span className="perseus-label"><PerseusIcon/>Perseu</span>Importação e análise de documentos de convênios.</p>
+   {view==='documents'&&<button className="billing-primary" onClick={()=>setOpen(true)}><PerseusIcon/>Importar com Perseu</button>}
+  </div>
+  {view==='overview'?<div className="insurance-overview">
+   <article><span>Pendências atuais</span><strong>{pendingCount}</strong></article>
+   <article><span>Documentos prontos</span><strong>{ready.length}</strong></article>
+   <article><span>Aguardando análise Perseu</span><strong>{ready.filter(document=>document.perseusStatus==='NOT_ANALYZED').length}</strong></article>
+   <article><span>Convênios / pagadores</span><strong>{new Set(ready.map(document=>document.movement.payer)).size}</strong></article>
+  </div>:<div className="billing-panel">
+   <table className="billing-table insurance-documents-table">
+    <thead><tr><th>Importado em</th><th>Empresa/PJ</th><th>Convênio/Pagador</th><th>Competência</th><th>Tipo informado</th><th>Referência externa</th><th>Arquivo</th><th>Formato identificado</th><th>Importação</th><th>Perseu</th><th>Importado por</th><th>Ação</th></tr></thead>
+    <tbody>{documents.map(document=>{
+     const state=insuranceDocumentState(document.uploadStatus,document.rejectionReason);
+     return <tr key={document.id}>
+      <td>{formatDateTimeBR(document.createdAt)}</td>
+      <td>{document.movement.billing_entity.trade_name||document.movement.billing_entity.name}</td>
+      <td>{document.movement.payer}</td>
+      <td>{document.movement.competence?formatDateBR(document.movement.competence):'—'}</td>
+      <td>{insuranceMovementLabels[document.movement.kind]}</td>
+      <td>{document.movement.external_reference||'—'}</td>
+      <td>{document.originalFilename}</td>
+      <td>{document.detectedFormat?'Formato identificado: '+document.detectedFormat:'—'}</td>
+      <td><span className={'insurance-document-state '+state.tone}>{state.label}</span>{state.reason&&<small className="insurance-document-reason">{state.reason}</small>}</td>
+      <td>{document.uploadStatus==='READY'?<span className="perseus-status"><PerseusIcon size={16}/>Aguardando análise</span>:'—'}</td>
+      <td>{document.importer}</td>
+      <td>{document.uploadStatus==='READY'?<a className="billing-secondary" href={'/api/insurance-control/documents?id='+encodeURIComponent(document.id)} target="_blank" rel="noreferrer">Abrir / Baixar original</a>:document.uploadStatus==='PENDING'?<button className="billing-danger insurance-cancel" disabled={busy} onClick={()=>void cancel(document)}>Cancelar importação</button>:'—'}</td>
+     </tr>;
+    })}</tbody>
+   </table>
+   {!documents.length&&<p className="billing-empty">Nenhum documento importado.</p>}
+  </div>}
+  {error&&<p className="billing-error" role="alert">{error}</p>}
+  {open&&<AppDialog label="Importar com Perseu" onClose={()=>setOpen(false)} busy={busy}>
+   <form onSubmit={submit}>
+    <div className="perseus-dialog-head"><PerseusIcon size={32}/><div><h2>Perseu</h2><p>Importação e análise de documentos de convênios</p></div></div>
+    <div className="billing-form-grid">
+     <label>Empresa / entidade recebedora<select required value={form.billingEntityId} onChange={event=>setForm({...form,billingEntityId:event.target.value})}><option value="">Selecione</option>{data.entities.map(entity=><option key={entity.id} value={entity.id}>{entity.trade_name||entity.name}</option>)}</select></label>
+     <label>Convênio / pagador<input required list="insurance-payers" value={form.payer} onChange={event=>setForm({...form,payer:event.target.value})}/><datalist id="insurance-payers">{data.payers.map(payer=><option key={payer} value={payer}/>)}</datalist></label>
+     <label>Competência<input type="month" value={form.competence} onChange={event=>setForm({...form,competence:event.target.value})}/></label>
+     <label>Tipo do movimento/documento<select value={form.kind} onChange={event=>setForm({...form,kind:event.target.value})}>{INSURANCE_MOVEMENT_KINDS.map(kind=><option key={kind} value={kind}>{insuranceMovementLabels[kind]}</option>)}</select></label>
+     <label>Referência externa / protocolo<input value={form.externalReference} onChange={event=>setForm({...form,externalReference:event.target.value})}/></label>
+     <label>Arquivo<input required type="file" accept={insuranceDocumentAccept} onChange={event=>setFile(event.target.files?.[0]||null)}/><small>PDF, XLSX, XLS, CSV, XML, TXT ou ZIP · até 25 MB</small></label>
+    </div>
+    <label>Observação<textarea value={form.notes} onChange={event=>setForm({...form,notes:event.target.value})}/></label>
+    {file&&file.size>INSURANCE_DOCUMENT_MAX_SIZE&&<p className="billing-error">O arquivo excede 25 MB.</p>}
+    <div className="billing-modal-actions"><button type="button" className="billing-secondary" disabled={busy} onClick={()=>setOpen(false)}>Cancelar</button><button className="billing-primary" disabled={busy||!file||file.size>INSURANCE_DOCUMENT_MAX_SIZE}>{busy?'Importando…':'Importar com Perseu'}</button></div>
+   </form>
+  </AppDialog>}
+ </section>;
+}
+

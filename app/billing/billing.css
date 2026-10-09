@@ -130,4 +130,13 @@
 
 
 /* Perseu: documental only; it does not alter financial records. */
-.insurance-control{display:grid;gap:18px}.perseus-label{display:inline-flex;align-items:center;gap:6px;margin-right:10px;color:#24566a;font-weight:700}.perseus-label svg{color:#16817d}.billing-primary svg{vertical-align:middle;margin-right:6px}.insurance-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.insurance-overview article{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid #dbe6ed;border-radius:12px;background:#fff}.insurance-overview span{color:#697f90;font-size:12px}.insurance-overview strong{color:#173e50;font-size:28px}.insurance-documents-table{min-width:1280px}.perseus-status{display:inline-flex;align-items:center;gap:5px;color:#386476;font-size:12px;font-weight:650;white-space:nowrap}.perseus-dialog-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:#1a5362}.perseus-dialog-head h2,.perseus-dialog-head p{margin:0}.perseus-dialog-head p{color:#718598;font-size:13px}@media(max-width:760px){.insurance-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+ .insurance-control{display:grid;gap:18px}.perseus-label{display:inline-flex;align-items:center;gap:6px;margin-right:10px;color:#24566a;font-weight:700}.perseus-label svg{color:#16817d}.billing-primary svg{vertical-align:middle;margin-right:6px}.insurance-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.insurance-overview article{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid #dbe6ed;border-radius:12px;background:#fff}.insurance-overview span{color:#697f90;font-size:12px}.insurance-overview strong{color:#173e50;font-size:28px}.insurance-documents-table{min-width:1280px}.perseus-status{display:inline-flex;align-items:center;gap:5px;color:#386476;font-size:12px;font-weight:650;white-space:nowrap}.perseus-dialog-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:#1a5362}.perseus-dialog-head h2,.perseus-dialog-head p{margin:0}.perseus-dialog-head p{color:#718598;font-size:13px}@media(max-width:760px){.insurance-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.insurance-document-state{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:750;line-height:1.2;white-space:nowrap}
+.insurance-document-state.ready{background:#e8f6f4;color:#176b68}
+.insurance-document-state.pending{background:#fff4df;color:#896114}
+.insurance-document-state.rejected{background:#fdebed;color:#a03d49}
+.insurance-document-reason{display:block;max-width:220px;margin-top:5px;color:#8a4a51;font-size:11px;line-height:1.35}
+.insurance-cancel{white-space:nowrap}
+.perseus-label svg,.perseus-dialog-head svg{filter:drop-shadow(0 1px 1px rgba(17,60,76,.18))}
+

@@ -1,4 +1,29 @@
 import {INSURANCE_DOCUMENT_MAX_SIZE,insuranceDocumentAccept} from './insurance-control';
+
 export type InsuranceDocumentInput={billingEntityId:string;payer:string;competence?:string;kind:string;externalReference?:string;notes?:string};
 async function json(response:Response){return response.json().catch(()=>({}));}
-export async function uploadInsuranceDocument(file:File,input:InsuranceDocumentInput){let id='';try{const begin=await fetch('/api/insurance-control/documents',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...input,name:file.name,mimeType:file.type,size:file.size})}),started=await json(begin);if(!begin.ok)throw Error(started.error||'Não foi possível preparar o envio.');id=started.id;const uploaded=await fetch(started.url,{method:'PUT',headers:{'content-type':file.type||'application/octet-stream'},body:file});if(!uploaded.ok)throw Error('Não foi possível enviar o arquivo.');const completed=await fetch('/api/insurance-control/documents',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({id})}),done=await json(completed);if(!completed.ok)throw Error(done.error||'Não foi possível concluir a importação.');return done}catch(error){if(id)await fetch('/api/insurance-control/documents?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});throw error instanceof Error?error:Error('Não foi possível importar o arquivo.')}}export {insuranceDocumentAccept,INSURANCE_DOCUMENT_MAX_SIZE};
+
+export async function cancelInsuranceDocument(id:string){
+ const response=await fetch('/api/insurance-control/documents?id='+encodeURIComponent(id),{method:'DELETE'});
+ const payload=await json(response);
+ if(!response.ok)throw Error(payload.error||'Não foi possível cancelar a importação.');
+}
+
+export async function uploadInsuranceDocument(file:File,input:InsuranceDocumentInput){
+ let id='';
+ try{
+  const begin=await fetch('/api/insurance-control/documents',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...input,name:file.name,mimeType:file.type,size:file.size})}),started=await json(begin);
+  if(!begin.ok)throw Error(started.error||'Não foi possível preparar o envio.');
+  id=started.id;
+  const uploaded=await fetch(started.url,{method:'PUT',headers:{'content-type':file.type||'application/octet-stream'},body:file});
+  if(!uploaded.ok)throw Error('Não foi possível enviar o arquivo.');
+  const completed=await fetch('/api/insurance-control/documents',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({id})}),done=await json(completed);
+  if(!completed.ok)throw Error(done.error||'Não foi possível concluir a importação.');
+  return done;
+ }catch(error){
+  if(id)await cancelInsuranceDocument(id).catch(()=>{});
+  throw error instanceof Error?error:Error('Não foi possível importar o arquivo.');
+ }
+}
+export {insuranceDocumentAccept,INSURANCE_DOCUMENT_MAX_SIZE};
+

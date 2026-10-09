@@ -1,4 +1,54 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {loadTs} from './load-ts.mjs';
-const read=(path)=>readFileSync(path,'utf8'),control=loadTs('lib/insurance-control.ts');
-test('Perseu validates formats without semantic parsing',()=>{assert.equal(control.detectInsuranceDocument(new Uint8Array([37,80,68,70,45]),'retorno.pdf'),'PDF');assert.equal(control.detectInsuranceDocument(new Uint8Array([208,207,17,224,161,177,26,225]),'retorno.xls'),'XLS');assert.equal(control.detectInsuranceDocument(new Uint8Array([80,75,3,4]),'retorno.xlsx'),'XLSX');assert.equal(control.detectInsuranceDocument(new TextEncoder().encode('<?xml version="1.0"?>'),'retorno.xml'),'XML');assert.equal(control.detectInsuranceDocument(new Uint8Array([77,90]),'malware.exe'),null);assert.equal(control.normalizeCompetence('2026-09'),'2026-09-01');assert.equal(control.normalizeCompetence('2026-13'),null);assert.equal(control.validInsuranceDocumentName('retorno.xlsx'),true);assert.equal(control.validInsuranceDocumentName('../arquivo.pdf'),false)});
-test('Perseu foundation is isolated from the financial domain',()=>{const migration=read('supabase/migrations/20261009153000_insurance_control_perseus_foundation.sql'),docs=read('app/api/insurance-control/documents/route.ts'),billing=read('app/billing/billing-client.tsx');assert.match(migration,/create table public\.insurance_movements/);assert.match(migration,/create table public\.insurance_documents/);assert.match(migration,/create table public\.insurance_document_items/);assert.match(migration,/enable row level security/);assert.match(migration,/revoke all/);assert.match(migration,/insurance-documents/);assert.doesNotMatch(migration,/alter table public\.(billing_records|invoices|invoice_billing_records|attendances|billing_entities|financial_attachments)/);assert.doesNotMatch(docs,/from\('(billing_records|invoices|invoice_billing_records)'\)/);assert.match(docs,/session\.account\.role!==['"]general_manager/);assert.match(docs,/createSignedUploadUrl/);assert.match(docs,/createSignedUrl/);assert.match(docs,/createHash\('sha256'\)/);assert.doesNotMatch(docs,/Response\.json\(\{[^}]*storage_path:/);assert.match(billing,/['"]Convênios['"]/);assert.doesNotMatch(billing,/['"]Pendências de Convênio['"]/);assert.match(billing,/Visão geral/);assert.match(billing,/Pendências/);assert.match(billing,/Documentos/);assert.match(billing,/InsurancePending/)});
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {loadTs} from './load-ts.mjs';
+
+const read=(path)=>readFileSync(path,'utf8');
+const control=loadTs('lib/insurance-control.ts');
+
+test('Perseu validates physical formats without semantic parsing',()=>{
+ assert.equal(control.detectInsuranceDocument(new Uint8Array([37,80,68,70,45]),'retorno.pdf'),'PDF');
+ assert.equal(control.detectInsuranceDocument(new Uint8Array([208,207,17,224,161,177,26,225]),'retorno.xls'),'XLS');
+ assert.equal(control.detectInsuranceDocument(new Uint8Array([80,75,3,4]),'retorno.xlsx'),'XLSX');
+ assert.equal(control.detectInsuranceDocument(new TextEncoder().encode('<?xml version="1.0"?>'),'retorno.xml'),'XML');
+ assert.equal(control.detectInsuranceDocument(new Uint8Array([77,90]),'malware.exe'),null);
+});
+
+test('Perseu isolates authorization, document lifecycle and duplicate context',()=>{
+ assert.equal(control.canManageInsurance('general_manager'),true);
+ assert.equal(control.canManageInsurance('doctor'),false);
+ assert.equal(control.canManageInsurance('secretary'),false);
+ assert.equal(control.insuranceDocumentState('PENDING').label,'Upload pendente');
+ assert.equal(control.insuranceDocumentState('PENDING').tone,'pending');
+ assert.equal(control.insuranceDocumentState('READY').tone,'ready');
+ assert.equal(control.insuranceDocumentState('REJECTED','Arquivo duplicado.').label,'Importação rejeitada');
+ assert.equal(control.insuranceDocumentState('REJECTED','Arquivo duplicado.').reason,'Arquivo duplicado.');
+ assert.equal(control.sameInsuranceDocumentContext({billingEntityId:'entity',payer:' UNIMED  Porto Alegre ',competence:'2026-10-01'},{billingEntityId:'entity',payer:'unimed porto alegre',competence:'2026-10-01'}),true);
+ assert.equal(control.sameInsuranceDocumentContext({billingEntityId:'entity',payer:'UNIMED',competence:'2026-10-01'},{billingEntityId:'entity',payer:'UNIMED',competence:'2026-11-01'}),false);
+});
+
+test('Perseu foundation stays document-only and exposes coherent states',()=>{
+ const migration=read('supabase/migrations/20261009153000_insurance_control_perseus_foundation.sql');
+ const docs=read('app/api/insurance-control/documents/route.ts');
+ const listing=read('app/api/insurance-control/route.ts');
+ const ui=read('app/billing/insurance-control.tsx');
+ const billing=read('app/billing/billing-client.tsx');
+ assert.match(migration,/create table public\.insurance_movements/);
+ assert.match(migration,/create table public\.insurance_documents/);
+ assert.match(migration,/create table public\.insurance_document_items/);
+ assert.doesNotMatch(migration,/alter table public\.(billing_records|invoices|invoice_billing_records)/);
+ assert.doesNotMatch(docs,/from\('(billing_records|invoices|invoice_billing_records)'\)/);
+ assert.match(docs,/createSignedUploadUrl/);
+ assert.match(docs,/createSignedUrl/);
+ assert.match(docs,/createHash\('sha256'\)/);
+ assert.match(docs,/sameInsuranceDocumentContext/);
+ assert.match(docs,/Importação cancelada/);
+ assert.match(listing,/rejectionReason/);
+ assert.match(ui,/Cancelar importação/);
+ assert.match(ui,/insurance-document-state/);
+ assert.match(ui,/Abrir \/ Baixar original/);
+ assert.match(ui,/Importar com Perseu/);
+ assert.match(billing,/['"]Convênios['"]/);
+ assert.match(billing,/InsurancePending/);
+});
+
