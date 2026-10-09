@@ -55,9 +55,12 @@ test('Perseu foundation stays document-only and exposes coherent states',()=>{
  assert.match(ui,/onClose=\{handleDialogClose\}/);
  assert.match(ui,/triggerRef\.current\?\.focus\(\)/);
  assert.match(ui,/PerseusMark/);
+ assert.match(ui,/Analisar com Perseu/);
+ assert.match(ui,/Estrutura identificada/);
+ assert.match(ui,/Primeiras \{preview\.items\.length\} linhas/);
  assert.match(ui,/Pendências atuais/);
  assert.match(ui,/Documentos prontos\/importados/);
- assert.doesNotMatch(ui,/AppDialog/);
+ assert.match(ui,/AppDialog/);
  assert.match(billing,/['"]Convênios['"]/);
  assert.match(billing,/InsurancePending/);
 });
