@@ -12,8 +12,13 @@ export function structuralColumns(headers:unknown[]):PerseusColumn[]{
   const original=String(header??'').trim()||`Coluna ${index+1}`;
   const base=normalizeStructuralKey(original)||`coluna_${index+1}`;
   const count=(seen.get(base)||0)+1;seen.set(base,count);
-  return {original,normalized:count===1?base:`${base}_${count}`};
+  return {original,key:count===1?original:`${original} [${count}]`,normalized:count===1?base:`${base}_${count}`};
  });
+}
+
+export function duplicateHeaderWarning(columns:PerseusColumn[]){
+ const duplicates=columns.filter(column=>column.key!==column.original).map(column=>column.original);
+ return duplicates.length?`Cabeçalhos duplicados preservados com chaves distintas: ${[...new Set(duplicates)].join(', ')}.`:null;
 }
 
 export function layoutFingerprint(format:PerseusFormat,sheets:PerseusSheet[]){

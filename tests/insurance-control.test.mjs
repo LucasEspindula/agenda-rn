@@ -56,13 +56,29 @@ test('Perseu foundation stays document-only and exposes coherent states',()=>{
  assert.match(ui,/triggerRef\.current\?\.focus\(\)/);
  assert.match(ui,/PerseusMark/);
  assert.match(ui,/Analisar com Perseu/);
+ assert.match(ui,/Reanalisar com Perseu/);
+ assert.match(ui,/Tentar novamente com Perseu/);
  assert.match(ui,/Estrutura identificada/);
  assert.match(ui,/Primeiras \{preview\.items\.length\} linhas/);
+ assert.match(ui,/sourceMetadata/);
+ assert.match(ui,/Aba: \$\{sheet\} · Linha: \$\{row\}/);
+ assert.match(ui,/className="perseus-preview-dialog"/);
+ assert.doesNotMatch(ui,/<AppDialog[^>]*compact/);
  assert.match(ui,/Pendências atuais/);
  assert.match(ui,/Documentos prontos\/importados/);
  assert.match(ui,/AppDialog/);
  assert.match(billing,/['"]Convênios['"]/);
  assert.match(billing,/InsurancePending/);
+});
+
+test('Perseu preview is a wide inspector with only its table scrolling horizontally',()=>{
+ const css=read('app/billing/billing.css');
+ assert.match(css,/dialog\.perseus-preview-dialog\{[^}]*width:min\(1080px,calc\(100vw - 32px\)\)[^}]*overflow-x:hidden/);
+ assert.match(css,/\.perseus-preview\{[^}]*min-width:0/);
+ assert.match(css,/\.perseus-preview-table-wrap\{[^}]*overflow-x:auto[^}]*overflow-y:hidden/);
+ assert.match(css,/\.perseus-preview-table\{min-width:760px/);
+ assert.match(css,/\.perseus-preview \.perseus-fingerprint\{[^}]*word-break:break-all/);
+ assert.doesNotMatch(css,/\.perseus-preview\{display:grid;gap:14px;min-width:min\(920px/);
 });
 
 test('Convênios keeps one operational filter and consolidates Perseu in Documents',()=>{

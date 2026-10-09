@@ -1,6 +1,6 @@
 import {XMLParser,XMLValidator} from 'fast-xml-parser';
 import {PERSEUS_LIMITS,PERSEUS_PARSER_VERSION,PerseusParseError,type PerseusParseResult,type PerseusSheet} from '../contracts';
-import {boundedCell,layoutFingerprint,normalizeStructuralKey,structuralColumns} from '../normalize';
+import {boundedCell,duplicateHeaderWarning,layoutFingerprint,normalizeStructuralKey,structuralColumns} from '../normalize';
 
 type Candidate={path:string;records:unknown[];depth:number};
 function leaves(value:unknown,path:string,out:Record<string,unknown>,depth=0):void{
@@ -27,5 +27,6 @@ export function parseXml(bytes:Uint8Array):PerseusParseResult{
  const rows=candidate.records.map((record,index)=>{const rawData:Record<string,unknown>={};leaves(record,'',rawData);return {sourceIndex:index,source:{path:`${candidate.path}[${index}]`},rawData};});
  const headerNames=[...new Set(rows.flatMap(row=>Object.keys(row.rawData)))];if(headerNames.length>PERSEUS_LIMITS.maxColumns)throw new PerseusParseError('XML excede o limite de colunas.');
  const columns=structuralColumns(headerNames),sheet:PerseusSheet={name:normalizeStructuralKey(candidate.path)||'XML',rowCount:rows.length,columns};
- return {format:'XML',parserKey:'generic-xml',parserVersion:PERSEUS_PARSER_VERSION,layoutFingerprint:layoutFingerprint('XML',[sheet]),structure:{rowCount:rows.length,columnCount:columns.length,sheetCount:1,columns,sheets:[sheet]},items:rows,warnings:[]};
+ const duplicateWarning=duplicateHeaderWarning(columns);
+ return {format:'XML',parserKey:'generic-xml',parserVersion:PERSEUS_PARSER_VERSION,layoutFingerprint:layoutFingerprint('XML',[sheet]),structure:{rowCount:rows.length,columnCount:columns.length,sheetCount:1,columns,sheets:[sheet]},items:rows,warnings:duplicateWarning?[duplicateWarning]:[]};
 }

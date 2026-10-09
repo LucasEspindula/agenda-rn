@@ -1,5 +1,5 @@
 import {PERSEUS_LIMITS,PERSEUS_PARSER_VERSION,PerseusParseError,type PerseusParseResult} from '../contracts';
-import {boundedCell,layoutFingerprint,structuralColumns} from '../normalize';
+import {boundedCell,duplicateHeaderWarning,layoutFingerprint,structuralColumns} from '../normalize';
 
 function decode(bytes:Uint8Array){
  const utf8=new TextDecoder('utf-8',{fatal:false}).decode(bytes);
@@ -32,9 +32,10 @@ export function parseCsv(bytes:Uint8Array):PerseusParseResult{
  const columns=structuralColumns(header),items=[] as PerseusParseResult['items'];
  for(const [index,row] of rows.entries()){
   if(items.length>=PERSEUS_LIMITS.maxItems)throw new PerseusParseError('CSV excede o limite de linhas analisáveis.');
-  const rawData:Record<string,unknown>={};for(let column=0;column<columns.length;column++)rawData[columns[column].original]=boundedCell(row[column]??'',PERSEUS_LIMITS.maxCellLength);
+  const rawData:Record<string,unknown>={};for(let column=0;column<columns.length;column++)rawData[columns[column].key]=boundedCell(row[column]??'',PERSEUS_LIMITS.maxCellLength);
   items.push({sourceIndex:items.length,source:{row:index+2},rawData});
  }
  const sheets=[{name:'CSV',rowCount:items.length,columns}],layoutFingerprintValue=layoutFingerprint('CSV',sheets);
- return {format:'CSV',parserKey:'generic-csv',parserVersion:PERSEUS_PARSER_VERSION,layoutFingerprint:layoutFingerprintValue,structure:{rowCount:items.length,columnCount:columns.length,sheetCount:1,columns,sheets},items,warnings:[`Codificação detectada: ${decoded.encoding}.`,`Delimitador detectado: ${delimiter==='\t'?'TAB':delimiter}.`]};
+ const duplicateWarning=duplicateHeaderWarning(columns);
+ return {format:'CSV',parserKey:'generic-csv',parserVersion:PERSEUS_PARSER_VERSION,layoutFingerprint:layoutFingerprintValue,structure:{rowCount:items.length,columnCount:columns.length,sheetCount:1,columns,sheets},items,warnings:[`Codificação detectada: ${decoded.encoding}.`,`Delimitador detectado: ${delimiter==='\t'?'TAB':delimiter}.`,...(duplicateWarning?[duplicateWarning]:[])]};
 }

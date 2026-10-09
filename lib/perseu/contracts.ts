@@ -2,7 +2,7 @@ export const PERSEUS_PARSER_VERSION='1.0.0';
 export const PERSEUS_LIMITS={maxItems:2000,maxColumns:160,maxCellLength:10000,maxSheets:20,maxXmlDepth:32,maxXmlNodes:50000} as const;
 
 export type PerseusFormat='CSV'|'XLSX'|'XML';
-export type PerseusColumn={original:string;normalized:string};
+export type PerseusColumn={original:string;key:string;normalized:string};
 export type PerseusSheet={name:string;rowCount:number;columns:PerseusColumn[]};
 export type PerseusRawItem={sourceIndex:number;source?:{sheet?:string;row?:number;path?:string};rawData:Record<string,unknown>};
 export type PerseusParseResult={

@@ -2,6 +2,7 @@ import {getSession} from '@/app/authz';
 import {canManageInsurance} from '@/lib/insurance-control';
 import {inspectPerseusDocument} from '@/lib/perseu/inspect';
 import {PerseusParseError,type PerseusParseResult} from '@/lib/perseu/contracts';
+import {perseusItemRows} from '@/lib/perseu/persistence';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {consumeLimit} from '@/lib/security/rate-limit';
 import {HttpError,readJson,secureMutation} from '@/lib/security/http';
@@ -17,17 +18,10 @@ function manager(session:Awaited<ReturnType<typeof getSession>>):asserts session
 function id(value:unknown){return typeof value==='string'&&uuid.test(value)}
 function failure(error:unknown){return Response.json({error:error instanceof HttpError||error instanceof PerseusParseError?error.message:'Não foi possível analisar o documento.'},{status:error instanceof HttpError?error.status:500,headers:{'Cache-Control':'private, no-store'}})}
 async function documentFor(documentId:string){const result=await getSupabaseAdmin().from('insurance_documents').select('id,storage_path,detected_format,upload_status,raw_metadata').eq('id',documentId).maybeSingle();if(result.error)throw result.error;return result.data as Document|null;}
-function metadata(result:PerseusParseResult){return {parsed_at:new Date().toISOString(),parser_key:result.parserKey,parser_version:result.parserVersion,format:result.format,row_count:result.structure.rowCount,column_count:result.structure.columnCount,sheet_count:result.structure.sheetCount,layout_fingerprint:result.layoutFingerprint,warnings:result.warnings};}
-function itemRows(documentId:string,result:PerseusParseResult){return result.items.map(item=>({document_id:documentId,source_index:item.sourceIndex,raw_data:item.rawData,normalized_data:{},match_status:'UNMATCHED'}));}
-
+function metadata(result:PerseusParseResult){return {parsed_at:new Date().toISOString(),parser_key:result.parserKey,parser_version:result.parserVersion,format:result.format,row_count:result.structure.rowCount,column_count:result.structure.columnCount,sheet_count:result.structure.sheetCount,layout_fingerprint:result.layoutFingerprint,warnings:result.warnings,structure:{sheets:result.structure.sheets?.map(sheet=>({name:sheet.name,columns:sheet.columns}))}};}
 async function replaceItems(document:Document,result:PerseusParseResult,actorId:number){
- const db=getSupabaseAdmin(),previous=await db.from('insurance_document_items').select('*').eq('document_id',document.id).order('source_index',{ascending:true});if(previous.error)throw previous.error;
- const remove=await db.from('insurance_document_items').delete().eq('document_id',document.id);if(remove.error)throw remove.error;
- const insert=await db.from('insurance_document_items').insert(itemRows(document.id,result));
- if(insert.error){if(previous.data?.length)await db.from('insurance_document_items').insert(previous.data);throw insert.error;}
- const rawMetadata={...(document.raw_metadata||{}),perseus:metadata(result)};
- const update=await db.from('insurance_documents').update({perseus_status:'REVIEW_REQUIRED',parser_key:result.parserKey,parser_version:result.parserVersion,raw_metadata:rawMetadata,updated_at:new Date().toISOString(),updated_by:actorId}).eq('id',document.id).eq('upload_status','READY');
- if(update.error){await db.from('insurance_document_items').delete().eq('document_id',document.id);if(previous.data?.length)await db.from('insurance_document_items').insert(previous.data);throw update.error;}
+ const replace=await getSupabaseAdmin().rpc('replace_perseus_document_analysis',{p_document_id:document.id,p_items:perseusItemRows(result),p_parser_key:result.parserKey,p_parser_version:result.parserVersion,p_perseus_metadata:metadata(result),p_updated_by:actorId});
+ if(replace.error)throw replace.error;
 }
 
 async function fail(document:Document,actorId:number,message:string){
@@ -51,8 +45,8 @@ async function analyze(request:Request){
 export async function GET(request:Request){try{
  const session=await getSession();manager(session);const url=new URL(request.url),documentId=url.searchParams.get('id');if(typeof documentId!=='string'||!id(documentId))throw new HttpError(400,'Documento inválido.');
  const document=await documentFor(documentId);if(!document||document.upload_status!=='READY')throw new HttpError(404,'Documento não disponível.');
- const limit=Math.min(Math.max(Number(url.searchParams.get('limit')||20)||20,1),20),items=await getSupabaseAdmin().from('insurance_document_items').select('source_index,raw_data').eq('document_id',document.id).order('source_index',{ascending:true}).limit(limit);if(items.error)throw items.error;
+ const limit=Math.min(Math.max(Number(url.searchParams.get('limit')||20)||20,1),20),items=await getSupabaseAdmin().from('insurance_document_items').select('source_index,raw_data,source_metadata').eq('document_id',document.id).order('source_index',{ascending:true}).limit(limit);if(items.error)throw items.error;
  const perseus=(document.raw_metadata?.perseus&&typeof document.raw_metadata.perseus==='object'?document.raw_metadata.perseus:{}) as Record<string,unknown>;
- return Response.json({summary:perseus,items:((items.data||[]) as {source_index:number;raw_data:Record<string,unknown>}[]).map(item=>({sourceIndex:item.source_index,rawData:item.raw_data}))},{headers:{'Cache-Control':'private, no-store'}});
+ return Response.json({summary:perseus,items:((items.data||[]) as {source_index:number;raw_data:Record<string,unknown>;source_metadata:Record<string,unknown>}[]).map(item=>({sourceIndex:item.source_index,rawData:item.raw_data,sourceMetadata:item.source_metadata}))},{headers:{'Cache-Control':'private, no-store'}});
 }catch(error){return failure(error);}}
 export const POST=secureMutation(async request=>{try{return await analyze(request)}catch(error){return failure(error)}});
