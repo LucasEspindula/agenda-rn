@@ -127,3 +127,7 @@
 .hospital-table th:last-child,.hospital-table td:last-child{position:sticky;right:0;z-index:2;width:108px;min-width:108px;background:#fff;box-shadow:-8px 0 12px -12px #12374f66}
 .hospital-table th:last-child{z-index:4;background:#f8fafc}
 .hospital-table tbody tr:hover>td:last-child{background:#f5fbfb}
+
+
+/* Perseu: documental only; it does not alter financial records. */
+.insurance-control{display:grid;gap:18px}.perseus-label{display:inline-flex;align-items:center;gap:6px;margin-right:10px;color:#24566a;font-weight:700}.perseus-label svg{color:#16817d}.billing-primary svg{vertical-align:middle;margin-right:6px}.insurance-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.insurance-overview article{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid #dbe6ed;border-radius:12px;background:#fff}.insurance-overview span{color:#697f90;font-size:12px}.insurance-overview strong{color:#173e50;font-size:28px}.insurance-documents-table{min-width:1280px}.perseus-status{display:inline-flex;align-items:center;gap:5px;color:#386476;font-size:12px;font-weight:650;white-space:nowrap}.perseus-dialog-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:#1a5362}.perseus-dialog-head h2,.perseus-dialog-head p{margin:0}.perseus-dialog-head p{color:#718598;font-size:13px}@media(max-width:760px){.insurance-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}

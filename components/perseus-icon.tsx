@@ -1,0 +1,1 @@
+export default function PerseusIcon({size=20}:{size?:number}){return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M7 20v-3.2a5 5 0 0 1 10 0V20M8.3 9.2c.2-3.8 2-6.2 3.7-6.2s3.5 2.4 3.7 6.2M8 10.5c1.2.9 2.5 1.3 4 1.3s2.8-.4 4-1.3M9.5 13.5h5M10 17h4"/></svg>}
