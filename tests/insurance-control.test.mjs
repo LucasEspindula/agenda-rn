@@ -76,12 +76,14 @@ test('Perseu reproduces the compact master-detail workspace',()=>{
  assert.equal((css.match(/\.perseus-workspace-brand\{/g)||[]).length,0);
  assert.equal((css.match(/\.perseus-indicators\{/g)||[]).length,0);
  assert.match(css,/\.perseus-list-scroll\{[^}]*flex:1 1 auto[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
- assert.match(css,/\.perseus-document-detail\{[^}]*display:flex[^}]*flex-direction:column[^}]*min-height:0[^}]*overflow:hidden/);
- assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow:visible/);
+ assert.match(css,/\.perseus-document-detail\{[^}]*display:flex[^}]*flex-direction:column[^}]*height:100%[^}]*min-height:0[^}]*overflow:visible/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 0 auto[^}]*min-height:min-content[^}]*overflow:visible/);
  assert.match(css,/\.perseus-document-detail>footer\{[^}]*flex:0 0 auto/);
  assert.match(css,/\.perseus-original-file strong\{[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/);
  assert.match(css,/\.perseus-compact-header\{[^}]*padding-left:18px[^}]*padding-right:18px/);
- assert.match(css,/\.perseus-detail-body\{[^}]*gap:14px[^}]*padding:16px 20px[^}]*overflow:visible/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*gap:12px[^}]*padding:16px 20px 12px[^}]*overflow:visible/);
+ assert.match(css,/\.perseus-meta-grid\{[^}]*gap:12px 24px/);
+ assert.match(css,/\.perseus-original-file\{[^}]*padding-top:10px/);
  assert.doesNotMatch(css,/\.perseus-detail-extra\{/);
 });
 
