@@ -87,6 +87,26 @@ test('Perseu reproduces the compact master-detail workspace',()=>{
  assert.doesNotMatch(css,/\.perseus-detail-extra\{/);
 });
 
+test('Perseu header has an isolated institutional identity without changing its operation',()=>{
+ const ui=read('app/billing/insurance-control.tsx');
+ const css=read('app/billing/billing.css');
+ assert.match(ui,/className="perseus-identity-signature"/);
+ assert.match(ui,/className="perseus-eyebrow">Análise documental/);
+ assert.match(ui,/PerseusMark size=\{64\}/);
+ assert.match(ui,/<small>Pendências<\/small><strong>\{pendingCount\}/);
+ assert.match(ui,/<small>Importados<\/small><strong>\{ready\.length\}/);
+ assert.match(ui,/<small>Aguardando análise<\/small>/);
+ assert.match(ui,/<small>Convênios<\/small>/);
+ assert.match(ui,/className="billing-primary perseus-import-button"/);
+ assert.match(css,/\/\* Perseu — faixa institucional do workspace documental\. \*\//);
+ assert.match(css,/\.perseus-compact-header\{[^}]*min-height:112px[^}]*background:linear-gradient/);
+ assert.match(css,/\.perseus-identity-signature\{[^}]*72px[^}]*border:1px solid rgba\(193,157,102/);
+ assert.match(css,/\.perseus-eyebrow\{[^}]*letter-spacing:\.14em[^}]*text-transform:uppercase/);
+ assert.match(css,/\.perseus-identity h2\{[^}]*color:#f7fbfc[^}]*font-size:29px/);
+ assert.match(css,/\.perseus-summary-inline small\{[^}]*font-size:10px/);
+ assert.match(css,/@media\(max-width:700px\)\{[^}]*\.perseus-compact-header/);
+});
+
 test('workspace uses real document fields and preserves current actions',()=>{
  const ui=read('app/billing/insurance-control.tsx');
  assert.match(ui,/document\.detectedFormat/);

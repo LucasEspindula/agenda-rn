@@ -165,3 +165,23 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 /* Ajustes pontuais de respiro e contenção do cabeçalho/inspector do Perseu. */
 .perseus-compact-header{padding-left:18px;padding-right:18px}
 .perseus-document-detail>footer{padding:10px 20px 12px}
+
+/* Perseu — faixa institucional do workspace documental. */
+.perseus-compact-header{min-height:112px;padding:18px 28px;overflow:hidden;border-bottom:2px solid rgba(181,141,83,.82);background:linear-gradient(112deg,#0d2d3e 0%,#123d4e 58%,#164956 100%);box-shadow:0 3px 12px rgba(13,45,62,.13)}
+.perseus-identity{gap:18px;color:#fff}
+.perseus-identity-signature{display:grid;place-items:center;flex:0 0 72px;width:72px;height:72px;border:1px solid rgba(193,157,102,.56);border-radius:14px;background:rgba(6,29,40,.28);box-shadow:inset 0 1px rgba(255,255,255,.08)}
+.perseus-identity-mark{width:64px;height:64px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.22))}
+.perseus-identity-copy{display:grid;align-content:center;gap:3px;min-width:0}
+.perseus-eyebrow{color:#c7a773;font-size:10px;font-weight:800;letter-spacing:.14em;line-height:1.2;text-transform:uppercase}
+.perseus-identity h2{color:#f7fbfc;font-size:29px;font-weight:700;letter-spacing:-.03em;line-height:1.02}
+.perseus-identity p{margin:1px 0 0;color:#b9cad1;font-size:13px;line-height:1.35}
+.perseus-header-actions{gap:22px}
+.perseus-summary-inline{gap:0;color:#d1e0e4}
+.perseus-summary-inline span{display:grid;gap:3px;padding:0 14px;border-color:rgba(203,220,223,.2);line-height:1.1}
+.perseus-summary-inline small{color:#b6c9cf;font-size:10px;font-weight:650;letter-spacing:.01em;white-space:nowrap}
+.perseus-summary-inline strong{color:#f4f8f8;font-size:17px;font-weight:750;letter-spacing:-.02em}
+.perseus-import-button{min-height:40px;padding:10px 15px;border:1px solid rgba(218,255,251,.18);border-radius:8px;box-shadow:0 5px 12px rgba(1,58,60,.2);font-size:12px}
+.perseus-import-button>span:first-child{font-size:17px}
+@media(max-width:1250px){.perseus-summary-inline span:nth-child(3){display:grid}.perseus-summary-inline span{padding-inline:9px}.perseus-header-actions{gap:14px}}
+@media(max-width:1100px){.perseus-compact-header{align-items:flex-start;flex-direction:column;gap:14px}.perseus-header-actions{width:100%;justify-content:space-between}.perseus-summary-inline{flex-wrap:wrap;row-gap:9px}}
+@media(max-width:700px){.perseus-compact-header{min-height:0;padding:17px 18px}.perseus-identity{align-items:flex-start;gap:13px}.perseus-identity-signature{flex-basis:58px;width:58px;height:58px;border-radius:12px}.perseus-identity-mark{width:52px;height:52px}.perseus-identity h2{font-size:25px}.perseus-identity p{font-size:12px}.perseus-header-actions{align-items:stretch;flex-direction:column;gap:13px}.perseus-summary-inline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:8px}.perseus-summary-inline span{min-width:0;padding:7px 8px;border:1px solid rgba(203,220,223,.18);border-radius:7px;background:rgba(3,30,41,.17)}.perseus-import-button{width:100%;justify-content:center}}
