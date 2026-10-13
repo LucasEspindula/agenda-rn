@@ -45,6 +45,21 @@ test('Convênios exposes Perseu as the visible workspace tab',()=>{
  assert.match(billing,/<InsuranceControl data=\{data\} view=\{insuranceView\}/);
 });
 
+test('Convênios keeps one stable frame and reserves the Perseu state card slots',()=>{
+ const billing=read('app/billing/billing-client.tsx');
+ const ui=read('app/billing/insurance-control.tsx');
+ const css=read('app/billing/billing.css');
+ assert.match(billing,/className=\{'billing-main'\+\(tab==='insurance'\?' insurance-main':''\)\}/);
+ assert.match(billing,/className="insurance-view-frame"/);
+ assert.match(billing,/className=\{'insurance-view-content insurance-view-'\+insuranceView\}/);
+ assert.match(css,/\.insurance-view-frame\{[^}]*display:flex[^}]*flex-direction:column[^}]*min-height:0/);
+ assert.match(css,/\.insurance-view-frame>\.insurance-workspace-tabs\{[^}]*min-height:42px/);
+ assert.match(css,/\.perseus-inspector-state\{[^}]*display:grid[^}]*grid-template-columns:38px minmax\(0,1fr\)[^}]*min-height:78px/);
+ assert.match(css,/\.perseus-inspector-state div\{[^}]*grid-template-rows:11px 15px 13px[^}]*min-height:43px/);
+ assert.equal(ui.includes("<strong>{analysis.title}</strong><small>{analysis.detail||' '}</small>"),true);
+ assert.doesNotMatch(css,/\.perseus-inspector-state\{[^}]*overflow:(hidden|auto)/);
+});
+
 test('Perseu reproduces the compact master-detail workspace',()=>{
  const ui=read('app/billing/insurance-control.tsx');
  const css=read('app/billing/billing.css');
