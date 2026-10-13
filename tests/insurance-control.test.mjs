@@ -52,6 +52,8 @@ test('Perseu reproduces the compact master-detail workspace',()=>{
  assert.match(ui,/perseus-workspace-body/);
  assert.match(ui,/className="perseus-document-list"/);
  assert.match(ui,/className="perseus-document-detail"/);
+ assert.doesNotMatch(ui,/perseus-detail-extra/);
+ assert.doesNotMatch(ui,/entityLabel\(selected\.movement\.billing_entity\).*formatDateTimeBR\(selected\.createdAt\).*selected\.importer/);
  assert.match(ui,/className="perseus-list-toolbar"/);
  assert.match(ui,/value=\{filters\.query\}/);
  assert.match(ui,/value=\{filters\.entityId\}/);
@@ -75,12 +77,12 @@ test('Perseu reproduces the compact master-detail workspace',()=>{
  assert.equal((css.match(/\.perseus-indicators\{/g)||[]).length,0);
  assert.match(css,/\.perseus-list-scroll\{[^}]*flex:1 1 auto[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
  assert.match(css,/\.perseus-document-detail\{[^}]*display:flex[^}]*flex-direction:column[^}]*min-height:0[^}]*overflow:hidden/);
- assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow:visible/);
  assert.match(css,/\.perseus-document-detail>footer\{[^}]*flex:0 0 auto/);
  assert.match(css,/\.perseus-original-file strong\{[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/);
  assert.match(css,/\.perseus-compact-header\{[^}]*padding-left:18px[^}]*padding-right:18px/);
- assert.match(css,/\.perseus-detail-body\{[^}]*gap:14px[^}]*padding:16px 20px[^}]*scrollbar-width:none/);
- assert.match(css,/\.perseus-detail-body::\-webkit-scrollbar\{width:0;height:0/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*gap:14px[^}]*padding:16px 20px[^}]*overflow:visible/);
+ assert.doesNotMatch(css,/\.perseus-detail-extra\{/);
 });
 
 test('workspace uses real document fields and preserves current actions',()=>{
