@@ -66,11 +66,18 @@ test('Perseu reproduces the compact master-detail workspace',()=>{
  assert.doesNotMatch(css,/\.perseus-floating-action/);
  assert.doesNotMatch(css,/\.perseus-drawer/);
  assert.doesNotMatch(css,/\.perseus-stepper/);
- assert.match(css,/\.billing-main:has\(\.perseus-workspace\)\{[^}]*height:calc\(100dvh - 138px\)[^}]*overflow:hidden/);
+ assert.doesNotMatch(css,/height:calc\(100dvh - 138px\)|min-height:calc\(100dvh - 230px\)/);
+ assert.match(css,/\.rn-hub:has\(\.perseus-workspace\)\{[^}]*height:100dvh[^}]*min-height:0[^}]*overflow:hidden/);
+ assert.match(css,/\.billing-main:has\(\.perseus-workspace\)\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow:hidden/);
  assert.match(css,/\.perseus-workspace-body\{[^}]*grid-template-columns:minmax\(0,1fr\) 382px[^}]*min-height:0/);
- assert.match(css,/\.perseus-list-scroll\{[^}]*flex:1 1 auto[^}]*overflow-y:auto[^}]*overflow-x:hidden/);
- assert.match(css,/\.perseus-detail-body\{[^}]*min-height:0[^}]*overflow-y:auto/);
+ assert.equal((css.match(/\.perseus-workspace-header\{/g)||[]).length,0);
+ assert.equal((css.match(/\.perseus-workspace-brand\{/g)||[]).length,0);
+ assert.equal((css.match(/\.perseus-indicators\{/g)||[]).length,0);
+ assert.match(css,/\.perseus-list-scroll\{[^}]*flex:1 1 auto[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
+ assert.match(css,/\.perseus-document-detail\{[^}]*display:flex[^}]*flex-direction:column[^}]*min-height:0[^}]*overflow:hidden/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
  assert.match(css,/\.perseus-document-detail>footer\{[^}]*flex:0 0 auto/);
+ assert.match(css,/\.perseus-original-file strong\{[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/);
 });
 
 test('workspace uses real document fields and preserves current actions',()=>{
