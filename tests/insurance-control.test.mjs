@@ -5,6 +5,7 @@ import {loadTs} from './load-ts.mjs';
 
 const read=(path)=>readFileSync(path,'utf8');
 const control=loadTs('lib/insurance-control.ts');
+const drawer=loadTs('app/billing/insurance-control.ts');
 
 test('Perseu validates physical formats without semantic parsing',()=>{
  assert.equal(control.detectInsuranceDocument(new Uint8Array([37,80,68,70,45]),'retorno.pdf'),'PDF');
@@ -25,6 +26,13 @@ test('Perseu isolates authorization, document lifecycle and duplicate context',(
  assert.equal(control.insuranceDocumentState('REJECTED','Arquivo duplicado.').reason,'Arquivo duplicado.');
  assert.equal(control.sameInsuranceDocumentContext({billingEntityId:'entity',payer:' UNIMED  Porto Alegre ',competence:'2026-10-01'},{billingEntityId:'entity',payer:'unimed porto alegre',competence:'2026-10-01'}),true);
  assert.equal(control.sameInsuranceDocumentContext({billingEntityId:'entity',payer:'UNIMED',competence:'2026-10-01'},{billingEntityId:'entity',payer:'UNIMED',competence:'2026-11-01'}),false);
+});
+
+test('Perseu validates Contexto before opening the file step',()=>{
+ assert.equal(drawer.perseusContextError({billingEntityId:'',payer:'UNIMED'}),'billingEntityId');
+ assert.equal(drawer.perseusContextError({billingEntityId:'entity',payer:''}),'payer');
+ assert.equal(drawer.perseusContextError({billingEntityId:'entity',payer:'   '}),'payer');
+ assert.equal(drawer.perseusContextError({billingEntityId:'entity',payer:'UNIMED'}),null);
 });
 
 test('Perseu foundation stays document-only and exposes coherent states',()=>{
@@ -81,16 +89,25 @@ test('Perseu preview is a wide inspector with only its table scrolling horizonta
  assert.doesNotMatch(css,/\.perseus-preview\{display:grid;gap:14px;min-width:min\(920px/);
 });
 
-test('Perseu drawer uses clear stages without blocking document actions',()=>{
+test('Perseu drawer validates Contexto and keeps Análise as a future indicator',()=>{
  const ui=read('app/billing/insurance-control.tsx');
  const css=read('app/billing/billing.css');
- assert.match(ui,/type PerseusStep='context'\|'file'\|'analysis'/);
- assert.match(ui,/function openDrawer\(\)\{setStep\('context'\);setOpen\(true\);\}/);
+ assert.match(ui,/type PerseusStep='context'\|'file'/);
+ assert.match(ui,/function openDrawer\(\)\{resetDrawer\(\);setOpen\(true\);\}/);
+ assert.match(ui,/function perseusContextError\(values:\{billingEntityId:string;payer:string\}\)\{if\(!values\.billingEntityId\)return 'billingEntityId';if\(!values\.payer\.trim\(\)\)return 'payer';return null;\}/);
+ assert.match(ui,/function goToFile\(\)\{if\(busy\)return;const invalid=perseusContextError\(form\)/);
+ assert.match(ui,/entityRef\.current:payerRef\.current/);
  assert.match(ui,/className="perseus-stepper"/);
  assert.match(ui,/aria-current=\{step===item\.id\?'step':undefined\}/);
+ assert.match(ui,/item\.id==='analysis'\?<span/);
+ assert.match(ui,/Após importação/);
  assert.match(ui,/Continuar para arquivo/);
  assert.match(ui,/Selecionar arquivo/);
- assert.match(ui,/Análise manual/);
+ assert.doesNotMatch(ui,/Análise manual/);
+ assert.doesNotMatch(ui,/Observação|<textarea/);
+ assert.match(ui,/uploadInsuranceDocument\(file,\{\.\.\.form,notes:''\}\)/);
+ assert.match(ui,/function resetDrawer\(\)\{setFile\(null\);setStep\('context'\);\}/);
+ assert.match(ui,/disabled=\{busy\}/);
  assert.match(ui,/<PerseusMark size=\{38\} className="perseus-floating-mark"\/><span>Importar com Perseu<\/span>/);
  assert.match(ui,/fileSize\(file\.size\)/);
  assert.match(css,/\.rn-hub:has\(\.perseus-floating-action\) \.billing-main\{padding-bottom:116px\}/);
