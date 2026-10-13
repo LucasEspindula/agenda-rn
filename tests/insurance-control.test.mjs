@@ -78,6 +78,9 @@ test('Perseu reproduces the compact master-detail workspace',()=>{
  assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
  assert.match(css,/\.perseus-document-detail>footer\{[^}]*flex:0 0 auto/);
  assert.match(css,/\.perseus-original-file strong\{[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/);
+ assert.match(css,/\.perseus-compact-header\{[^}]*padding-left:18px[^}]*padding-right:18px/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*gap:14px[^}]*padding:16px 20px[^}]*scrollbar-width:none/);
+ assert.match(css,/\.perseus-detail-body::\-webkit-scrollbar\{width:0;height:0/);
 });
 
 test('workspace uses real document fields and preserves current actions',()=>{
