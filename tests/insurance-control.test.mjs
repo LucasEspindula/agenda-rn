@@ -45,11 +45,11 @@ test('Convênios exposes Perseu as the visible workspace tab',()=>{
  assert.match(billing,/<InsuranceControl data=\{data\} view=\{insuranceView\}/);
 });
 
-test('Perseu workspace replaces the legacy table, floating action and drawer',()=>{
+test('Perseu reproduces the compact master-detail workspace',()=>{
  const ui=read('app/billing/insurance-control.tsx');
  const css=read('app/billing/billing.css');
  assert.match(ui,/className="perseus-workspace"/);
- assert.match(ui,/className="perseus-workspace-body"/);
+ assert.match(ui,/perseus-workspace-body/);
  assert.match(ui,/className="perseus-document-list"/);
  assert.match(ui,/className="perseus-document-detail"/);
  assert.match(ui,/className="perseus-list-toolbar"/);
@@ -58,12 +58,18 @@ test('Perseu workspace replaces the legacy table, floating action and drawer',()
  assert.match(ui,/value=\{filters\.format\}/);
  assert.match(ui,/selectedPerseusDocument\(visibleDocuments,selectedId\)/);
  assert.match(ui,/Convênio \/ Pagador/);
+ assert.match(ui,/Importar documento/);
+ assert.match(ui,/className="perseus-summary-inline"/);
  assert.doesNotMatch(ui,/PAYER/);
  assert.doesNotMatch(ui,/perseus-floating-action/);
  assert.doesNotMatch(ui,/perseus-drawer/);
  assert.doesNotMatch(css,/\.perseus-floating-action/);
- assert.match(css,/\.perseus-workspace-body\{[^}]*grid-template-columns:minmax\(0,1fr\) minmax\(310px,380px\)/);
- assert.match(css,/\.perseus-list-scroll\{[^}]*overflow:auto/);
+ assert.doesNotMatch(css,/\.perseus-drawer/);
+ assert.doesNotMatch(css,/\.perseus-stepper/);
+ assert.match(css,/\.billing-main:has\(\.perseus-workspace\)\{[^}]*height:calc\(100dvh - 138px\)[^}]*overflow:hidden/);
+ assert.match(css,/\.perseus-workspace-body\{[^}]*grid-template-columns:minmax\(0,1fr\) 382px[^}]*min-height:0/);
+ assert.match(css,/\.perseus-list-scroll\{[^}]*flex:1 1 auto[^}]*overflow-y:auto[^}]*overflow-x:hidden/);
+ assert.match(css,/\.perseus-detail-body\{[^}]*min-height:0[^}]*overflow-y:auto/);
  assert.match(css,/\.perseus-document-detail>footer\{[^}]*flex:0 0 auto/);
 });
 
@@ -77,8 +83,19 @@ test('workspace uses real document fields and preserves current actions',()=>{
  assert.match(ui,/Reanalisar com Perseu/);
  assert.match(ui,/Tentar novamente com Perseu/);
  assert.match(ui,/Cancelar importação/);
- assert.match(ui,/Ver prévia estrutural/);
+ assert.match(ui,/Ver prévia estruturada/);
  assert.match(ui,/href=\{url\}/);
+});
+
+test('preview and cancellation actions are kept in the inspector footer',()=>{
+ const ui=read('app/billing/insurance-control.tsx');
+ const footer=ui.slice(ui.indexOf('<footer>{action&&'));
+ const body=ui.slice(ui.indexOf('className="perseus-detail-body"'),ui.indexOf('</div><footer>{action&&'));
+ assert.match(footer,/Ver prévia estruturada/);
+ assert.match(footer,/Cancelar importação/);
+ assert.doesNotMatch(body,/Ver prévia estrutural/);
+ assert.match(ui,/className="perseus-meta-grid"/);
+ assert.match(ui,/onClick=\{\(\)=>setDetailOpen\(false\)\}/);
 });
 
 test('header import uses a conventional dialog and preserves the validated two-step flow',()=>{
