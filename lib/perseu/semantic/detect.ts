@@ -19,6 +19,12 @@ import {
   type SemanticClassification,
   type SemanticColumnInterpretation,
 } from "./contracts";
+import {
+  compatiblePerseusRules,
+  learnedRuleDecision,
+  perseusTableSignature,
+} from "../supervision/rules";
+import type { PerseusRuleContext, PerseusSemanticRule } from "../supervision/contracts";
 
 type Candidate = {
   field: PerseusSemanticField;
@@ -132,15 +138,35 @@ function totalRow(item: PerseusRawItem) {
 
 export function interpretPerseusSemantics(
   result: PerseusParseResult,
+  learned?: { context: Omit<PerseusRuleContext, "tableSignature">; rules: PerseusSemanticRule[] },
 ): PerseusParseResult {
   const tables = result.structure.tables || [];
   const semanticTables = tables.map((table) => {
     const tableItems = result.items.filter(
       (item) => item.source?.tableId === table.tableId,
     );
-    const columns = table.columns.map((column) =>
-      interpretation(table, column, tableItems),
-    );
+    const columns = table.columns.map((column) => {
+      const current = interpretation(table, column, tableItems);
+      if (!learned) return current;
+      const decision = learnedRuleDecision(
+        compatiblePerseusRules(learned.rules, {
+          ...learned.context,
+          tableSignature: perseusTableSignature(table),
+        }, column.normalized),
+      );
+      if (decision.kind === "none") return current;
+      if (decision.kind === "conflict")
+        return { ...current, field: null, classification: "AMBIGUOUS" as const, origin: "CONFLICT" as const, warnings: [...current.warnings, "Há regras aprendidas conflitantes; revisão humana é necessária."] };
+      return {
+        ...current,
+        field: decision.field,
+        classification: (decision.field ? "MEDIUM" : "UNKNOWN") as SemanticClassification,
+        origin: "LEARNED_SUGGESTION" as const,
+        ruleId: decision.ruleId,
+        reasons: ["Sugestão aprendida de revisão humana compatível."],
+        warnings: decision.field ? [] : ["Coluna rejeitada em revisão humana anterior."],
+      };
+    });
     const fieldCounts = new Map<PerseusSemanticField, number>();
     for (const column of columns)
       if (column.field)
@@ -183,6 +209,7 @@ export function interpretPerseusSemantics(
         if (normalized.value) normalizedData[column.field] = normalized.value;
         semanticEvidence[column.field] = {
           ...column,
+          origin: column.origin || "HEURISTIC",
           warnings: [
             ...column.warnings,
             ...(normalized.warning ? [normalized.warning] : []),

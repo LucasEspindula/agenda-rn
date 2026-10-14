@@ -9,6 +9,9 @@ import { perseusItemRows } from "@/lib/perseu/persistence";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
+import { normalizeInsurancePayer } from "@/lib/insurance-control";
+import { interpretPerseusSemantics } from "@/lib/perseu/semantic/detect";
+import type { PerseusSemanticRule } from "@/lib/perseu/supervision/contracts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +25,8 @@ type Document = {
   detected_format: string | null;
   upload_status: string;
   raw_metadata: Record<string, unknown> | null;
+  updated_at: string;
+  movement: { billing_entity_id: string; payer: string; kind: string };
 };
 
 function manager(
@@ -50,7 +55,7 @@ function failure(error: unknown) {
 async function documentFor(documentId: string) {
   const result = await getSupabaseAdmin()
     .from("insurance_documents")
-    .select("id,storage_path,detected_format,upload_status,raw_metadata")
+    .select("id,storage_path,detected_format,upload_status,raw_metadata,updated_at,movement:insurance_movements!inner(billing_entity_id,payer,kind)")
     .eq("id", documentId)
     .maybeSingle();
   if (result.error) throw result.error;
@@ -159,9 +164,28 @@ async function analyze(request: Request) {
         { ok: false, unsupported: true, message: inspection.message },
         { headers: { "Cache-Control": "private, no-store" } },
       );
-    await replaceItems(document, inspection.result, session.account.id);
+    const rules = await getSupabaseAdmin()
+      .from("perseus_semantic_rules")
+      .select("id,domain,billing_entity_id,payer_normalized,movement_kind,layout_fingerprint,table_signature,column_normalized,semantic_field,state,version")
+      .eq("state", "ACTIVE")
+      .eq("domain", "INSURANCE")
+      .eq("billing_entity_id", document.movement.billing_entity_id)
+      .eq("payer_normalized", normalizeInsurancePayer(document.movement.payer))
+      .eq("movement_kind", document.movement.kind);
+    if (rules.error) throw rules.error;
+    const learned = interpretPerseusSemantics(inspection.result, {
+      context: {
+        domain: "INSURANCE",
+        billingEntityId: document.movement.billing_entity_id,
+        payerNormalized: normalizeInsurancePayer(document.movement.payer),
+        movementKind: document.movement.kind,
+        layoutFingerprint: inspection.result.layoutFingerprint,
+      },
+      rules: ((rules.data || []) as unknown as PerseusSemanticRule[]),
+    });
+    await replaceItems(document, learned, session.account.id);
     return Response.json(
-      { ok: true, summary: metadata(inspection.result) },
+      { ok: true, summary: metadata(learned) },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
@@ -194,7 +218,7 @@ export async function GET(request: Request) {
       items = await getSupabaseAdmin()
         .from("insurance_document_items")
         .select(
-          "source_index,raw_data,normalized_data,match_evidence,source_metadata",
+          "id,source_index,raw_data,normalized_data,match_evidence,source_metadata",
         )
         .eq("document_id", document.id)
         .order("source_index", { ascending: true })
@@ -209,8 +233,10 @@ export async function GET(request: Request) {
     return Response.json(
       {
         summary: perseus,
+        updatedAt: document.updated_at,
         items: (
           (items.data || []) as {
+            id: string;
             source_index: number;
             raw_data: Record<string, unknown>;
             normalized_data: Record<string, unknown>;
@@ -218,6 +244,7 @@ export async function GET(request: Request) {
             source_metadata: Record<string, unknown>;
           }[]
         ).map((item) => ({
+          id: item.id,
           sourceIndex: item.source_index,
           rawData: item.raw_data,
           normalizedData: item.normalized_data,

@@ -26,6 +26,8 @@ export type SemanticEvidence = {
   classification: SemanticClassification;
   reasons: string[];
   warnings: string[];
+  origin?: "HEURISTIC" | "LEARNED_SUGGESTION" | "USER_CONFIRMED" | "USER_REJECTED" | "CONFLICT";
+  ruleId?: string;
 };
 
 export type SemanticColumnInterpretation = SemanticEvidence & {

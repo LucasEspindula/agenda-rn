@@ -86,7 +86,9 @@ type DocumentRow = {
 type Preview = {
   document: DocumentRow;
   summary: Analysis;
+  updatedAt?: string;
   items: {
+    id: string;
     sourceIndex: number;
     rawData: Record<string, unknown>;
     normalizedData: Record<string, string>;
@@ -135,6 +137,9 @@ const normalizedSummary = (values: Record<string, string>) =>
   Object.entries(values)
     .map(([field, value]) => `${semanticLabel(field)}: ${value}`)
     .join(" · ");
+const semanticFields = [
+  "patient_name","beneficiary_number","guide_number","external_reference","service_date","procedure_code","procedure_description","amount_presented","amount_approved","amount_glossed","gloss_code","gloss_reason",
+];
 function analysisText(document: DocumentRow) {
   if (document.perseusStatus === "REVIEW_REQUIRED")
     return { title: "Estrutura identificada", detail: "Revisão necessária" };
@@ -233,6 +238,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
     [busy, setBusy] = useState(false),
     [analyzingId, setAnalyzingId] = useState(""),
     [preview, setPreview] = useState<Preview | null>(null),
+    [reviewingKey, setReviewingKey] = useState(""),
     [previewTableId, setPreviewTableId] = useState(""),
     [file, setFile] = useState<File | null>(null),
     [step, setStep] = useState<PerseusStep>("context"),
@@ -488,6 +494,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
         document,
         summary: payload.summary || {},
         items: payload.items || [],
+        updatedAt: payload.updatedAt,
       } as Preview;
       setPreview(next);
       setPreviewTableId(
@@ -503,6 +510,33 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
             : "Não foi possível carregar a prévia.",
       });
     }
+  }
+  async function reviewMapping(document: DocumentRow, tableId: string, sourceKey: string, semanticField: string | null, learn: boolean) {
+    if (!preview?.updatedAt) return;
+    const key = tableId + ":" + sourceKey;
+    setReviewingKey(key);
+    try {
+      const response = await fetch("/api/insurance-control/semantic-review", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: document.id, tableId, sourceKey, semanticField, learn, expectedUpdatedAt: preview.updatedAt }),
+      }), payload = await response.json();
+      if (!response.ok) throw Error(payload.error || "Não foi possível registrar a revisão.");
+      await load();
+      await openPreview(document);
+    } catch (reason) {
+      setPreviewError({ documentId: document.id, message: reason instanceof Error ? reason.message : "Não foi possível registrar a revisão." });
+    } finally { setReviewingKey(""); }
+  }
+  async function correctValue(itemId: string, field: string, value: string) {
+    if (!preview?.updatedAt) return;
+    const key = "value:" + itemId + ":" + field;
+    setReviewingKey(key);
+    try {
+      const response = await fetch("/api/insurance-control/semantic-review", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documentId: preview.document.id, itemId, semanticField: field, value, expectedUpdatedAt: preview.updatedAt }) }), payload = await response.json();
+      if (!response.ok) throw Error(payload.error || "Não foi possível corrigir o valor.");
+      await load(); await openPreview(preview.document);
+    } catch (reason) { setPreviewError({ documentId: preview.document.id, message: reason instanceof Error ? reason.message : "Não foi possível corrigir o valor." }); }
+    finally { setReviewingKey(""); }
   }
   return (
     <>
@@ -1227,6 +1261,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                           <th>Significado</th>
                           <th>Confiança</th>
                           <th>Critérios</th>
+                          <th>Revisão humana</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1252,6 +1287,25 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                               {[...column.reasons, ...column.warnings].join(
                                 " · ",
                               ) || "—"}
+                            </td>
+                            <td className="perseus-semantic-review">
+                              <select
+                                aria-label={"Significado de " + column.sourceColumn}
+                                defaultValue={column.field || ""}
+                                disabled={reviewingKey === semanticTable.tableId + ":" + column.sourceKey}
+                                onChange={(event) => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, event.target.value || null, false)}
+                              >
+                                <option value="">Não mapear</option>
+                                {semanticFields.map((field) => <option key={field} value={field}>{semanticLabel(field)}</option>)}
+                              </select>
+                              <button
+                                type="button"
+                                className="billing-link-button"
+                                disabled={!column.field || reviewingKey === semanticTable.tableId + ":" + column.sourceKey}
+                                onClick={() => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, column.field, true)}
+                              >
+                                {reviewingKey === semanticTable.tableId + ":" + column.sourceKey ? "Salvando…" : "Confirmar e aprender"}
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1293,6 +1347,23 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                             ))}
                             <td>
                               {normalizedSummary(item.normalizedData) || "—"}
+                              {Object.keys(item.normalizedData).length > 0 && (
+                                <details className="perseus-value-corrections">
+                                  <summary>Corrigir valores</summary>
+                                  {Object.entries(item.normalizedData).map(([field, value]) => (
+                                    <label key={field}>
+                                      {semanticLabel(field)}
+                                      <input
+                                        defaultValue={value}
+                                        disabled={reviewingKey === "value:" + item.id + ":" + field}
+                                        onBlur={(event) => {
+                                          if (event.target.value !== value) void correctValue(item.id, field, event.target.value);
+                                        }}
+                                      />
+                                    </label>
+                                  ))}
+                                </details>
+                              )}
                             </td>
                           </tr>
                         );

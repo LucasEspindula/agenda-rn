@@ -9,6 +9,7 @@ const engine=loadTs('lib/perseu/inspect.ts');
 const normalize=loadTs('lib/perseu/normalize.ts');
 const semanticNormalize=loadTs('lib/perseu/semantic/normalize.ts');
 const persistence=loadTs('lib/perseu/persistence.ts');
+const supervision=loadTs('lib/perseu/supervision/rules.ts');
 const text=value=>new TextEncoder().encode(value);
 
 test('Perseu uses the official SheetJS CE 0.20.3 package source',()=>{
@@ -251,4 +252,30 @@ test('Perseu preview keeps detected tables distinct instead of mixing their colu
  assert.match(ui,/Estrutura identificada/);
  assert.match(ui,/perseus-preview-table-select/);
  assert.match(ui,/Interpreta\u00e7\u00e3o normalizada/);
+});
+
+test('Perseu learned mappings are strictly scoped and conflicts remain reviewable',()=>{
+ const table={columns:[{normalized:'beneficiario'},{normalized:'guia'}]};
+ const context={domain:'INSURANCE',billingEntityId:'entity-a',payerNormalized:'UNIMED',movementKind:'PROCESSING',layoutFingerprint:'layout-a',tableSignature:supervision.perseusTableSignature(table)};
+ const rule={id:'rule-1',...context,columnNormalized:'beneficiario',semanticField:'patient_name',state:'ACTIVE',version:1};
+ assert.equal(supervision.compatiblePerseusRules([rule],context,'beneficiario').length,1);
+ assert.equal(supervision.compatiblePerseusRules([rule],{...context,payerNormalized:'OUTRO'},'beneficiario').length,0);
+ assert.deepEqual(JSON.parse(JSON.stringify(supervision.learnedRuleDecision([rule]))),{kind:'suggestion',field:'patient_name',ruleId:'rule-1'});
+ assert.deepEqual(JSON.parse(JSON.stringify(supervision.learnedRuleDecision([rule,{...rule,id:'rule-2',semanticField:'guide_number'}]))),{kind:'conflict'});
+});
+
+test('Perseu Phase 3C protects reviewed documents and keeps supervision server-only',()=>{
+ const migration=readFileSync('supabase/migrations/20261015120000_perseus_supervised_semantics.sql','utf8');
+ const route=readFileSync('app/api/insurance-control/semantic-review/route.ts','utf8');
+ assert.match(migration,/perseus_semantic_reviews/);
+ assert.match(migration,/perseus_semantic_rules/);
+ assert.match(migration,/perseus_semantic_value_corrections/);
+ assert.match(migration,/O documento possui revisão humana/);
+ assert.match(migration,/for update/);
+ assert.match(migration,/revoke all on table .* from public,anon,authenticated/);
+ assert.match(migration,/grant all on table .* to service_role/);
+ assert.match(route,/canManageInsurance/);
+ assert.match(route,/consumeLimit\('perseus-semantic-review'/);
+ assert.match(route,/apply_perseus_semantic_review/);
+ assert.doesNotMatch(route,/billing_records|invoice_billing_records|attendances/);
 });
