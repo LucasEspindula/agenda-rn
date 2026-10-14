@@ -192,11 +192,51 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 .perseus-preview-table-select{display:grid;gap:5px;max-width:460px;color:#607681;font-size:11px;font-weight:750}.perseus-preview-table-select select{min-width:0;max-width:100%;padding:7px 9px;border:1px solid #dce7ea;border-radius:7px;background:#fff;color:#294958;font:inherit}.perseus-preview-structure-note{margin:0;color:#71838e;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
 
 /* Navegação financeira compartilhada: operações à esquerda, Perseu como módulo documental. */
-.billing-subnav-nav{display:flex;align-items:stretch;width:100%;min-width:0;overflow:visible!important;gap:0!important}.billing-subnav-financial{display:flex;min-width:0;flex:1 1 auto;overflow-x:auto;scrollbar-width:thin}.billing-subnav .billing-subnav-perseus{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;margin-left:12px;padding:0 16px;border-left:1px solid #dce6eb;color:#58717b;font-size:13px;font-weight:750;text-decoration:none;white-space:nowrap}.billing-subnav .billing-subnav-perseus img{width:22px;height:22px;object-fit:contain}.billing-subnav .billing-subnav-perseus:hover{background:#f8fbfb;color:#087b76}.billing-subnav .billing-subnav-perseus[aria-current=page]{background:#f4fbfa;color:#087b76;box-shadow:inset 0 -3px #18a7a0}.billing-subnav .billing-subnav-perseus:focus-visible{outline:2px solid #18a7a0;outline-offset:-3px}.perseus-main{box-sizing:border-box;display:flex;flex:1 1 auto;flex-direction:column;min-height:0;padding:12px 24px 16px}.perseus-load-error,.perseus-list-error{display:grid;gap:10px;align-content:center;justify-items:start;padding:24px;color:#8f2935}.perseus-load-error{margin:20px 0;border:1px solid #efb7bd;border-radius:12px;background:#fff7f7}.perseus-list-error{min-height:180px}
+/* Perseu é independente da navegação financeira: somente a lista financeira pode rolar. */
+.rn-hub .billing-subnav{overflow-x:hidden}
+.rn-hub .billing-subnav nav.billing-subnav-nav{
+  display:flex;align-items:center;flex:1 1 auto;gap:12px;
+  width:100%;max-width:100%;min-width:0;overflow:visible;
+}
+.rn-hub .billing-subnav .billing-subnav-financial{
+  display:flex;align-items:center;gap:3px;
+  flex:1 1 auto;min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+}
+.rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus{
+  box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;gap:8px;height:40px;min-height:40px;margin:0;padding:5px 14px;
+  border:1px solid #b79864;border-radius:9px;background:#10384b;color:#fff;
+  box-shadow:0 2px 6px rgba(12,43,58,.15);
+  font-size:13px;font-weight:750;line-height:1;white-space:nowrap;text-decoration:none;
+}
+.rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus img{
+  display:block;flex:0 0 auto;width:27px;height:27px;object-fit:contain;
+}
+.rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus:hover{
+  background:#174b5e;color:#fff;border-color:#cbb17e;
+}
+.rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus[aria-current=page]{
+  background:#0c2d40;color:#fff;border-color:#c6a46f;
+  box-shadow:inset 0 -3px #20aaa4,0 2px 6px rgba(12,43,58,.17);
+}
+.rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus:focus-visible{
+  outline:2px solid #20aaa4;outline-offset:2px;
+}
+@media(max-width:700px){
+  .rn-hub .billing-subnav nav.billing-subnav-nav{gap:6px}
+  .rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus{
+    height:38px;min-height:38px;padding:5px 10px;gap:6px;
+  }
+  .rn-hub .billing-subnav nav.billing-subnav-nav > a.billing-subnav-perseus img{
+    width:23px;height:23px;
+  }
+}
+
+.perseus-main{box-sizing:border-box;display:flex;flex:1 1 auto;flex-direction:column;min-height:0;padding:12px 24px 16px}.perseus-load-error,.perseus-list-error{display:grid;gap:10px;align-content:center;justify-items:start;padding:24px;color:#8f2935}.perseus-load-error{margin:20px 0;border:1px solid #efb7bd;border-radius:12px;background:#fff7f7}.perseus-list-error{min-height:180px}
 
 /* Avisos pertencem ao documento e expandem somente o card de Estado Perseu. */
 .perseus-inspector-state{display:grid;gap:10px;align-content:center;min-width:0;padding:12px}.perseus-inspector-state-main{display:grid;grid-template-columns:38px minmax(0,1fr);align-items:center;gap:10px;min-width:0}.perseus-inspector-state-main>img{width:38px;height:38px}.perseus-inspector-state-main>div{display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}.perseus-inspector-state-main span{line-height:1.2}.perseus-inspector-state-main strong,.perseus-inspector-state-main small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.perseus-context-notice{display:grid;gap:5px;margin-top:1px;padding:9px 10px;border:1px solid;border-radius:8px;font-size:11px;line-height:1.4}.perseus-context-notice.info{border-color:#e2c77c;background:#fff9e9;color:#765a13}.perseus-context-notice.error{border-color:#efb7bd;background:#fff4f5;color:#9f2936}.perseus-context-notice>div{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0}.perseus-context-notice strong{color:inherit;font-size:11px}.perseus-context-notice p{margin:0;overflow-wrap:anywhere}.perseus-context-notice button{display:grid;place-items:center;width:24px;height:24px;flex:0 0 24px;border:0;border-radius:6px;background:transparent;color:currentColor;font-size:18px;line-height:1;cursor:pointer}.perseus-context-notice button:hover{background:#0000000a}.perseus-context-notice button:focus-visible{outline:2px solid currentColor;outline-offset:2px}.perseus-preview-error{margin:0;color:#9f2936;font-size:11px;line-height:1.35}.perseus-import-error{margin:0 22px!important}.perseus-document-detail>footer{position:static}
-@media(max-width:700px){.billing-subnav .billing-subnav-perseus{margin-left:4px;padding-inline:11px}.billing-subnav .billing-subnav-perseus span{font-size:12px}.perseus-main{padding:12px}.perseus-import-error{margin-inline:16px!important}}
+@media(max-width:700px){.perseus-main{padding:12px}.perseus-import-error{margin-inline:16px!important}}
 
 /* Fase 3B: um único fluxo vertical no inspetor; o corpo rola somente quando a altura realmente não comporta o conteúdo. */
 .perseus-document-detail{overflow:hidden}
@@ -204,4 +244,3 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 .perseus-semantic-summary{display:grid;gap:8px;min-width:0;padding:12px;border:1px solid #dce8e9;border-radius:9px;background:#fbfdfd}.perseus-semantic-summary>div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.perseus-semantic-summary h4{margin:0;color:#294c58;font-size:12px}.perseus-semantic-summary small,.perseus-semantic-summary p{margin:0;color:#6b8189;font-size:10px;line-height:1.4}.perseus-semantic-summary table{width:100%;border-collapse:collapse;font-size:11px}.perseus-semantic-summary th,.perseus-semantic-summary td{padding:7px 6px;border-top:1px solid #e7eff0;text-align:left;vertical-align:top}.perseus-semantic-summary th{color:#70858c;font-size:9px;letter-spacing:.05em;text-transform:uppercase}.perseus-semantic-class{display:inline-flex;border-radius:999px;padding:3px 6px;font-size:9px;font-weight:800;letter-spacing:.04em}.perseus-semantic-class.high{background:#e6f7f3;color:#197168}.perseus-semantic-class.medium{background:#fff4dd;color:#876010}.perseus-semantic-class.ambiguous{background:#fff0ee;color:#9b5142}.perseus-semantic-class.unknown{background:#eff3f4;color:#637780}
 
 /* Perseu é o módulo documental especial da barra financeira. */
-.billing-subnav .billing-subnav-perseus{min-height:48px;margin:5px 8px 5px 14px;padding:0 17px;border:1px solid rgba(172,139,84,.7);border-radius:9px;background:#102f40;color:#fff;box-shadow:0 2px 7px rgba(10,39,53,.16)}.billing-subnav .billing-subnav-perseus img{width:29px;height:29px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.26))}.billing-subnav .billing-subnav-perseus:hover{background:#174759;color:#fff}.billing-subnav .billing-subnav-perseus[aria-current=page]{background:#0d2a39;box-shadow:inset 0 -3px #1ba9a1,0 3px 9px rgba(10,39,53,.18)}.billing-subnav .billing-subnav-perseus:focus-visible{outline:3px solid #20aaa4;outline-offset:2px}@media(max-width:700px){.billing-subnav .billing-subnav-perseus{min-height:42px;margin:5px 4px;padding-inline:12px}.billing-subnav .billing-subnav-perseus img{width:25px;height:25px}}
