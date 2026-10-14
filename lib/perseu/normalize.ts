@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {PerseusParseError} from './contracts';
-import type {PerseusColumn,PerseusFormat,PerseusSheet} from './contracts';
+import type {PerseusColumn,PerseusFormat,PerseusSheet,PerseusTable} from './contracts';
 
 export function normalizeStructuralKey(value:unknown){
  return String(value??'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').replace(/_+/g,'_');
@@ -21,8 +21,8 @@ export function duplicateHeaderWarning(columns:PerseusColumn[]){
  return duplicates.length?`Cabeçalhos duplicados preservados com chaves distintas: ${[...new Set(duplicates)].join(', ')}.`:null;
 }
 
-export function layoutFingerprint(format:PerseusFormat,sheets:PerseusSheet[]){
- const layout={format,sheets:sheets.map(sheet=>({name:sheet.name,columns:sheet.columns.map(column=>column.normalized),columnCount:sheet.columns.length}))};
+export function layoutFingerprint(format:PerseusFormat,sheets:PerseusSheet[],tables:PerseusTable[]=[]){
+ const layout={version:2,format,sheets:sheets.map(sheet=>({name:sheet.name,columns:sheet.columns.map(column=>column.normalized),columnCount:sheet.columns.length})),tables:tables.map(table=>({source:table.source,columns:table.columns.map(column=>column.normalized),columnCount:table.columns.length}))};
  return createHash('sha256').update(JSON.stringify(layout)).digest('hex');
 }
 

@@ -202,3 +202,5 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 .perseus-inspector-state small{min-height:13px;line-height:13px}
 @media(max-width:840px){.billing-main.insurance-main{padding:12px 18px 20px}}
 @media(max-width:600px){.billing-main.insurance-main{padding:12px}.insurance-view-frame>.insurance-workspace-tabs{min-height:40px}}
+
+.perseus-preview-table-select{display:grid;gap:5px;max-width:460px;color:#607681;font-size:11px;font-weight:750}.perseus-preview-table-select select{min-width:0;max-width:100%;padding:7px 9px;border:1px solid #dce7ea;border-radius:7px;background:#fff;color:#294958;font:inherit}.perseus-preview-structure-note{margin:0;color:#71838e;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
