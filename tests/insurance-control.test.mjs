@@ -1,171 +1,186 @@
-import {test} from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {loadTs} from './load-ts.mjs';
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { loadTs } from "./load-ts.mjs";
 
-const read=(path)=>readFileSync(path,'utf8');
-const control=loadTs('lib/insurance-control.ts');
-const workspace=loadTs('app/billing/insurance-control.ts');
+const read = (path) => readFileSync(path, "utf8");
+const control = loadTs("lib/insurance-control.ts");
+const workspace = loadTs("app/billing/insurance-control.ts");
 
-const documents=[
- {id:'one',originalFilename:'unimed-outubro.csv',detectedFormat:'CSV',uploadStatus:'READY',perseusStatus:'NOT_ANALYZED',createdAt:'2026-10-13T10:00:00Z',importer:'Lucas',rejectionReason:null,analysis:null,movement:{payer:'Unimed',competence:'2026-10-01',kind:'UNKNOWN',external_reference:'PROTO-1',billing_entity:{name:'Clínica Central',trade_name:null}}},
- {id:'two',originalFilename:'bradesco.xml',detectedFormat:'XML',uploadStatus:'READY',perseusStatus:'REVIEW_REQUIRED',createdAt:'2026-10-12T10:00:00Z',importer:'Roseni',rejectionReason:null,analysis:null,movement:{payer:'Bradesco',competence:null,kind:'UNKNOWN',external_reference:null,billing_entity:{name:'Hospital Norte',trade_name:'Norte'}}}
+const documents = [
+  {
+    id: "one",
+    originalFilename: "unimed-outubro.csv",
+    detectedFormat: "CSV",
+    uploadStatus: "READY",
+    perseusStatus: "NOT_ANALYZED",
+    createdAt: "2026-10-13T10:00:00Z",
+    importer: "Lucas",
+    rejectionReason: null,
+    analysis: null,
+    movement: {
+      payer: "Unimed",
+      competence: "2026-10-01",
+      kind: "UNKNOWN",
+      external_reference: "PROTO-1",
+      billing_entity: { name: "Clínica Central", trade_name: null },
+    },
+  },
+  {
+    id: "two",
+    originalFilename: "bradesco.xml",
+    detectedFormat: "XML",
+    uploadStatus: "READY",
+    perseusStatus: "REVIEW_REQUIRED",
+    createdAt: "2026-10-12T10:00:00Z",
+    importer: "Roseni",
+    rejectionReason: null,
+    analysis: null,
+    movement: {
+      payer: "Bradesco",
+      competence: null,
+      kind: "UNKNOWN",
+      external_reference: null,
+      billing_entity: { name: "Hospital Norte", trade_name: "Norte" },
+    },
+  },
 ];
-const entities=[{id:'central',name:'Clínica Central',trade_name:null},{id:'norte',name:'Hospital Norte',trade_name:'Norte'}];
+const entities = [
+  { id: "central", name: "Clínica Central", trade_name: null },
+  { id: "norte", name: "Hospital Norte", trade_name: "Norte" },
+];
 
-test('Perseu keeps document lifecycle isolated from financial records',()=>{
- assert.equal(control.canManageInsurance('general_manager'),true);
- assert.equal(control.canManageInsurance('doctor'),false);
- assert.equal(control.insuranceDocumentState('PENDING').label,'Upload pendente');
- const migration=read('supabase/migrations/20261009153000_insurance_control_perseus_foundation.sql');
- assert.doesNotMatch(migration,/alter table public\.(billing_records|invoices|invoice_billing_records)/);
- assert.doesNotMatch(read('app/billing/insurance-control.tsx'),/billing_records|invoice_billing_records|attendances/);
+test("Perseu keeps the document lifecycle isolated from financial records", () => {
+  assert.equal(control.canManageInsurance("general_manager"), true);
+  assert.equal(control.canManageInsurance("doctor"), false);
+  const migration = read(
+    "supabase/migrations/20261009153000_insurance_control_perseus_foundation.sql",
+  );
+  assert.doesNotMatch(
+    migration,
+    /alter table public\.(billing_records|invoices|invoice_billing_records)/,
+  );
+  assert.doesNotMatch(
+    read("app/billing/insurance-control.tsx"),
+    /billing_records|invoice_billing_records|attendances/,
+  );
 });
 
-test('Perseu validates Contexto before the file step',()=>{
- assert.equal(workspace.perseusContextError({billingEntityId:'',payer:'UNIMED'}),'billingEntityId');
- assert.equal(workspace.perseusContextError({billingEntityId:'entity',payer:'   '}),'payer');
- assert.equal(workspace.perseusContextError({billingEntityId:'entity',payer:'UNIMED'}),null);
+test("Perseu validates Contexto before the file step", () => {
+  assert.equal(
+    workspace.perseusContextError({ billingEntityId: "", payer: "UNIMED" }),
+    "billingEntityId",
+  );
+  assert.equal(
+    workspace.perseusContextError({ billingEntityId: "entity", payer: "   " }),
+    "payer",
+  );
+  assert.equal(
+    workspace.perseusContextError({
+      billingEntityId: "entity",
+      payer: "UNIMED",
+    }),
+    null,
+  );
 });
 
-test('workspace filters search, entity and detected format without a new API',()=>{
- assert.deepEqual(workspace.filterPerseusDocuments(documents,{query:'proto-1',entityId:'',format:''},entities).map(item=>item.id),['one']);
- assert.deepEqual(workspace.filterPerseusDocuments(documents,{query:'',entityId:'norte',format:''},entities).map(item=>item.id),['two']);
- assert.deepEqual(workspace.filterPerseusDocuments(documents,{query:'',entityId:'',format:'CSV'},entities).map(item=>item.id),['one']);
- assert.equal(workspace.selectedPerseusDocument(documents,'two')?.id,'two');
- assert.equal(workspace.selectedPerseusDocument(documents,'missing')?.id,'one');
- assert.equal(workspace.selectedPerseusDocument([], 'missing'),null);
+test("Perseu filters the locally loaded document list without a new API", () => {
+  assert.deepEqual(
+    workspace
+      .filterPerseusDocuments(
+        documents,
+        { query: "proto-1", entityId: "", format: "" },
+        entities,
+      )
+      .map((item) => item.id),
+    ["one"],
+  );
+  assert.deepEqual(
+    workspace
+      .filterPerseusDocuments(
+        documents,
+        { query: "", entityId: "norte", format: "" },
+        entities,
+      )
+      .map((item) => item.id),
+    ["two"],
+  );
+  assert.deepEqual(
+    workspace
+      .filterPerseusDocuments(
+        documents,
+        { query: "", entityId: "", format: "CSV" },
+        entities,
+      )
+      .map((item) => item.id),
+    ["one"],
+  );
+  assert.equal(workspace.selectedPerseusDocument(documents, "two")?.id, "two");
 });
 
-test('Convênios exposes Perseu as the visible workspace tab',()=>{
- const billing=read('app/billing/billing-client.tsx');
- assert.match(billing,/useState<'pending'\|'documents'>\('documents'\)/);
- assert.match(billing,/>Perseu<\/button>/);
- assert.doesNotMatch(billing,/>Documentos<\/button>/);
- assert.match(billing,/<InsuranceControl data=\{data\} view=\{insuranceView\}/);
+test("Perseu is an independent manager-only route with a shared billing subnav", () => {
+  const page = read("app/perseu/page.tsx");
+  const client = read("app/perseu/perseus-client.tsx");
+  const nav = read("app/billing/billing-subnav.tsx");
+  assert.match(page, /session\.account\.role !== "general_manager"/);
+  assert.match(page, /<PerseusClient\s*\/>/);
+  assert.match(client, /fetch\("\/api\/billing"/);
+  assert.match(client, /<BillingSubnav active="perseu"/);
+  assert.match(
+    client,
+    /<InsuranceControl data=\{data\} pendingCount=\{pendingCount\}/,
+  );
+  assert.match(nav, /href="\/perseu"/);
+  assert.match(nav, /className="billing-subnav-financial"/);
+  assert.match(nav, /className="billing-subnav-perseus"/);
 });
 
-test('Convênios keeps one stable frame and reserves the Perseu state card slots',()=>{
- const billing=read('app/billing/billing-client.tsx');
- const ui=read('app/billing/insurance-control.tsx');
- const css=read('app/billing/billing.css');
- assert.match(billing,/className=\{'billing-main'\+\(tab==='insurance'\?' insurance-main':''\)\}/);
- assert.match(billing,/className="insurance-view-frame"/);
- assert.match(billing,/className=\{'insurance-view-content insurance-view-'\+insuranceView\}/);
- assert.match(css,/\.insurance-view-frame\{[^}]*display:flex[^}]*flex-direction:column[^}]*min-height:0/);
- assert.match(css,/\.insurance-view-frame>\.insurance-workspace-tabs\{[^}]*min-height:42px/);
- assert.match(css,/\.perseus-inspector-state\{[^}]*display:grid[^}]*grid-template-columns:38px minmax\(0,1fr\)[^}]*min-height:78px/);
- assert.match(css,/\.perseus-inspector-state div\{[^}]*grid-template-rows:11px 15px 13px[^}]*min-height:43px/);
- assert.equal(ui.includes("<strong>{analysis.title}</strong><small>{analysis.detail||' '}</small>"),true);
- assert.doesNotMatch(css,/\.perseus-inspector-state\{[^}]*overflow:(hidden|auto)/);
+test("Convênios contains only Pendências and does not mount Perseu workspace", () => {
+  const billing = read("app/billing/billing-client.tsx");
+  assert.match(billing, /<BillingSubnav\s+active=\{tab\}/);
+  assert.match(billing, /tab === "insurance"[\s\S]{0,220}<InsurancePending/);
+  assert.doesNotMatch(billing, /InsuranceControl/);
+  assert.doesNotMatch(billing, /insuranceView/);
+  assert.doesNotMatch(billing, /insurance-workspace-tabs/);
 });
 
-test('Perseu reproduces the compact master-detail workspace',()=>{
- const ui=read('app/billing/insurance-control.tsx');
- const css=read('app/billing/billing.css');
- assert.match(ui,/className="perseus-workspace"/);
- assert.match(ui,/perseus-workspace-body/);
- assert.match(ui,/className="perseus-document-list"/);
- assert.match(ui,/className="perseus-document-detail"/);
- assert.doesNotMatch(ui,/perseus-detail-extra/);
- assert.doesNotMatch(ui,/entityLabel\(selected\.movement\.billing_entity\).*formatDateTimeBR\(selected\.createdAt\).*selected\.importer/);
- assert.match(ui,/className="perseus-list-toolbar"/);
- assert.match(ui,/value=\{filters\.query\}/);
- assert.match(ui,/value=\{filters\.entityId\}/);
- assert.match(ui,/value=\{filters\.format\}/);
- assert.match(ui,/selectedPerseusDocument\(visibleDocuments,selectedId\)/);
- assert.match(ui,/Convênio \/ Pagador/);
- assert.match(ui,/Importar documento/);
- assert.match(ui,/className="perseus-summary-inline"/);
- assert.doesNotMatch(ui,/PAYER/);
- assert.doesNotMatch(ui,/perseus-floating-action/);
- assert.doesNotMatch(ui,/perseus-drawer/);
- assert.doesNotMatch(css,/\.perseus-floating-action/);
- assert.doesNotMatch(css,/\.perseus-drawer/);
- assert.doesNotMatch(css,/\.perseus-stepper/);
- assert.doesNotMatch(css,/height:calc\(100dvh - 138px\)|min-height:calc\(100dvh - 230px\)/);
- assert.match(css,/\.rn-hub:has\(\.perseus-workspace\)\{[^}]*height:100dvh[^}]*min-height:0[^}]*overflow:hidden/);
- assert.match(css,/\.billing-main:has\(\.perseus-workspace\)\{[^}]*flex:1 1 auto[^}]*min-height:0[^}]*overflow:hidden/);
- assert.match(css,/\.perseus-workspace-body\{[^}]*grid-template-columns:minmax\(0,1fr\) 382px[^}]*min-height:0/);
- assert.equal((css.match(/\.perseus-workspace-header\{/g)||[]).length,0);
- assert.equal((css.match(/\.perseus-workspace-brand\{/g)||[]).length,0);
- assert.equal((css.match(/\.perseus-indicators\{/g)||[]).length,0);
- assert.match(css,/\.perseus-list-scroll\{[^}]*flex:1 1 auto[^}]*overflow-x:hidden[^}]*overflow-y:auto/);
- assert.match(css,/\.perseus-document-detail\{[^}]*display:flex[^}]*flex-direction:column[^}]*height:100%[^}]*min-height:0[^}]*overflow:visible/);
- assert.match(css,/\.perseus-detail-body\{[^}]*flex:1 0 auto[^}]*min-height:min-content[^}]*overflow:visible/);
- assert.match(css,/\.perseus-document-detail>footer\{[^}]*flex:0 0 auto/);
- assert.match(css,/\.perseus-original-file strong\{[^}]*text-overflow:ellipsis[^}]*white-space:nowrap/);
- assert.match(css,/\.perseus-compact-header\{[^}]*padding-left:18px[^}]*padding-right:18px/);
- assert.match(css,/\.perseus-detail-body\{[^}]*gap:12px[^}]*padding:16px 20px 12px[^}]*overflow:visible/);
- assert.match(css,/\.perseus-meta-grid\{[^}]*gap:12px 24px/);
- assert.match(css,/\.perseus-original-file\{[^}]*padding-top:10px/);
- assert.doesNotMatch(css,/\.perseus-detail-extra\{/);
+test("document notices stay contextual and stale preview errors cannot leak to another selection", () => {
+  const ui = read("app/billing/insurance-control.tsx");
+  assert.match(ui, /Record<string, DocumentNotice>/);
+  assert.match(ui, /\[document\.id\]: \{[\s\S]{0,220}tone: "info"/);
+  assert.match(
+    ui,
+    /Este documento foi importado corretamente, mas a análise estruturada/,
+  );
+  assert.match(ui, /notices\[selected\.id\]/);
+  assert.match(ui, /aria-label="Fechar aviso"/);
+  assert.match(ui, /analysisRequest\.current/);
+  assert.match(ui, /documentId: document\.id/);
+  assert.match(ui, /previewError\?\.documentId === selected\.id/);
+  assert.match(ui, /className="billing-error perseus-import-error"/);
+  assert.match(ui, /className="perseus-list-error"/);
 });
 
-test('Perseu header has an isolated institutional identity without changing its operation',()=>{
- const ui=read('app/billing/insurance-control.tsx');
- const css=read('app/billing/billing.css');
- assert.match(ui,/className="perseus-identity-signature"/);
- assert.match(ui,/className="perseus-eyebrow">Análise documental/);
- assert.match(ui,/PerseusMark size=\{64\}/);
- assert.match(ui,/<small>Pendências<\/small><strong>\{pendingCount\}/);
- assert.match(ui,/<small>Importados<\/small><strong>\{ready\.length\}/);
- assert.match(ui,/<small>Aguardando análise<\/small>/);
- assert.match(ui,/<small>Convênios<\/small>/);
- assert.match(ui,/className="billing-primary perseus-import-button"/);
- assert.match(css,/\/\* Perseu — faixa institucional do workspace documental\. \*\//);
- assert.match(css,/\.perseus-compact-header\{[^}]*min-height:112px[^}]*background:linear-gradient/);
- assert.match(css,/\.perseus-identity-signature\{[^}]*72px[^}]*border:1px solid rgba\(193,157,102/);
- assert.match(css,/\.perseus-eyebrow\{[^}]*letter-spacing:\.14em[^}]*text-transform:uppercase/);
- assert.match(css,/\.perseus-identity h2\{[^}]*color:#f7fbfc[^}]*font-size:29px/);
- assert.match(css,/\.perseus-summary-inline small\{[^}]*font-size:10px/);
- assert.match(css,/@media\(max-width:700px\)\{[^}]*\.perseus-compact-header/);
+test("premium Perseu workspace remains the sole document UI with existing actions", () => {
+  const ui = read("app/billing/insurance-control.tsx");
+  const css = read("app/billing/billing.css");
+  assert.match(ui, /className="perseus-workspace"/);
+  assert.match(ui, /Importação e análise documental<\/p>/);
+  assert.doesNotMatch(ui, /Importação e análise documental de convênios/);
+  assert.match(ui, /Analisar com Perseu/);
+  assert.match(ui, /Reanalisar com Perseu/);
+  assert.match(ui, /Ver prévia estruturada/);
+  assert.match(css, /\.billing-subnav-financial\{[^}]*overflow-x:auto/);
+  assert.match(css, /\.billing-subnav \.billing-subnav-perseus\{/);
+  assert.match(css, /\.perseus-context-notice\.info/);
+  assert.match(css, /\.perseus-context-notice\.error/);
 });
 
-test('workspace uses real document fields and preserves current actions',()=>{
- const ui=read('app/billing/insurance-control.tsx');
- assert.match(ui,/document\.detectedFormat/);
- assert.match(ui,/insuranceMovementLabels\[selected\.movement\.kind\]/);
- assert.match(ui,/Abrir original/);
- assert.match(ui,/Baixar original/);
- assert.match(ui,/Analisar com Perseu/);
- assert.match(ui,/Reanalisar com Perseu/);
- assert.match(ui,/Tentar novamente com Perseu/);
- assert.match(ui,/Cancelar importação/);
- assert.match(ui,/Ver prévia estruturada/);
- assert.match(ui,/href=\{url\}/);
-});
-
-test('preview and cancellation actions are kept in the inspector footer',()=>{
- const ui=read('app/billing/insurance-control.tsx');
- const footer=ui.slice(ui.indexOf('<footer>{action&&'));
- const body=ui.slice(ui.indexOf('className="perseus-detail-body"'),ui.indexOf('</div><footer>{action&&'));
- assert.match(footer,/Ver prévia estruturada/);
- assert.match(footer,/Cancelar importação/);
- assert.doesNotMatch(body,/Ver prévia estrutural/);
- assert.match(ui,/className="perseus-meta-grid"/);
- assert.match(ui,/onClick=\{\(\)=>setDetailOpen\(false\)\}/);
-});
-
-test('header import uses a conventional dialog and preserves the validated two-step flow',()=>{
- const ui=read('app/billing/insurance-control.tsx');
- assert.match(ui,/perseus-import-button/);
- assert.match(ui,/<dialog ref=\{dialogRef\} className="perseus-import-dialog"/);
- assert.match(ui,/showModal\(\)/);
- assert.match(ui,/function resetImport\(\)\{setFile\(null\);setStep\('context'\);\}/);
- assert.match(ui,/function openImport\(\)\{resetImport\(\);setOpen\(true\);\}/);
- assert.match(ui,/function goToFile\(\)\{if\(busy\)return;const invalid=perseusContextError\(form\)/);
- assert.match(ui,/uploadInsuranceDocument\(file,\{\.\.\.form,notes:''\}\)/);
- assert.match(ui,/Continuar para arquivo/);
- assert.doesNotMatch(ui,/Observação|<textarea/);
- assert.doesNotMatch(ui,/Análise manual/);
-});
-
-test('structural preview remains separate and only its table scrolls horizontally',()=>{
- const ui=read('app/billing/insurance-control.tsx');
- const css=read('app/billing/billing.css');
- assert.match(ui,/className="perseus-preview-dialog"/);
- assert.match(ui,/sourceMetadata/);
- assert.match(css,/\.perseus-preview-table-wrap\{[^}]*overflow-x:auto/);
- assert.match(css,/\.perseus-preview-table\{min-width:760px/);
+test("structural preview stays separate and only its table scrolls horizontally", () => {
+  const ui = read("app/billing/insurance-control.tsx");
+  const css = read("app/billing/billing.css");
+  assert.match(ui, /className="perseus-preview-dialog"/);
+  assert.match(ui, /sourceMetadata/);
+  assert.match(css, /\.perseus-preview-table-wrap\{[^}]*overflow-x:auto/);
+  assert.match(css, /\.perseus-preview-table\{min-width:760px/);
 });
