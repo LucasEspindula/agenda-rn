@@ -49,6 +49,21 @@ type Analysis = {
   warnings?: string[];
   error?: string;
   structure?: { tables?: AnalysisTable[] };
+  semantic?: {
+    version?: string;
+    tables?: {
+      tableId: string;
+      warnings?: string[];
+      columns: {
+        field: string | null;
+        sourceColumn: string;
+        sourceKey: string;
+        classification: "HIGH" | "MEDIUM" | "AMBIGUOUS" | "UNKNOWN";
+        reasons: string[];
+        warnings: string[];
+      }[];
+    }[];
+  };
 };
 type DocumentRow = {
   id: string;
@@ -74,6 +89,8 @@ type Preview = {
   items: {
     sourceIndex: number;
     rawData: Record<string, unknown>;
+    normalizedData: Record<string, string>;
+    semanticEvidence: Record<string, unknown>;
     sourceMetadata: Record<string, unknown>;
   }[];
 };
@@ -99,6 +116,25 @@ const displayValue = (value: unknown) =>
     : typeof value === "object"
       ? JSON.stringify(value)
       : String(value);
+const semanticLabel = (field: string) =>
+  ({
+    patient_name: "Paciente",
+    beneficiary_number: "Número do beneficiário",
+    guide_number: "Número da guia",
+    external_reference: "Referência externa",
+    service_date: "Data do atendimento",
+    procedure_code: "Código do procedimento",
+    procedure_description: "Procedimento",
+    amount_presented: "Valor apresentado",
+    amount_approved: "Valor aprovado",
+    amount_glossed: "Valor glosado",
+    gloss_code: "Código da glosa",
+    gloss_reason: "Motivo da glosa",
+  })[field] || "Não identificado";
+const normalizedSummary = (values: Record<string, string>) =>
+  Object.entries(values)
+    .map(([field, value]) => `${semanticLabel(field)}: ${value}`)
+    .join(" · ");
 function analysisText(document: DocumentRow) {
   if (document.perseusStatus === "REVIEW_REQUIRED")
     return { title: "Estrutura identificada", detail: "Revisão necessária" };
@@ -1080,7 +1116,10 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                     item.sourceMetadata.table_id === selectedTable.table_id,
                 )
               : preview.items,
-            columns = previewColumns(visibleItems);
+            columns = previewColumns(visibleItems),
+            semanticTable = preview.summary.semantic?.tables?.find(
+              (table) => table.tableId === selectedTable?.table_id,
+            );
           return (
             <AppDialog
               label={
@@ -1173,6 +1212,56 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                     ))}
                   </ul>
                 ) : null}
+                {semanticTable && (
+                  <section className="perseus-semantic-summary">
+                    <div>
+                      <h4>Interpretação sugerida</h4>
+                      <small>
+                        Motor semântico {preview.summary.semantic?.version}
+                      </small>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Coluna</th>
+                          <th>Significado</th>
+                          <th>Confiança</th>
+                          <th>Critérios</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {semanticTable.columns.map((column) => (
+                          <tr key={column.sourceKey}>
+                            <td>{column.sourceColumn}</td>
+                            <td>
+                              {column.field
+                                ? semanticLabel(column.field)
+                                : "Não identificado"}
+                            </td>
+                            <td>
+                              <span
+                                className={
+                                  "perseus-semantic-class " +
+                                  column.classification.toLowerCase()
+                                }
+                              >
+                                {column.classification}
+                              </span>
+                            </td>
+                            <td>
+                              {[...column.reasons, ...column.warnings].join(
+                                " · ",
+                              ) || "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {semanticTable.warnings?.length ? (
+                      <p>{semanticTable.warnings.join(" ")}</p>
+                    ) : null}
+                  </section>
+                )}
                 <div className="billing-panel perseus-preview-table-wrap">
                   <table className="billing-table perseus-preview-table">
                     <thead>
@@ -1181,6 +1270,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                         {columns.map((column) => (
                           <th key={column}>{column}</th>
                         ))}
+                        <th>Interpretação normalizada</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1201,6 +1291,9 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                                 {displayValue(item.rawData[column])}
                               </td>
                             ))}
+                            <td>
+                              {normalizedSummary(item.normalizedData) || "—"}
+                            </td>
                           </tr>
                         );
                       })}

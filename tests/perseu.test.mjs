@@ -7,6 +7,7 @@ import {loadTs} from './load-ts.mjs';
 
 const engine=loadTs('lib/perseu/inspect.ts');
 const normalize=loadTs('lib/perseu/normalize.ts');
+const semanticNormalize=loadTs('lib/perseu/semantic/normalize.ts');
 const persistence=loadTs('lib/perseu/persistence.ts');
 const text=value=>new TextEncoder().encode(value);
 
@@ -101,7 +102,7 @@ test('Perseu preserves independent XML collections without selecting nested dupl
  assert.match(inspection.result.items[0].source?.path||'',/\[0\]$/);
 });
 
-test('Perseu persists CSV, XLSX and XML source metadata without semantic fields',()=>{
+test('Perseu persists CSV, XLSX and XML source metadata alongside empty semantic data',()=>{
  const csv=engine.inspectPerseusDocument('CSV',text('Nome\nAna\n'));
  const workbook=XLSX.utils.book_new();XLSX.utils.book_append_sheet(workbook,XLSX.utils.aoa_to_sheet([['Nome'],['Ana']]),'Demonstrativo');
  const xlsx=engine.inspectPerseusDocument('XLSX',XLSX.write(workbook,{type:'buffer',bookType:'xlsx'}));
@@ -112,8 +113,46 @@ test('Perseu persists CSV, XLSX and XML source metadata without semantic fields'
   const metadata=JSON.parse(JSON.stringify(row.source_metadata));
   assert.deepEqual(Object.fromEntries(Object.entries(metadata).filter(([key])=>key!=='region')),expected);
   assert.ok(metadata.region);
-  assert.deepEqual(Object.keys(row).sort(),['raw_data','source_index','source_metadata']);
+  assert.deepEqual(Object.keys(row).sort(),['normalized_data','raw_data','semantic_evidence','source_index','source_metadata']);
+  assert.deepEqual(JSON.parse(JSON.stringify(row.normalized_data)),{});
+  assert.deepEqual(JSON.parse(JSON.stringify(row.semantic_evidence)),{});
  }
+});
+
+test('Perseu interprets supported insurance headings with normalized values and auditable evidence',()=>{
+ const inspection=engine.inspectPerseusDocument('CSV',text('Benefici\u00e1rio;N\u00ba Guia;Data do atendimento;C\u00f3digo TUSS;Procedimento;Valor cobrado;Valor aprovado;Valor pago;Diferen\u00e7a;C\u00f3digo da glosa;Motivo da glosa\nAna Silva;000123;05/10/2026;40101010;Colonoscopia;R$ 1.500,00;1200.5;999,99;200,51;G01;Documento incompleto\n'));
+ assert.equal(inspection.kind,'parsed');if(inspection.kind!=='parsed')return;
+ const item=inspection.result.items[0];
+ assert.deepEqual(JSON.parse(JSON.stringify(item.normalizedData)),{
+  patient_name:'Ana Silva',guide_number:'000123',service_date:'2026-10-05',procedure_code:'40101010',procedure_description:'Colonoscopia',amount_presented:'1500.00',amount_approved:'1200.50',gloss_code:'G01',gloss_reason:'Documento incompleto'
+ });
+ assert.equal(item.normalizedData?.amount_glossed,undefined);
+ assert.equal(item.semanticEvidence?.amount_presented.classification,'HIGH');
+ assert.match(JSON.stringify(item.semanticEvidence?.amount_presented.reasons),/cabe\u00e7alho reconhecido/);
+ const semantic=inspection.result.semantic;
+ assert.equal(semantic?.version,'1.0.0');
+ assert.equal(semantic?.tables[0].columns.find(column=>column.sourceColumn==='Valor pago')?.classification,'UNKNOWN');
+ assert.equal(semantic?.tables[0].columns.find(column=>column.sourceColumn==='Diferen\u00e7a')?.classification,'UNKNOWN');
+ const row=persistence.perseusItemRows(inspection.result)[0];
+ assert.equal(row.amount_presented,'1500.00');
+ assert.equal(row.service_date,'2026-10-05');
+ assert.equal(row.guide_number,'000123');
+});
+
+test('Perseu remains conservative with generic, ambiguous, invalid and total rows',()=>{
+ const inspection=engine.inspectPerseusDocument('CSV',text('Nome;Valor;Data;Valor Glosado;Valor Glosado\nAna;1.500;31/02/2026;-1.500,00;200,00\nTOTAL;1.500;05/10/2026;0;0\n'));
+ assert.equal(inspection.kind,'parsed');if(inspection.kind!=='parsed')return;
+ const semantic=inspection.result.semantic?.tables[0];
+ assert.equal(semantic?.columns.find(column=>column.sourceColumn==='Nome')?.classification,'UNKNOWN');
+ assert.equal(semantic?.columns.find(column=>column.sourceColumn==='Valor')?.classification,'UNKNOWN');
+ assert.equal(semantic?.columns.filter(column=>column.sourceColumn==='Valor Glosado').every(column=>column.classification==='AMBIGUOUS'),true);
+ assert.deepEqual(JSON.parse(JSON.stringify(inspection.result.items[0].normalizedData)),{});
+ assert.equal(semanticNormalize.normalizeDate('2026-01-09').value,'2026-01-09');
+ assert.equal(semanticNormalize.normalizeDate('09/01/2026').value,'2026-01-09');
+ assert.equal(semanticNormalize.normalizeDate('31/02/2026').value,undefined);
+ assert.equal(semanticNormalize.normalizeAmount('-1.500,00').value,'-1500.00');
+ assert.equal(semanticNormalize.normalizeAmount('1.500').value,undefined);
+ assert.equal(semanticNormalize.normalizeAmount('').value,undefined);
 });
 
 test('Perseu structural normalization and fingerprint are deterministic and contain no row values',()=>{
@@ -138,12 +177,12 @@ test('Perseu keeps unsupported formats outside FAILED and delegates replacement 
  const unsupported=engine.inspectPerseusDocument('PDF',text('%PDF- example'));
  assert.deepEqual(JSON.parse(JSON.stringify(unsupported)),{kind:'unsupported',format:'PDF',message:'O Perseu ainda não possui parser para este formato.'});
  const route=readFileSync('app/api/insurance-control/analyze/route.ts','utf8');
- assert.match(route,/upload_status!=='READY'/);
- assert.match(route,/perseus_status:'FAILED'/);
+ assert.match(route,/upload_status\s*!==\s*["']READY["']/);
+ assert.match(route,/perseus_status\s*:\s*["']FAILED["']/);
  assert.doesNotMatch(route,/billing_records|invoices|attendance_id:/);
- assert.match(route,/\.rpc\('replace_perseus_document_analysis'/);
+ assert.match(route,/\.rpc\(\s*["']replace_perseus_document_analysis["']/);
  assert.doesNotMatch(route,/\.from\('insurance_document_items'\)\.(delete|insert|upsert)/);
- assert.match(route,/consumeLimit\('perseus-analyze'/);
+ assert.match(route,/consumeLimit\(\s*["']perseus-analyze["']/);
 });
 
 test('Perseu database replacement is locked, atomic and unique by source index',()=>{
@@ -163,27 +202,36 @@ test('Perseu database replacement is locked, atomic and unique by source index',
  assert.match(adaptiveMigration,/'region',item\.source_metadata->'region'/);
  assert.match(adaptiveMigration,/for update/);
  assert.match(adaptiveMigration,/revoke all on function .* from public,anon,authenticated/);
+ const semanticMigration=readFileSync('supabase/migrations/20261014160000_perseus_semantic_interpretation.sql','utf8');
+ assert.match(semanticMigration,/for update/);
+ assert.match(semanticMigration,/match_evidence/);
+ assert.match(semanticMigration,/patient_name,beneficiary_number,guide_number/);
+ assert.match(semanticMigration,/attendance_id is not null or billing_record_id is not null/);
+ assert.match(semanticMigration,/revoke all on function .* from public,anon,authenticated/);
+ assert.doesNotMatch(semanticMigration,/insert into public\.(billing_records|invoices|invoice_billing_records|attendances)/);
 });
 
 test('Perseu replace RPC rolls back all item changes when an insert fails',async()=>{
  const db=new PGlite();
  const migration=readFileSync('supabase/migrations/20261009200000_stabilize_perseus_structured_parsing.sql','utf8');
  const adaptiveMigration=readFileSync('supabase/migrations/20261013170000_perseus_adaptive_structure.sql','utf8');
+ const semanticMigration=readFileSync('supabase/migrations/20261014160000_perseus_semantic_interpretation.sql','utf8');
  const documentId='11111111-1111-4111-8111-111111111111';
  await db.exec(`create role anon;create role authenticated;create role service_role;
   create table insurance_documents(id uuid primary key,upload_status text not null,parser_key text,parser_version text,raw_metadata jsonb not null default '{}'::jsonb,perseus_status text not null default 'NOT_ANALYZED',updated_at timestamptz,updated_by bigint);
-  create table insurance_document_items(id uuid primary key default gen_random_uuid(),document_id uuid not null references insurance_documents(id),source_index integer,raw_data jsonb not null check(raw_data ? 'value'),normalized_data jsonb not null default '{}'::jsonb,match_status text,source_metadata jsonb not null default '{}'::jsonb);
+  create table insurance_document_items(id uuid primary key default gen_random_uuid(),document_id uuid not null references insurance_documents(id),source_index integer,raw_data jsonb not null check(raw_data ? 'value'),normalized_data jsonb not null default '{}'::jsonb,match_status text,match_evidence jsonb not null default '{}'::jsonb,source_metadata jsonb not null default '{}'::jsonb,patient_name text,beneficiary_number text,guide_number text,external_reference text,service_date date,procedure_code text,procedure_description text,amount_presented numeric,amount_approved numeric,amount_glossed numeric,gloss_code text,gloss_reason text,attendance_id uuid,billing_record_id uuid);
   grant all on insurance_documents,insurance_document_items to service_role;
   insert into insurance_documents(id,upload_status) values('${documentId}','READY');`);
  await db.exec(migration);
  await db.exec(adaptiveMigration);
+ await db.exec(semanticMigration);
  await db.exec('set role service_role');
  const call=(items,key='parser-a')=>db.query('select replace_perseus_document_analysis($1,$2::jsonb,$3,$4,$5::jsonb,$6)',[documentId,JSON.stringify(items),key,'1.0.0',JSON.stringify({row_count:items.length}),1]);
- await call([{source_index:0,raw_data:{value:'before'},source_metadata:{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:1}}}]);
+ await call([{source_index:0,raw_data:{value:'before'},normalized_data:{patient_name:'Ana'},semantic_evidence:{patient_name:{classification:'HIGH'}},source_metadata:{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:1}},patient_name:'Ana'}]);
  await assert.rejects(()=>call([{source_index:0,raw_data:{value:'after'}},{source_index:1,raw_data:{}}],'parser-b'));
- const items=(await db.query('select source_index,raw_data,source_metadata from insurance_document_items where document_id=$1',[documentId])).rows;
+ const items=(await db.query('select source_index,raw_data,normalized_data,match_evidence,source_metadata,patient_name from insurance_document_items where document_id=$1',[documentId])).rows;
  const document=(await db.query('select parser_key,perseus_status from insurance_documents where id=$1',[documentId])).rows[0];
- assert.deepEqual(JSON.parse(JSON.stringify(items)),[{source_index:0,raw_data:{value:'before'},source_metadata:{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:1}}}]);
+ assert.deepEqual(JSON.parse(JSON.stringify(items)),[{source_index:0,raw_data:{value:'before'},normalized_data:{patient_name:'Ana'},match_evidence:{patient_name:{classification:'HIGH'}},source_metadata:{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:1}},patient_name:'Ana'}]);
  assert.deepEqual(JSON.parse(JSON.stringify(document)),{parser_key:'parser-a',perseus_status:'REVIEW_REQUIRED'});
  await assert.rejects(()=>call([{source_index:0,raw_data:{value:'one'}},{source_index:0,raw_data:{value:'two'}}]));
  await db.close();
@@ -199,7 +247,8 @@ test('Perseu enforces bounded structural input',()=>{
 test('Perseu preview keeps detected tables distinct instead of mixing their columns',()=>{
  const ui=readFileSync('app/billing/insurance-control.tsx','utf8');
  assert.match(ui,/previewTableId/);
- assert.match(ui,/sourceMetadata\.table_id===selectedTable\.table_id/);
+ assert.match(ui,/sourceMetadata\.table_id\s*===\s*selectedTable\.table_id/);
  assert.match(ui,/Estrutura identificada/);
  assert.match(ui,/perseus-preview-table-select/);
+ assert.match(ui,/Interpreta\u00e7\u00e3o normalizada/);
 });

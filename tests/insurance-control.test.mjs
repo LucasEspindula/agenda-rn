@@ -183,4 +183,5 @@ test("structural preview stays separate and only its table scrolls horizontally"
   assert.match(ui, /sourceMetadata/);
   assert.match(css, /\.perseus-preview-table-wrap\{[^}]*overflow-x:auto/);
   assert.match(css, /\.perseus-preview-table\{min-width:760px/);
+  assert.doesNotMatch(css, /\.perseus-semantic-summary\{[^}]*overflow-x:auto/);
 });
