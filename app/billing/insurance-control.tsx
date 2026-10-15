@@ -59,6 +59,7 @@ type Analysis = {
         sourceColumn: string;
         sourceKey: string;
         classification: "HIGH" | "MEDIUM" | "AMBIGUOUS" | "UNKNOWN";
+        origin?: "HEURISTIC" | "LEARNED_SUGGESTION" | "USER_CONFIRMED" | "USER_REJECTED" | "CONFLICT";
         reasons: string[];
         warnings: string[];
       }[];
@@ -239,6 +240,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
     [analyzingId, setAnalyzingId] = useState(""),
     [preview, setPreview] = useState<Preview | null>(null),
     [reviewingKey, setReviewingKey] = useState(""),
+    [mappingSelections, setMappingSelections] = useState<Record<string, string>>({}),
     [previewTableId, setPreviewTableId] = useState(""),
     [file, setFile] = useState<File | null>(null),
     [step, setStep] = useState<PerseusStep>("context"),
@@ -478,7 +480,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
       if (request === analysisRequest.current) setAnalyzingId("");
     }
   }
-  async function openPreview(document: DocumentRow) {
+  async function openPreview(document: DocumentRow, preferredTableId = "") {
     setPreviewError(null);
     try {
       const response = await fetch(
@@ -497,9 +499,13 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
         updatedAt: payload.updatedAt,
       } as Preview;
       setPreview(next);
+      setMappingSelections(Object.fromEntries((next.summary.semantic?.tables || []).flatMap((table) => table.columns.map((column) => [table.tableId + ":" + column.sourceKey, column.field || ""]))));
+      const availableTables = next.summary.structure?.tables || [];
       setPreviewTableId(
-        next.summary.structure?.tables?.[0]?.table_id ||
-          String(next.items[0]?.sourceMetadata.table_id || ""),
+        availableTables.some((table) => table.table_id === preferredTableId)
+          ? preferredTableId
+          : availableTables[0]?.table_id ||
+            String(next.items[0]?.sourceMetadata.table_id || ""),
       );
     } catch (reason) {
       setPreviewError({
@@ -522,7 +528,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
       }), payload = await response.json();
       if (!response.ok) throw Error(payload.error || "Não foi possível registrar a revisão.");
       await load();
-      await openPreview(document);
+      await openPreview(document, previewTableId);
     } catch (reason) {
       setPreviewError({ documentId: document.id, message: reason instanceof Error ? reason.message : "Não foi possível registrar a revisão." });
     } finally { setReviewingKey(""); }
@@ -534,7 +540,7 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
     try {
       const response = await fetch("/api/insurance-control/semantic-review", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ documentId: preview.document.id, itemId, semanticField: field, value, expectedUpdatedAt: preview.updatedAt }) }), payload = await response.json();
       if (!response.ok) throw Error(payload.error || "Não foi possível corrigir o valor.");
-      await load(); await openPreview(preview.document);
+      await load(); await openPreview(preview.document, previewTableId);
     } catch (reason) { setPreviewError({ documentId: preview.document.id, message: reason instanceof Error ? reason.message : "Não foi possível corrigir o valor." }); }
     finally { setReviewingKey(""); }
   }
@@ -1291,9 +1297,9 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                             <td className="perseus-semantic-review">
                               <select
                                 aria-label={"Significado de " + column.sourceColumn}
-                                defaultValue={column.field || ""}
+                                value={mappingSelections[semanticTable.tableId + ":" + column.sourceKey] ?? column.field ?? ""}
                                 disabled={reviewingKey === semanticTable.tableId + ":" + column.sourceKey}
-                                onChange={(event) => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, event.target.value || null, false)}
+                                onChange={(event) => setMappingSelections((current) => ({ ...current, [semanticTable.tableId + ":" + column.sourceKey]: event.target.value }))}
                               >
                                 <option value="">Não mapear</option>
                                 {semanticFields.map((field) => <option key={field} value={field}>{semanticLabel(field)}</option>)}
@@ -1301,11 +1307,13 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                               <button
                                 type="button"
                                 className="billing-link-button"
-                                disabled={!column.field || reviewingKey === semanticTable.tableId + ":" + column.sourceKey}
-                                onClick={() => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, column.field, true)}
+                                disabled={!mappingSelections[semanticTable.tableId + ":" + column.sourceKey] || reviewingKey === semanticTable.tableId + ":" + column.sourceKey}
+                                onClick={() => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, mappingSelections[semanticTable.tableId + ":" + column.sourceKey] || null, true)}
                               >
                                 {reviewingKey === semanticTable.tableId + ":" + column.sourceKey ? "Salvando…" : "Confirmar e aprender"}
                               </button>
+                              <button type="button" className="billing-link-button" disabled={reviewingKey === semanticTable.tableId + ":" + column.sourceKey} onClick={() => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, mappingSelections[semanticTable.tableId + ":" + column.sourceKey] || null, false)}>Aplicar revisão</button>
+                              {column.origin && <small>Origem: {column.origin === "USER_CONFIRMED" ? "Confirmado pelo usuário" : column.origin === "LEARNED_SUGGESTION" ? "Sugestão aprendida" : column.origin === "USER_REJECTED" ? "Não mapeado pelo usuário" : "Heurística"}</small>}
                             </td>
                           </tr>
                         ))}

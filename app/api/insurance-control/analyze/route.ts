@@ -12,6 +12,7 @@ import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { normalizeInsurancePayer } from "@/lib/insurance-control";
 import { interpretPerseusSemantics } from "@/lib/perseu/semantic/detect";
 import type { PerseusSemanticRule } from "@/lib/perseu/supervision/contracts";
+import { adaptSupabaseSemanticRule } from "@/lib/perseu/supervision/rules";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -181,7 +182,9 @@ async function analyze(request: Request) {
         movementKind: document.movement.kind,
         layoutFingerprint: inspection.result.layoutFingerprint,
       },
-      rules: ((rules.data || []) as unknown as PerseusSemanticRule[]),
+      rules: (rules.data || [])
+        .map(adaptSupabaseSemanticRule)
+        .filter((rule: PerseusSemanticRule | null): rule is PerseusSemanticRule => rule !== null),
     });
     await replaceItems(document, learned, session.account.id);
     return Response.json(
@@ -222,17 +225,35 @@ export async function GET(request: Request) {
         )
         .eq("document_id", document.id)
         .order("source_index", { ascending: true })
-        .limit(limit);
+        .limit(limit),
+      reviews = await getSupabaseAdmin()
+        .from("perseus_semantic_reviews")
+        .select("table_id,source_key,semantic_field,state,created_at")
+        .eq("document_id", document.id)
+        .in("state", ["CONFIRMED", "REJECTED"]);
     if (items.error) throw items.error;
+    if (reviews.error) throw reviews.error;
     const perseus = (
       document.raw_metadata?.perseus &&
       typeof document.raw_metadata.perseus === "object"
         ? document.raw_metadata.perseus
         : {}
     ) as Record<string, unknown>;
+    const summary = structuredClone(perseus) as Record<string, unknown>;
+    const semantic = summary.semantic as { tables?: { tableId: string; columns?: Record<string, unknown>[] }[] } | undefined;
+    for (const review of reviews.data || []) {
+      const table = semantic?.tables?.find((candidate) => candidate.tableId === review.table_id);
+      const column = table?.columns?.find((candidate) => candidate.sourceKey === review.source_key);
+      if (!column) continue;
+      column.field = review.semantic_field;
+      column.classification = review.state === "CONFIRMED" ? "HIGH" : "UNKNOWN";
+      column.origin = review.state === "CONFIRMED" ? "USER_CONFIRMED" : "USER_REJECTED";
+      column.reasons = ["Revisado por usuário."];
+      column.warnings = [];
+    }
     return Response.json(
       {
-        summary: perseus,
+        summary,
         updatedAt: document.updated_at,
         items: (
           (items.data || []) as {
