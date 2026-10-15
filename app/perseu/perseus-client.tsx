@@ -1,72 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import BillingSubnav from "@/app/billing/billing-subnav";
 import InsuranceControl from "@/app/billing/insurance-control";
 import type { BillingData } from "@/lib/billing-types";
 import { isInsurancePending } from "@/lib/billing-row";
 
-const empty: BillingData = {
-  payers: [],
-  rows: [],
-  entities: [],
-  links: [],
-  invoices: [],
-  items: [],
-  doctors: [],
-};
+const empty: BillingData = { payers: [], rows: [], entities: [], links: [], invoices: [], items: [], doctors: [] };
+type Doc = { id:string; original_filename:string; detected_format:string|null; processing_status:string; document_class:string; processing_metadata:{ limitations?:string[] }|null; error_message:string|null; created_at:string; perseus_operational_proposals:{id:string;status:string;title:string;rationale:string}[] };
+const accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.xlsx,.xml,application/pdf,image/png,image/jpeg,image/webp,text/plain,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/xml,text/xml";
 
-export default function PerseusClient() {
-  const [data, setData] = useState<BillingData>(empty),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/billing", { cache: "no-store" }),
-        payload = await response.json();
-      if (!response.ok)
-        throw Error(
-          payload.error || "Não foi possível carregar o workspace do Perseu.",
-        );
-      setData(payload as BillingData);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Não foi possível carregar o workspace do Perseu.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-  const pendingCount = data.rows.filter(isInsurancePending).length;
-  return (
-    <>
-      <BillingSubnav active="perseu" insurancePendingCount={pendingCount} />
-      <main className="billing-main perseus-main">
-        {loading ? (
-          <p className="billing-empty">Carregando Perseu…</p>
-        ) : error ? (
-          <section className="perseus-load-error" role="alert">
-            <p>{error}</p>
-            <button
-              className="billing-secondary"
-              type="button"
-              onClick={() => void load()}
-            >
-              Tentar novamente
-            </button>
-          </section>
-        ) : (
-          <InsuranceControl data={data} pendingCount={pendingCount} />
-        )}
-      </main>
-    </>
-  );
+function GlobalDocuments(){
+ const [documents,setDocuments]=useState<Doc[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false); const input=useRef<HTMLInputElement>(null);
+ const load=useCallback(async()=>{setLoading(true);try{const r=await fetch("/api/perseu/documents",{cache:"no-store"}),j=await r.json();if(!r.ok)throw Error(j.error);setDocuments(j.documents||[]);setError("")}catch(e){setError(e instanceof Error?e.message:"Não foi possível carregar documentos.")}finally{setLoading(false)}},[]);
+ useEffect(()=>{const timer=window.setTimeout(()=>void load(),0);return()=>window.clearTimeout(timer)},[load]);
+ const upload=async()=>{if(!file)return;setBusy(true);try{const start=await fetch("/api/perseu/documents",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:file.name,size:file.size,mimeType:file.type})}),s=await start.json();if(!start.ok)throw Error(s.error);const sent=await fetch(s.url,{method:"PUT",headers:{"Content-Type":file.type||"application/octet-stream"},body:file});if(!sent.ok)throw Error("Não foi possível enviar o arquivo.");const done=await fetch("/api/perseu/documents",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:s.id})}),d=await done.json();if(!done.ok)throw Error(d.error);setFile(null);if(input.current)input.current.value="";await load()}catch(e){setError(e instanceof Error?e.message:"Não foi possível receber o arquivo.")}finally{setBusy(false)}};
+ const call=async(url:string,body:Record<string,string>)=>{setBusy(true);try{const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),j=await r.json();if(!r.ok)throw Error(j.error);await load()}catch(e){setError(e instanceof Error?e.message:"Não foi possível concluir a ação.")}finally{setBusy(false)}};
+ return <section className="perseus-global" aria-label="Documentos globais do Perseu"><header className="perseus-global-head"><div><span>INTELIGÊNCIA DOCUMENTAL</span><h1>Perseu</h1><p>Envie um documento primeiro. Contexto e decisões ficam para a revisão humana.</p></div><label className="billing-primary">Selecionar documento<input ref={input} type="file" accept={accept} onChange={e=>setFile(e.target.files?.[0]||null)} hidden/></label></header>{file&&<div className="perseus-upload-queue"><strong>{file.name}</strong><span>{(file.size/1024/1024).toFixed(1)} MB</span><button className="billing-primary" type="button" disabled={busy} onClick={()=>void upload()}>{busy?"Enviando…":"Enviar para Perseu"}</button></div>}{error&&<p className="perseus-load-error" role="alert">{error}</p>}<p className="perseus-global-note">PDF, imagem, TXT, CSV, XLSX e XML. O Perseu gera evidências e propostas; nunca executa mudanças financeiras.</p>{loading?<p className="billing-empty">Carregando documentos…</p>:documents.length?<div className="perseus-global-grid">{documents.map(doc=><article className="perseus-global-card" key={doc.id}><div><small>{doc.detected_format||"Em validação"} · {new Date(doc.created_at).toLocaleString("pt-BR")}</small><h2>{doc.original_filename}</h2><p>{doc.document_class.replaceAll("_"," ")} · {doc.processing_status.replaceAll("_"," ")}</p>{doc.error_message&&<p role="alert">{doc.error_message}</p>}{doc.processing_metadata?.limitations?.map((item,i)=><small key={i}>{item}</small>)}</div>{["PENDING_PROCESSING","REVIEW_REQUIRED","FAILED"].includes(doc.processing_status)&&<button className="billing-secondary" type="button" disabled={busy} onClick={()=>void call("/api/perseu/documents/analyze",{id:doc.id})}>{doc.processing_status==="REVIEW_REQUIRED"?"Reanalisar":"Analisar com Perseu"}</button>}{doc.perseus_operational_proposals?.map(proposal=><div className="perseus-proposal" key={proposal.id}><strong>{proposal.title}</strong><p>{proposal.rationale}</p>{proposal.status==="PROPOSED"&&<span><button type="button" disabled={busy} onClick={()=>void call("/api/perseu/proposals",{id:proposal.id,status:"REVIEWED"})}>Revisar</button><button type="button" disabled={busy} onClick={()=>void call("/api/perseu/proposals",{id:proposal.id,status:"DISMISSED"})}>Dispensar</button></span>}</div>)}</article>)}</div>:<p className="billing-empty">Nenhum documento global foi enviado ao Perseu.</p>}</section>
 }
+export default function PerseusClient(){const [data,setData]=useState<BillingData>(empty),[loading,setLoading]=useState(true),[error,setError]=useState(""),[view,setView]=useState<"global"|"insurance">("global");const load=useCallback(async()=>{setLoading(true);try{const r=await fetch("/api/billing",{cache:"no-store"}),j=await r.json();if(!r.ok)throw Error(j.error);setData(j);setError("")}catch(e){setError(e instanceof Error?e.message:"Não foi possível carregar o workspace do Perseu.")}finally{setLoading(false)}},[]);useEffect(()=>{const timer=window.setTimeout(()=>void load(),0);return()=>window.clearTimeout(timer)},[load]);const pendingCount=data.rows.filter(isInsurancePending).length;return <><BillingSubnav active="perseu" insurancePendingCount={pendingCount}/><main className="billing-main perseus-main"><nav className="perseus-mode-tabs" aria-label="Área do Perseu"><button type="button" aria-current={view==="global"?"page":undefined} onClick={()=>setView("global")}>Documentos</button><button type="button" aria-current={view==="insurance"?"page":undefined} onClick={()=>setView("insurance")}>Convênios existentes</button></nav>{view==="global"?<GlobalDocuments/>:loading?<p className="billing-empty">Carregando Perseu…</p>:error?<section className="perseus-load-error" role="alert"><p>{error}</p><button className="billing-secondary" type="button" onClick={()=>void load()}>Tentar novamente</button></section>:<InsuranceControl data={data} pendingCount={pendingCount}/>}</main></>}
