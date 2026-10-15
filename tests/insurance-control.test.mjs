@@ -185,3 +185,27 @@ test("structural preview stays separate and only its table scrolls horizontally"
   assert.match(css, /\.perseus-preview-table\{min-width:760px/);
   assert.doesNotMatch(css, /\.perseus-semantic-summary\{[^}]*overflow-x:auto/);
 });
+
+test("Perseu opens history as an independent responsive panel", () => {
+  const ui = read("app/billing/insurance-control.tsx");
+  const css = read("app/billing/billing.css");
+  assert.match(ui, /function PerseusDocumentHistoryPanel/);
+  assert.match(ui, /className="perseus-history-panel"/);
+  assert.match(ui, /aria-controls="perseus-history-panel"/);
+  assert.match(ui, /historyOpen && \(\s*<PerseusDocumentHistoryPanel/);
+  assert.doesNotMatch(ui, /<section className="perseus-history"/);
+  assert.match(css, /\.perseus-workspace-body\.history-open\{grid-template-columns:minmax\(320px,1fr\) minmax\(320px,382px\) minmax\(300px,350px\)/);
+  assert.match(css, /@media\(max-width:1380px\)\{\.perseus-workspace-body\.history-open/);
+  assert.match(css, /\.perseus-history-panel\{display:flex;flex-direction:column/);
+  assert.match(css, /\.perseus-history-panel-body\{[^}]*overflow-y:auto/);
+});
+
+test("Perseu history keeps the current document and reports the pending migration honestly", () => {
+  const route = read("app/api/insurance-control/events/route.ts");
+  const ui = read("app/billing/insurance-control.tsx");
+  assert.match(route, /const ledgerUnavailable = events\.error\?\.code === "42P01"/);
+  assert.match(route, /availability: ledgerUnavailable \? "MIGRATION_PENDING" : "READY"/);
+  assert.match(ui, /histórico persistente será ativado após a migration pendente/);
+  assert.match(ui, /historyRequest = useRef\(0\)/);
+  assert.match(ui, /nextCursor/);
+});

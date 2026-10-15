@@ -12,6 +12,7 @@ const persistence=loadTs('lib/perseu/persistence.ts');
 const supervision=loadTs('lib/perseu/supervision/rules.ts');
 const supervisionReview=loadTs('lib/perseu/supervision/review.ts');
 const operationalHistory=loadTs('lib/perseu/operational-history.ts');
+const operationalTimeline=loadTs('lib/perseu/operational-timeline.ts');
 const text=value=>new TextEncoder().encode(value);
 
 test('Perseu uses the official SheetJS CE 0.20.3 package source',()=>{
@@ -86,6 +87,23 @@ test('Perseu preserves duplicate headers, all cell values and deterministic stru
  const rows=persistence.perseusItemRows(inspection.result);
  assert.deepEqual(JSON.parse(JSON.stringify(rows[0].source_metadata)),{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:2}});
  assert.equal(rows[0].raw_data['Valor [2]'],'200');
+});
+
+test('Perseu paginates one stable timeline without duplicating reconstructed events',()=>{
+ const events=Array.from({length:150},(_,index)=>({
+  id:`event-${String(index).padStart(3,'0')}`,
+  documentId:'document',eventType:'ANALYSIS_COMPLETED',eventOrigin:'PARSER',
+  occurredAt:`2026-10-15T10:${String(Math.floor(index/60)).padStart(2,'0')}:${String(index%60).padStart(2,'0')}.000Z`,actorId:null,metadata:{},
+ }));
+ const seen=[];let cursor=null;
+ do {
+  const page=operationalTimeline.paginatePerseusTimeline([...events,...events.slice(0,3)],20,cursor);
+  seen.push(...page.events.map(event=>event.id));cursor=page.nextCursor?operationalTimeline.decodePerseusTimelineCursor(page.nextCursor):null;
+ } while(cursor);
+ assert.equal(seen.length,150);
+ assert.equal(new Set(seen).size,150);
+ assert.equal(seen[0],'event-149');
+ assert.equal(seen.at(-1),'event-000');
 });
 
 test('Perseu extracts repeated XML records and rejects malformed or unsafe XML',()=>{
@@ -394,5 +412,11 @@ test('Perseu keeps operational events transactional, append-only and free of raw
  await db.query('select revoke_perseus_semantic_rule($1,$2)',[rule.id,9]);
  assert.equal((await db.query('select state from perseus_semantic_rules where id=$1',[rule.id])).rows[0].state,'REVOKED');
  assert.equal((await db.query("select count(*)::int as count from perseus_document_events where related_rule_id=$1 and event_type='LEARNED_RULE_REVOKED'",[rule.id])).rows[0].count,1);
+ const operationA='45555555-5555-4555-8555-555555555555',operationB='46666666-6666-4666-8666-666666666666';
+ await db.query("insert into perseus_document_events(document_id,event_type,event_origin,operation_id,event_metadata) values($1,'REANALYSIS_BLOCKED','SYSTEM',$2,'{}'::jsonb)",[documentId,operationA]);
+ await assert.rejects(()=>db.query("insert into perseus_document_events(document_id,event_type,event_origin,operation_id,event_metadata) values($1,'REANALYSIS_BLOCKED','SYSTEM',$2,'{}'::jsonb)",[documentId,operationA]));
+ await db.query("insert into perseus_document_events(document_id,event_type,event_origin,operation_id,event_metadata) values($1,'REANALYSIS_BLOCKED','SYSTEM',$2,'{}'::jsonb)",[documentId,operationB]);
+ assert.equal((await db.query("select count(*)::int as count from perseus_document_events where document_id=$1 and event_type='REANALYSIS_BLOCKED'",[documentId])).rows[0].count,2);
+ await assert.rejects(()=>db.query('delete from insurance_documents where id=$1',[documentId]));
  await db.close();
 });

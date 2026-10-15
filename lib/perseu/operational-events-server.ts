@@ -13,6 +13,7 @@ export async function appendPerseusDocumentEvent(
     eventType: PerseusEventType;
     eventOrigin: PerseusEventOrigin;
     actorId?: number | null;
+    operationId?: string;
     parserVersion?: string | null;
     semanticVersion?: string | null;
     metadata?: Record<string, unknown>;
@@ -23,13 +24,16 @@ export async function appendPerseusDocumentEvent(
     event_type: input.eventType,
     event_origin: input.eventOrigin,
     actor_id: input.actorId || null,
+    operation_id: input.operationId || crypto.randomUUID(),
     parser_version: input.parserVersion || null,
     semantic_version: input.semanticVersion || null,
     event_metadata: safePerseusEventMetadata(input.metadata || {}),
   });
   // Deployments can briefly precede the additive migration. Do not block the
   // existing document workflow while the event ledger is not installed yet.
-  if (result.error && !["23505", "42P01"].includes(result.error.code)) {
-    throw result.error;
-  }
+  if (!result.error) return;
+  if (result.error.code === "42P01") return;
+  // Only a caller-provided operation id can safely be retried idempotently.
+  if (result.error.code === "23505" && input.operationId) return;
+  throw result.error;
 }

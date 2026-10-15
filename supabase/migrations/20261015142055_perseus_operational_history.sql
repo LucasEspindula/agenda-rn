@@ -1,7 +1,7 @@
 -- Perseu: histórico operacional append-only. Esta migration não altera análises já persistidas.
 create table public.perseus_document_events (
  id uuid primary key default gen_random_uuid(),
- document_id uuid not null references public.insurance_documents(id) on delete cascade,
+ document_id uuid not null references public.insurance_documents(id) on delete restrict,
  event_type text not null check (event_type in (
   'DOCUMENT_IMPORTED','IMPORT_REJECTED','FORMAT_UNSUPPORTED','ANALYSIS_COMPLETED','STRUCTURE_IDENTIFIED',
   'SEMANTIC_INTERPRETATION_COMPLETED','SEMANTIC_CONFLICT_IDENTIFIED','LEARNED_SUGGESTION_REUSED',
@@ -18,7 +18,7 @@ create table public.perseus_document_events (
  check (jsonb_typeof(event_metadata)='object')
 );
 create index perseus_document_events_document_order on public.perseus_document_events(document_id,occurred_at desc,id desc);
-create unique index perseus_document_events_blocked_once on public.perseus_document_events(document_id,event_type,coalesce(event_metadata->>'reason','')) where event_type='REANALYSIS_BLOCKED';
+create unique index perseus_document_events_operation_once on public.perseus_document_events(document_id,event_type,operation_id);
 alter table public.perseus_document_events enable row level security;
 revoke all on table public.perseus_document_events from public,anon,authenticated;
 grant select,insert on table public.perseus_document_events to service_role;
@@ -27,7 +27,7 @@ grant select,insert on table public.perseus_document_events to service_role;
 create or replace function public.replace_perseus_document_analysis(
  p_document_id uuid,p_items jsonb,p_parser_key text,p_parser_version text,p_perseus_metadata jsonb,p_updated_by bigint
 ) returns void language plpgsql security invoker set search_path=public,pg_temp as $$
-declare v_document public.insurance_documents%rowtype; v_tables integer; v_columns integer; v_records integer; v_semantic integer; v_conflicts integer; v_rule record;
+declare v_document public.insurance_documents%rowtype; v_tables integer; v_columns integer; v_records integer; v_semantic integer; v_conflicts integer; v_rule record; v_operation uuid:=gen_random_uuid();
 begin
  if jsonb_typeof(p_items) is distinct from 'array' or jsonb_array_length(p_items)>2000 then raise exception 'Itens do Perseu inválidos.' using errcode='22023'; end if;
  select * into v_document from public.insurance_documents where id=p_document_id for update;
@@ -42,22 +42,22 @@ begin
  from jsonb_to_recordset(p_items) as item(source_index integer,raw_data jsonb,normalized_data jsonb,semantic_evidence jsonb,source_metadata jsonb,patient_name text,beneficiary_number text,guide_number text,external_reference text,service_date date,procedure_code text,procedure_description text,amount_presented numeric,amount_approved numeric,amount_glossed numeric,gloss_code text,gloss_reason text) order by item.source_index;
  update public.insurance_documents set parser_key=p_parser_key,parser_version=p_parser_version,raw_metadata=coalesce(raw_metadata,'{}'::jsonb)||jsonb_build_object('perseus',coalesce(p_perseus_metadata,'{}'::jsonb)),perseus_status='REVIEW_REQUIRED',updated_at=now(),updated_by=p_updated_by where id=p_document_id;
  v_tables:=jsonb_array_length(coalesce(p_perseus_metadata->'structure'->'tables','[]'::jsonb)); v_columns:=coalesce((p_perseus_metadata->>'column_count')::integer,0); v_records:=coalesce((p_perseus_metadata->>'row_count')::integer,0);
- insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,parser_version,semantic_version,event_metadata) values
-  (p_document_id,'ANALYSIS_COMPLETED','SYSTEM',p_updated_by,p_parser_version,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('tables',v_tables,'columns',v_columns,'records',v_records)),
-  (p_document_id,'STRUCTURE_IDENTIFIED','SYSTEM',p_updated_by,p_parser_version,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('tables',v_tables,'columns',v_columns,'records',v_records));
+ insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,parser_version,semantic_version,event_metadata) values
+  (p_document_id,'ANALYSIS_COMPLETED','SYSTEM',p_updated_by,v_operation,p_parser_version,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('tables',v_tables,'columns',v_columns,'records',v_records)),
+  (p_document_id,'STRUCTURE_IDENTIFIED','SYSTEM',p_updated_by,v_operation,p_parser_version,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('tables',v_tables,'columns',v_columns,'records',v_records));
  select count(*) into v_semantic from jsonb_array_elements(coalesce(p_perseus_metadata->'semantic'->'tables','[]'::jsonb)) table_item cross join lateral jsonb_array_elements(coalesce(table_item->'columns','[]'::jsonb)) column_item where column_item->>'field' is not null;
- if v_semantic>0 then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,parser_version,semantic_version,event_metadata) values(p_document_id,'SEMANTIC_INTERPRETATION_COMPLETED','SEMANTIC_ENGINE',p_updated_by,p_parser_version,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('items',v_semantic)); end if;
+ if v_semantic>0 then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,parser_version,semantic_version,event_metadata) values(p_document_id,'SEMANTIC_INTERPRETATION_COMPLETED','SEMANTIC_ENGINE',p_updated_by,v_operation,p_parser_version,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('items',v_semantic)); end if;
  select count(*) into v_conflicts from jsonb_array_elements(coalesce(p_perseus_metadata->'semantic'->'tables','[]'::jsonb)) table_item cross join lateral jsonb_array_elements(coalesce(table_item->'columns','[]'::jsonb)) column_item where column_item->>'origin'='CONFLICT';
- if v_conflicts>0 then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,semantic_version,event_metadata) values(p_document_id,'SEMANTIC_CONFLICT_IDENTIFIED','SEMANTIC_ENGINE',p_updated_by,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('items',v_conflicts)); end if;
+ if v_conflicts>0 then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,semantic_version,event_metadata) values(p_document_id,'SEMANTIC_CONFLICT_IDENTIFIED','SEMANTIC_ENGINE',p_updated_by,v_operation,p_perseus_metadata->'semantic'->>'version',jsonb_build_object('items',v_conflicts)); end if;
  for v_rule in select distinct (column_item->>'ruleId')::uuid as rule_id,left(coalesce(column_item->>'sourceColumn',''),80) as source_column,left(coalesce(column_item->>'field',''),80) as semantic_field from jsonb_array_elements(coalesce(p_perseus_metadata->'semantic'->'tables','[]'::jsonb)) table_item cross join lateral jsonb_array_elements(coalesce(table_item->'columns','[]'::jsonb)) column_item where column_item->>'origin'='LEARNED_SUGGESTION' and column_item->>'ruleId' is not null loop
-  insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,semantic_version,related_rule_id,event_metadata) values(p_document_id,'LEARNED_SUGGESTION_REUSED','LEARNED_KNOWLEDGE',p_updated_by,p_perseus_metadata->'semantic'->>'version',v_rule.rule_id,jsonb_build_object('column',v_rule.source_column,'field',v_rule.semantic_field));
+  insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,semantic_version,related_rule_id,event_metadata) values(p_document_id,'LEARNED_SUGGESTION_REUSED','LEARNED_KNOWLEDGE',p_updated_by,v_operation,p_perseus_metadata->'semantic'->>'version',v_rule.rule_id,jsonb_build_object('column',v_rule.source_column,'field',v_rule.semantic_field));
  end loop;
 end $$;
 
 create or replace function public.apply_perseus_semantic_review(
  p_document_id uuid,p_table_id text,p_source_key text,p_semantic_field text,p_learn boolean,p_context jsonb,p_item_updates jsonb,p_expected_updated_at timestamptz,p_updated_by bigint
 ) returns jsonb language plpgsql security invoker set search_path=public,pg_temp as $$
-declare v_document public.insurance_documents%rowtype; v_entity uuid; v_payer text; v_kind text; v_fingerprint text; v_expected integer; v_count integer; v_previous uuid; v_review uuid; v_rule uuid; v_rule_action text;
+declare v_document public.insurance_documents%rowtype; v_entity uuid; v_payer text; v_kind text; v_fingerprint text; v_expected integer; v_count integer; v_previous uuid; v_review uuid; v_rule uuid; v_rule_action text; v_operation uuid:=gen_random_uuid();
 begin
  if p_semantic_field is not null and p_semantic_field not in ('patient_name','beneficiary_number','guide_number','external_reference','service_date','procedure_code','procedure_description','amount_presented','amount_approved','amount_glossed','gloss_code','gloss_reason') then raise exception 'Significado inválido.' using errcode='22023'; end if;
  if jsonb_typeof(p_item_updates) is distinct from 'array' then raise exception 'Atualização de itens inválida.' using errcode='22023'; end if;
@@ -87,16 +87,16 @@ begin
    v_rule_action:='CREATED';
   end if;
  end if;
- insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,semantic_version,related_review_id,event_metadata) values(p_document_id,case when p_semantic_field is null then 'MAPPING_REVIEW_REJECTED' else 'MAPPING_REVIEW_APPLIED' end,'USER',p_updated_by,coalesce(v_document.raw_metadata->'perseus'->'semantic'->>'version','1.0.0'),v_review,jsonb_build_object('column',left(p_source_key,80),'field',coalesce(p_semantic_field,''),'items',v_count));
- if v_previous is not null then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,related_review_id,event_metadata) values(p_document_id,'MAPPING_REVIEW_REPLACED','USER',p_updated_by,v_review,jsonb_build_object('column',left(p_source_key,80),'field',coalesce(p_semantic_field,''))); end if;
- if v_rule is not null then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,related_review_id,related_rule_id,event_metadata) values(p_document_id,case when v_rule_action='CREATED' then 'LEARNED_RULE_CREATED' else 'LEARNED_RULE_REUSED' end,'USER',p_updated_by,v_review,v_rule,jsonb_build_object('column',left(p_source_key,80),'field',p_semantic_field)); end if;
+ insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,semantic_version,related_review_id,event_metadata) values(p_document_id,case when p_semantic_field is null then 'MAPPING_REVIEW_REJECTED' else 'MAPPING_REVIEW_APPLIED' end,'USER',p_updated_by,v_operation,coalesce(v_document.raw_metadata->'perseus'->'semantic'->>'version','1.0.0'),v_review,jsonb_build_object('column',left(p_source_key,80),'field',coalesce(p_semantic_field,''),'items',v_count));
+ if v_previous is not null then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,related_review_id,event_metadata) values(p_document_id,'MAPPING_REVIEW_REPLACED','USER',p_updated_by,v_operation,v_review,jsonb_build_object('column',left(p_source_key,80),'field',coalesce(p_semantic_field,''))); end if;
+ if v_rule is not null then insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,related_review_id,related_rule_id,event_metadata) values(p_document_id,case when v_rule_action='CREATED' then 'LEARNED_RULE_CREATED' else 'LEARNED_RULE_REUSED' end,'USER',p_updated_by,v_operation,v_review,v_rule,jsonb_build_object('column',left(p_source_key,80),'field',p_semantic_field)); end if;
  update public.insurance_documents set updated_at=now(),updated_by=p_updated_by where id=p_document_id;
  return jsonb_build_object('applied_item_count',v_count,'rule_id',v_rule,'rule_action',v_rule_action,'review_id',v_review);
 end $$;
 
 create or replace function public.apply_perseus_semantic_value_correction(p_document_id uuid,p_item_id uuid,p_semantic_field text,p_normalized_value text,p_expected_updated_at timestamptz,p_updated_by bigint)
 returns void language plpgsql security invoker set search_path=public,pg_temp as $$
-declare v_document public.insurance_documents%rowtype; v_previous uuid; v_correction uuid; v_table text;
+declare v_document public.insurance_documents%rowtype; v_previous uuid; v_correction uuid; v_table text; v_operation uuid:=gen_random_uuid();
 begin
  if p_semantic_field not in ('patient_name','beneficiary_number','guide_number','external_reference','service_date','procedure_code','procedure_description','amount_presented','amount_approved','amount_glossed','gloss_code','gloss_reason') then raise exception 'Significado inválido.' using errcode='22023'; end if;
  select * into v_document from public.insurance_documents where id=p_document_id for update;
@@ -107,19 +107,19 @@ begin
  update public.perseus_semantic_value_corrections set state='SUPERSEDED' where item_id=p_item_id and semantic_field=p_semantic_field and state='ACTIVE' returning id into v_previous;
  insert into public.perseus_semantic_value_corrections(document_id,item_id,semantic_field,normalized_value,supersedes_correction_id,created_by) values(p_document_id,p_item_id,p_semantic_field,p_normalized_value,v_previous,p_updated_by) returning id into v_correction;
  update public.insurance_document_items set normalized_data=jsonb_set(normalized_data,array[p_semantic_field],to_jsonb(p_normalized_value),true),match_evidence=jsonb_set(match_evidence,array[p_semantic_field],jsonb_build_object('origin','USER_CONFIRMED','corrected',true),true),patient_name=case when p_semantic_field='patient_name' then p_normalized_value else patient_name end,beneficiary_number=case when p_semantic_field='beneficiary_number' then p_normalized_value else beneficiary_number end,guide_number=case when p_semantic_field='guide_number' then p_normalized_value else guide_number end,external_reference=case when p_semantic_field='external_reference' then p_normalized_value else external_reference end,service_date=case when p_semantic_field='service_date' then p_normalized_value::date else service_date end,procedure_code=case when p_semantic_field='procedure_code' then p_normalized_value else procedure_code end,procedure_description=case when p_semantic_field='procedure_description' then p_normalized_value else procedure_description end,amount_presented=case when p_semantic_field='amount_presented' then p_normalized_value::numeric else amount_presented end,amount_approved=case when p_semantic_field='amount_approved' then p_normalized_value::numeric else amount_approved end,amount_glossed=case when p_semantic_field='amount_glossed' then p_normalized_value::numeric else amount_glossed end,gloss_code=case when p_semantic_field='gloss_code' then p_normalized_value else gloss_code end,gloss_reason=case when p_semantic_field='gloss_reason' then p_normalized_value else gloss_reason end where id=p_item_id and document_id=p_document_id;
- insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,related_correction_id,event_metadata) values(p_document_id,'INDIVIDUAL_CORRECTION_APPLIED','USER',p_updated_by,v_correction,jsonb_build_object('field',p_semantic_field));
+ insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,related_correction_id,event_metadata) values(p_document_id,'INDIVIDUAL_CORRECTION_APPLIED','USER',p_updated_by,v_operation,v_correction,jsonb_build_object('field',p_semantic_field));
  update public.insurance_documents set updated_at=now(),updated_by=p_updated_by where id=p_document_id;
 end $$;
 
 create or replace function public.revoke_perseus_semantic_rule(p_rule_id uuid,p_updated_by bigint)
 returns jsonb language plpgsql security invoker set search_path=public,pg_temp as $$
-declare v_rule public.perseus_semantic_rules%rowtype;
+declare v_rule public.perseus_semantic_rules%rowtype; v_operation uuid:=gen_random_uuid();
 begin
  select * into v_rule from public.perseus_semantic_rules where id=p_rule_id for update;
  if not found then raise exception 'Regra aprendida não encontrada.' using errcode='P0002'; end if;
  if v_rule.state<>'ACTIVE' then raise exception 'A regra não está ativa.' using errcode='55000'; end if;
  update public.perseus_semantic_rules set state='REVOKED',revoked_at=now(),revoked_by=p_updated_by where id=p_rule_id;
- insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,related_rule_id,event_metadata) values(v_rule.source_document_id,'LEARNED_RULE_REVOKED','USER',p_updated_by,p_rule_id,jsonb_build_object('column',left(v_rule.column_normalized,80),'field',v_rule.semantic_field));
+ insert into public.perseus_document_events(document_id,event_type,event_origin,actor_id,operation_id,related_rule_id,event_metadata) values(v_rule.source_document_id,'LEARNED_RULE_REVOKED','USER',p_updated_by,v_operation,p_rule_id,jsonb_build_object('column',left(v_rule.column_normalized,80),'field',v_rule.semantic_field));
  return jsonb_build_object('rule_id',p_rule_id,'state','REVOKED');
 end $$;
 

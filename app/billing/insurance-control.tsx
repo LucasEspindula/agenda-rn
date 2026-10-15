@@ -113,6 +113,8 @@ type DocumentHistory = {
   loading: boolean;
   error: string;
   hasMore: boolean;
+  nextCursor: string | null;
+  availability: "READY" | "MIGRATION_PENDING";
 };
 type PerseusStep = "context" | "file";
 type WorkspaceFilters = { query: string; entityId: string; format: string };
@@ -218,6 +220,95 @@ export function perseusContextError(values: {
   if (!values.payer.trim()) return "payer";
   return null;
 }
+function PerseusDocumentHistoryPanel({
+  document,
+  history,
+  onClose,
+  onLoadMore,
+}: {
+  document: DocumentRow;
+  history: DocumentHistory | null;
+  onClose: () => void;
+  onLoadMore: (cursor: string) => void;
+}) {
+  const current = history?.documentId === document.id ? history : null;
+  const events = current?.events || [];
+  return (
+    <aside
+      id="perseus-history-panel"
+      className="perseus-history-panel"
+      aria-label="Histórico do Perseu"
+    >
+      <header>
+        <div>
+          <h3>Histórico do Perseu</h3>
+          <small>
+            {current?.loading && !events.length
+              ? "Carregando eventos…"
+              : `${current?.total ?? events.length} evento(s) registrado(s)`}
+          </small>
+        </div>
+        <button
+          type="button"
+          className="perseus-detail-close"
+          aria-label="Fechar histórico do Perseu"
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </header>
+      <div className="perseus-history-panel-body">
+        {current?.loading && !events.length && <p className="perseus-history-message">Carregando histórico…</p>}
+        {current?.error && <p role="alert" className="perseus-preview-error">{current.error}</p>}
+        {!current?.loading && !current?.error && current?.availability === "MIGRATION_PENDING" && (
+          <p className="perseus-history-message" role="status">
+            O histórico persistente será ativado após a migration pendente. Eventos históricos verificáveis continuam disponíveis abaixo.
+          </p>
+        )}
+        {!current?.loading && !current?.error && current?.availability !== "MIGRATION_PENDING" && !events.length && (
+          <p className="perseus-history-message">Nenhum evento operacional foi registrado para este documento.</p>
+        )}
+        {events.length > 0 && (
+          <ol className="perseus-history-timeline">
+            {events.map((event) => {
+              const presentation = perseusEventPresentation(event);
+              const origin = event.historical
+                ? "Histórico reconstruído"
+                : event.actorName
+                  ? `Origem: ${event.actorName}`
+                  : event.eventOrigin === "LEARNED_KNOWLEDGE"
+                    ? "Origem: Conhecimento anterior"
+                    : event.eventOrigin === "SEMANTIC_ENGINE"
+                      ? "Origem: Motor semântico"
+                      : "Origem: Sistema";
+              return (
+                <li key={event.id}>
+                  <span className="perseus-history-dot" aria-hidden="true" />
+                  <div>
+                    <strong>{presentation.title}</strong>
+                    <time>{formatDateTimeBR(event.occurredAt)}</time>
+                    <p>{presentation.detail}</p>
+                    <small>{origin}</small>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+        {current?.hasMore && current.nextCursor && (
+          <button
+            type="button"
+            className="billing-link-button"
+            disabled={current.loading}
+            onClick={() => onLoadMore(current.nextCursor!)}
+          >
+            {current.loading ? "Carregando…" : "Ver mais eventos"}
+          </button>
+        )}
+      </div>
+    </aside>
+  );
+}
 export function filterPerseusDocuments(
   documents: DocumentRow[],
   filters: WorkspaceFilters,
@@ -287,10 +378,12 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
     });
   const dialogRef = useRef<HTMLDialogElement>(null),
     triggerRef = useRef<HTMLButtonElement>(null),
+    historyTriggerRef = useRef<HTMLButtonElement>(null),
     closeRef = useRef<HTMLButtonElement>(null),
     entityRef = useRef<HTMLSelectElement>(null),
     payerRef = useRef<HTMLInputElement>(null),
-    analysisRequest = useRef(0);
+    analysisRequest = useRef(0),
+    historyRequest = useRef(0);
   async function load() {
     const response = await fetch("/api/insurance-control", {
         cache: "no-store",
@@ -363,31 +456,38 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
       ),
     ].sort();
   const selectedDocumentId = selected?.id || "";
-  const loadHistory = useCallback(async (documentId: string, offset = 0) => {
+  const loadHistory = useCallback(async (documentId: string, cursor: string | null = null) => {
+    const requestId = ++historyRequest.current;
     setHistory((current) => ({
       documentId,
-      events: offset === 0 ? [] : current?.events || [],
-      total: offset === 0 ? null : current?.total || null,
+      events: cursor ? current?.events || [] : [],
+      total: cursor ? current?.total || null : null,
       loading: true,
       error: "",
       hasMore: current?.hasMore || false,
+      nextCursor: cursor ? current?.nextCursor || null : null,
+      availability: current?.availability || "READY",
     }));
     try {
       const response = await fetch(
-        "/api/insurance-control/events?id=" + encodeURIComponent(documentId) + "&limit=20&offset=" + offset,
+        "/api/insurance-control/events?id=" + encodeURIComponent(documentId) + "&limit=20" + (cursor ? "&cursor=" + encodeURIComponent(cursor) : ""),
         { cache: "no-store" },
       );
       const payload = await response.json();
       if (!response.ok) throw Error(payload.error || "Não foi possível carregar o histórico.");
+      if (requestId !== historyRequest.current) return;
       setHistory((current) => ({
         documentId,
-        events: offset === 0 ? payload.events || [] : [...(current?.events || []), ...(payload.events || [])],
+        events: cursor ? [...(current?.events || []), ...(payload.events || [])] : payload.events || [],
         total: typeof payload.total === "number" ? payload.total : current?.total || null,
         loading: false,
         error: "",
         hasMore: Boolean(payload.hasMore),
+        nextCursor: typeof payload.nextCursor === "string" ? payload.nextCursor : null,
+        availability: payload.availability === "MIGRATION_PENDING" ? "MIGRATION_PENDING" : "READY",
       }));
     } catch (reason) {
+      if (requestId !== historyRequest.current) return;
       setHistory((current) => ({
         documentId,
         events: current?.documentId === documentId ? current.events : [],
@@ -395,14 +495,20 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
         loading: false,
         error: reason instanceof Error ? reason.message : "Não foi possível carregar o histórico.",
         hasMore: false,
+        nextCursor: null,
+        availability: current?.availability || "READY",
       }));
     }
   }, []);
   useEffect(() => {
-    if (selectedDocumentId) void loadHistory(selectedDocumentId);
-  }, [loadHistory, selectedDocumentId]);
+    if (historyOpen && selectedDocumentId) void loadHistory(selectedDocumentId);
+  }, [historyOpen, loadHistory, selectedDocumentId]);
   const restoreFocus = () =>
     requestAnimationFrame(() => triggerRef.current?.focus());
+  function closeHistory() {
+    setHistoryOpen(false);
+    requestAnimationFrame(() => historyTriggerRef.current?.focus());
+  }
   function resetImport() {
     setFile(null);
     setImportError("");
@@ -688,7 +794,8 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
         <div
           className={
             "perseus-workspace-body" +
-            (!detailOpen || !selected ? " detail-hidden" : "")
+            (!detailOpen || !selected ? " detail-hidden" : "") +
+            (historyOpen && selected ? " history-open" : "")
           }
         >
           <section
@@ -852,20 +959,35 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                   "/api/insurance-control/documents?id=" +
                   encodeURIComponent(selected.id);
               return (
+                <>
                 <aside
                   className="perseus-document-detail"
                   aria-label="Detalhes do documento"
                 >
                   <header>
                     <h3>Detalhes do Documento</h3>
-                    <button
-                      type="button"
-                      className="perseus-detail-close"
-                      aria-label="Fechar detalhes"
-                      onClick={() => setDetailOpen(false)}
-                    >
-                      ×
-                    </button>
+                    <div className="perseus-detail-header-actions">
+                      <button
+                        ref={historyTriggerRef}
+                        type="button"
+                        className="perseus-history-trigger"
+                        aria-label="Abrir histórico do Perseu"
+                        aria-controls="perseus-history-panel"
+                        aria-expanded={historyOpen}
+                        title="Abrir histórico do Perseu"
+                        onClick={() => setHistoryOpen(true)}
+                      >
+                        ◷
+                      </button>
+                      <button
+                        type="button"
+                        className="perseus-detail-close"
+                        aria-label="Fechar detalhes"
+                        onClick={() => setDetailOpen(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </header>
                   <div className="perseus-detail-body">
                     <section className="perseus-inspector-state">
@@ -959,53 +1081,6 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                         )}
                       </div>
                     </section>
-                    <section className="perseus-history" aria-label="Histórico do Perseu">
-                      <button
-                        type="button"
-                        className="perseus-history-toggle"
-                        aria-expanded={historyOpen}
-                        onClick={() => setHistoryOpen((current) => !current)}
-                      >
-                        <span className="perseus-history-icon" aria-hidden="true">◷</span>
-                        <span>
-                          <strong>Histórico do Perseu</strong>
-                          <small>
-                            {history?.documentId === selected.id && history.loading
-                              ? "Carregando…"
-                              : history?.documentId === selected.id && history.events[0]
-                                ? `${history.total ?? history.events.length} evento(s) · última atividade ${formatDateTimeBR(history.events[0].occurredAt)}`
-                                : "Sem eventos operacionais registrados"}
-                          </small>
-                        </span>
-                        <b aria-hidden="true">{historyOpen ? "⌃" : "⌄"}</b>
-                      </button>
-                      {historyOpen && (
-                        <div className="perseus-history-content">
-                          {history?.documentId === selected.id && history.loading && <p>Carregando histórico…</p>}
-                          {history?.documentId === selected.id && history.error && <p role="alert" className="perseus-preview-error">{history.error}</p>}
-                          {history?.documentId === selected.id && !history.loading && !history.error && !history.events.length && <p>O histórico operacional começa a ser registrado a partir desta atualização.</p>}
-                          {history?.documentId === selected.id && history.events.length > 0 && (
-                            <ol className="perseus-history-timeline">
-                              {history.events.map((event) => {
-                                const presentation = perseusEventPresentation(event);
-                                return <li key={event.id}>
-                                  <span className="perseus-history-dot" aria-hidden="true" />
-                                  <div>
-                                    <strong>{presentation.title}</strong>
-                                    <time>{formatDateTimeBR(event.occurredAt)}</time>
-                                    <p>{presentation.detail}</p>
-                                    <small>{event.historical ? "Histórico reconstruído" : event.actorName ? `Origem: ${event.actorName}` : `Origem: ${event.eventOrigin === "LEARNED_KNOWLEDGE" ? "Conhecimento anterior" : event.eventOrigin === "SEMANTIC_ENGINE" ? "Motor semântico" : "Sistema"}`}</small>
-                                  </div>
-                                </li>;
-                              })}
-                            </ol>
-                          )}
-                          {history?.documentId === selected.id && history.hasMore && (
-                            <button type="button" className="billing-link-button" disabled={history.loading} onClick={() => void loadHistory(selected.id, history.events.length)}>Ver mais eventos</button>
-                          )}
-                        </div>
-                      )}
-                    </section>
                     {selected.rejectionReason && (
                       <p className="insurance-document-reason">
                         {selected.rejectionReason}
@@ -1048,6 +1123,15 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                     )}
                   </footer>
                 </aside>
+                {historyOpen && (
+                  <PerseusDocumentHistoryPanel
+                    document={selected}
+                    history={history}
+                    onClose={closeHistory}
+                    onLoadMore={(cursor) => void loadHistory(selected.id, cursor)}
+                  />
+                )}
+                </>
               );
             })()}
         </div>

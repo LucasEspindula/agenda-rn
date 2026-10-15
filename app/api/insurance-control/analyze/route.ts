@@ -115,7 +115,12 @@ async function replaceItems(
   if (replace.error) throw replace.error;
 }
 
-async function fail(document: Document, actorId: number, message: string) {
+async function fail(
+  document: Document,
+  actorId: number,
+  message: string,
+  operationId: string,
+) {
   const rawMetadata = {
     ...(document.raw_metadata || {}),
     perseus: {
@@ -141,6 +146,7 @@ async function fail(document: Document, actorId: number, message: string) {
     eventType: "ANALYSIS_FAILED",
     eventOrigin: "SYSTEM",
     actorId,
+    operationId,
   });
 }
 
@@ -164,6 +170,7 @@ async function analyze(request: Request) {
       409,
       "Somente documentos prontos podem ser analisados.",
     );
+  const operationId = crypto.randomUUID();
   const download = await getSupabaseAdmin()
     .storage.from(BUCKET)
     .download(document.storage_path);
@@ -180,6 +187,7 @@ async function analyze(request: Request) {
         eventType: "FORMAT_UNSUPPORTED",
         eventOrigin: "SYSTEM",
         actorId: session.account.id,
+        operationId,
         metadata: { format: document.detected_format || "" },
       });
       return Response.json(
@@ -215,7 +223,7 @@ async function analyze(request: Request) {
     );
   } catch (error) {
     if (error instanceof PerseusParseError) {
-      await fail(document, session.account.id, error.message);
+      await fail(document, session.account.id, error.message, operationId);
       return Response.json(
         { error: error.message },
         { status: 422, headers: { "Cache-Control": "private, no-store" } },
@@ -228,6 +236,7 @@ async function analyze(request: Request) {
         eventType: "REANALYSIS_BLOCKED",
         eventOrigin: "SYSTEM",
         actorId: session.account.id,
+        operationId,
         metadata: { reason },
       });
     throw error;
