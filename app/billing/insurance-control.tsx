@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { BillingData } from "@/lib/billing-types";
 import AppDialog from "@/components/app-dialog";
 import PerseusMark from "@/components/perseus-mark";
@@ -16,6 +16,11 @@ import {
   INSURANCE_DOCUMENT_MAX_SIZE,
 } from "@/lib/insurance-documents-client";
 import { formatDateBR, formatDateTimeBR } from "@/lib/date-format";
+import {
+  type PerseusDocumentEvent,
+  perseusEventPresentation,
+  perseusOriginLabel,
+} from "@/lib/perseu/operational-history";
 
 type AnalysisTable = {
   table_id: string;
@@ -60,6 +65,7 @@ type Analysis = {
         sourceKey: string;
         classification: "HIGH" | "MEDIUM" | "AMBIGUOUS" | "UNKNOWN";
         origin?: "HEURISTIC" | "LEARNED_SUGGESTION" | "USER_CONFIRMED" | "USER_REJECTED" | "CONFLICT";
+        ruleId?: string;
         reasons: string[];
         warnings: string[];
       }[];
@@ -100,6 +106,14 @@ type Preview = {
 type Props = { data: BillingData; pendingCount: number };
 type DocumentNotice = { tone: "info" | "error"; message: string };
 type PreviewError = { documentId: string; message: string };
+type DocumentHistory = {
+  documentId: string;
+  events: PerseusDocumentEvent[];
+  total: number | null;
+  loading: boolean;
+  error: string;
+  hasMore: boolean;
+};
 type PerseusStep = "context" | "file";
 type WorkspaceFilters = { query: string; entityId: string; format: string };
 
@@ -141,6 +155,16 @@ const normalizedSummary = (values: Record<string, string>) =>
 const semanticFields = [
   "patient_name","beneficiary_number","guide_number","external_reference","service_date","procedure_code","procedure_description","amount_presented","amount_approved","amount_glossed","gloss_code","gloss_reason",
 ];
+const semanticOriginHint = (origin: string | undefined) =>
+  origin === "LEARNED_SUGGESTION"
+    ? "Compatibilidade: estrutura e contexto correspondentes. Aguardando revisão deste documento."
+    : origin === "USER_CONFIRMED"
+      ? "Confirmado pelo usuário neste documento."
+      : origin === "USER_REJECTED"
+        ? "Rejeitado pelo usuário neste documento."
+        : origin === "CONFLICT"
+          ? "Conflito de conhecimento: revisão humana necessária."
+          : "Evidências avaliadas pelo motor semântico.";
 function analysisText(document: DocumentRow) {
   if (document.perseusStatus === "REVIEW_REQUIRED")
     return { title: "Estrutura identificada", detail: "Revisão necessária" };
@@ -240,12 +264,15 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
     [analyzingId, setAnalyzingId] = useState(""),
     [preview, setPreview] = useState<Preview | null>(null),
     [reviewingKey, setReviewingKey] = useState(""),
+    [revokingRuleId, setRevokingRuleId] = useState(""),
     [mappingSelections, setMappingSelections] = useState<Record<string, string>>({}),
     [previewTableId, setPreviewTableId] = useState(""),
     [file, setFile] = useState<File | null>(null),
     [step, setStep] = useState<PerseusStep>("context"),
     [selectedId, setSelectedId] = useState(""),
     [detailOpen, setDetailOpen] = useState(true),
+    [historyOpen, setHistoryOpen] = useState(false),
+    [history, setHistory] = useState<DocumentHistory | null>(null),
     [filters, setFilters] = useState<WorkspaceFilters>({
       query: "",
       entityId: "",
@@ -335,6 +362,45 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
           .filter((format): format is string => Boolean(format)),
       ),
     ].sort();
+  const selectedDocumentId = selected?.id || "";
+  const loadHistory = useCallback(async (documentId: string, offset = 0) => {
+    setHistory((current) => ({
+      documentId,
+      events: offset === 0 ? [] : current?.events || [],
+      total: offset === 0 ? null : current?.total || null,
+      loading: true,
+      error: "",
+      hasMore: current?.hasMore || false,
+    }));
+    try {
+      const response = await fetch(
+        "/api/insurance-control/events?id=" + encodeURIComponent(documentId) + "&limit=20&offset=" + offset,
+        { cache: "no-store" },
+      );
+      const payload = await response.json();
+      if (!response.ok) throw Error(payload.error || "Não foi possível carregar o histórico.");
+      setHistory((current) => ({
+        documentId,
+        events: offset === 0 ? payload.events || [] : [...(current?.events || []), ...(payload.events || [])],
+        total: typeof payload.total === "number" ? payload.total : current?.total || null,
+        loading: false,
+        error: "",
+        hasMore: Boolean(payload.hasMore),
+      }));
+    } catch (reason) {
+      setHistory((current) => ({
+        documentId,
+        events: current?.documentId === documentId ? current.events : [],
+        total: current?.documentId === documentId ? current.total : null,
+        loading: false,
+        error: reason instanceof Error ? reason.message : "Não foi possível carregar o histórico.",
+        hasMore: false,
+      }));
+    }
+  }, []);
+  useEffect(() => {
+    if (selectedDocumentId) void loadHistory(selectedDocumentId);
+  }, [loadHistory, selectedDocumentId]);
   const restoreFocus = () =>
     requestAnimationFrame(() => triggerRef.current?.focus());
   function resetImport() {
@@ -543,6 +609,22 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
       await load(); await openPreview(preview.document, previewTableId);
     } catch (reason) { setPreviewError({ documentId: preview.document.id, message: reason instanceof Error ? reason.message : "Não foi possível corrigir o valor." }); }
     finally { setReviewingKey(""); }
+  }
+  async function revokeLearnedRule(ruleId: string) {
+    if (!window.confirm("Revogar esta regra aprendida? Ela continuará no histórico, mas não será usada em novos documentos.")) return;
+    setRevokingRuleId(ruleId);
+    try {
+      const response = await fetch("/api/insurance-control/semantic-review", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ruleId }),
+      }), payload = await response.json();
+      if (!response.ok) throw Error(payload.error || "Não foi possível revogar a regra.");
+      if (preview) await loadHistory(preview.document.id);
+      await load();
+    } catch (reason) {
+      if (preview) setPreviewError({ documentId: preview.document.id, message: reason instanceof Error ? reason.message : "Não foi possível revogar a regra." });
+    } finally { setRevokingRuleId(""); }
   }
   return (
     <>
@@ -876,6 +958,53 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                           </span>
                         )}
                       </div>
+                    </section>
+                    <section className="perseus-history" aria-label="Histórico do Perseu">
+                      <button
+                        type="button"
+                        className="perseus-history-toggle"
+                        aria-expanded={historyOpen}
+                        onClick={() => setHistoryOpen((current) => !current)}
+                      >
+                        <span className="perseus-history-icon" aria-hidden="true">◷</span>
+                        <span>
+                          <strong>Histórico do Perseu</strong>
+                          <small>
+                            {history?.documentId === selected.id && history.loading
+                              ? "Carregando…"
+                              : history?.documentId === selected.id && history.events[0]
+                                ? `${history.total ?? history.events.length} evento(s) · última atividade ${formatDateTimeBR(history.events[0].occurredAt)}`
+                                : "Sem eventos operacionais registrados"}
+                          </small>
+                        </span>
+                        <b aria-hidden="true">{historyOpen ? "⌃" : "⌄"}</b>
+                      </button>
+                      {historyOpen && (
+                        <div className="perseus-history-content">
+                          {history?.documentId === selected.id && history.loading && <p>Carregando histórico…</p>}
+                          {history?.documentId === selected.id && history.error && <p role="alert" className="perseus-preview-error">{history.error}</p>}
+                          {history?.documentId === selected.id && !history.loading && !history.error && !history.events.length && <p>O histórico operacional começa a ser registrado a partir desta atualização.</p>}
+                          {history?.documentId === selected.id && history.events.length > 0 && (
+                            <ol className="perseus-history-timeline">
+                              {history.events.map((event) => {
+                                const presentation = perseusEventPresentation(event);
+                                return <li key={event.id}>
+                                  <span className="perseus-history-dot" aria-hidden="true" />
+                                  <div>
+                                    <strong>{presentation.title}</strong>
+                                    <time>{formatDateTimeBR(event.occurredAt)}</time>
+                                    <p>{presentation.detail}</p>
+                                    <small>{event.historical ? "Histórico reconstruído" : event.actorName ? `Origem: ${event.actorName}` : `Origem: ${event.eventOrigin === "LEARNED_KNOWLEDGE" ? "Conhecimento anterior" : event.eventOrigin === "SEMANTIC_ENGINE" ? "Motor semântico" : "Sistema"}`}</small>
+                                  </div>
+                                </li>;
+                              })}
+                            </ol>
+                          )}
+                          {history?.documentId === selected.id && history.hasMore && (
+                            <button type="button" className="billing-link-button" disabled={history.loading} onClick={() => void loadHistory(selected.id, history.events.length)}>Ver mais eventos</button>
+                          )}
+                        </div>
+                      )}
                     </section>
                     {selected.rejectionReason && (
                       <p className="insurance-document-reason">
@@ -1278,6 +1407,9 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                               {column.field
                                 ? semanticLabel(column.field)
                                 : "Não identificado"}
+                              <small className={"perseus-semantic-origin " + (column.origin || "HEURISTIC").toLowerCase()}>
+                                {perseusOriginLabel(column.origin)}
+                              </small>
                             </td>
                             <td>
                               <span
@@ -1290,9 +1422,8 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                               </span>
                             </td>
                             <td>
-                              {[...column.reasons, ...column.warnings].join(
-                                " · ",
-                              ) || "—"}
+                              <span>{[...column.reasons, ...column.warnings].join(" · ") || "—"}</span>
+                              <small className="perseus-semantic-hint">{semanticOriginHint(column.origin)}</small>
                             </td>
                             <td className="perseus-semantic-review">
                               <select
@@ -1312,8 +1443,11 @@ export default function InsuranceControl({ data, pendingCount }: Props) {
                               >
                                 {reviewingKey === semanticTable.tableId + ":" + column.sourceKey ? "Salvando…" : "Confirmar e aprender"}
                               </button>
+                              <small className="perseus-semantic-action-note">{mappingSelections[semanticTable.tableId + ":" + column.sourceKey] ? "Aplicar revisão: somente neste documento." : "Selecione um significado para revisar."}</small>
                               <button type="button" className="billing-link-button" disabled={reviewingKey === semanticTable.tableId + ":" + column.sourceKey} onClick={() => void reviewMapping(preview.document, semanticTable.tableId, column.sourceKey, mappingSelections[semanticTable.tableId + ":" + column.sourceKey] || null, false)}>Aplicar revisão</button>
-                              {column.origin && <small>Origem: {column.origin === "USER_CONFIRMED" ? "Confirmado pelo usuário" : column.origin === "LEARNED_SUGGESTION" ? "Sugestão aprendida" : column.origin === "USER_REJECTED" ? "Não mapeado pelo usuário" : "Heurística"}</small>}
+                              {column.origin === "LEARNED_SUGGESTION" && column.ruleId && (
+                                <button type="button" className="billing-link-button perseus-revoke-rule" disabled={revokingRuleId === column.ruleId} onClick={() => void revokeLearnedRule(column.ruleId!)}>{revokingRuleId === column.ruleId ? "Revogando…" : "Revogar regra aprendida"}</button>
+                              )}
                             </td>
                           </tr>
                         ))}

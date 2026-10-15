@@ -4,6 +4,7 @@ import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {INSURANCE_DOCUMENT_MAX_SIZE,INSURANCE_MOVEMENT_KINDS,canManageInsurance,detectInsuranceDocument,normalizeCompetence,sameInsuranceDocumentContext,validInsuranceDocumentName} from '@/lib/insurance-control';
 import {consumeLimit} from '@/lib/security/rate-limit';
 import {HttpError,readJson,secureMutation} from '@/lib/security/http';
+import {appendPerseusDocumentEvent} from '@/lib/perseu/operational-events-server';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -20,7 +21,7 @@ function kind(value:unknown){return typeof value==='string'&&(INSURANCE_MOVEMENT
 function failure(error:unknown){return error instanceof HttpError?Response.json({error:error.message},{status:error.status}):Response.json({error:'Não foi possível processar o documento do convênio.'},{status:500})}
 
 async function documentFor(documentId:string){const result=await getSupabaseAdmin().from('insurance_documents').select('id,movement_id,storage_path,original_filename,mime_type,file_size,upload_status,created_by,raw_metadata').eq('id',documentId).maybeSingle();if(result.error)throw result.error;return result.data as DocumentRecord|null}
-async function reject(document:DocumentRecord,reason:string,actorId=document.created_by){const db=getSupabaseAdmin();await db.storage.from(BUCKET).remove([document.storage_path]);const rawMetadata={...(document.raw_metadata||{}),rejection_reason:reason};const result=await db.from('insurance_documents').update({upload_status:'REJECTED',raw_metadata:rawMetadata,updated_at:new Date().toISOString(),updated_by:actorId}).eq('id',document.id).eq('upload_status','PENDING');if(result.error)throw result.error}
+async function reject(document:DocumentRecord,reason:string,actorId=document.created_by){const db=getSupabaseAdmin();await db.storage.from(BUCKET).remove([document.storage_path]);const rawMetadata={...(document.raw_metadata||{}),rejection_reason:reason};const result=await db.from('insurance_documents').update({upload_status:'REJECTED',raw_metadata:rawMetadata,updated_at:new Date().toISOString(),updated_by:actorId}).eq('id',document.id).eq('upload_status','PENDING');if(result.error)throw result.error;await appendPerseusDocumentEvent(db,{documentId:document.id,eventType:'IMPORT_REJECTED',eventOrigin:'SYSTEM',actorId})}
 async function cleanup(actor:number){const cutoff=new Date(Date.now()-60*60*1000).toISOString(),db=getSupabaseAdmin(),result=await db.from('insurance_documents').select('id,movement_id,storage_path,original_filename,mime_type,file_size,upload_status,created_by,raw_metadata').eq('created_by',actor).eq('upload_status','PENDING').lt('created_at',cutoff);if(result.error)throw result.error;for(const document of result.data||[])await reject(document as DocumentRecord,'Upload não concluído em até uma hora.',actor)}
 
 async function begin(request:Request){
@@ -54,7 +55,7 @@ async function complete(request:Request){
  const duplicate=((existing.data||[]) as {movement:MovementContext|null}[]).some(row=>sameInsuranceDocumentContext({billingEntityId:row.movement?.billing_entity_id,payer:row.movement?.payer,competence:row.movement?.competence},{billingEntityId:context?.billing_entity_id,payer:context?.payer,competence:context?.competence}));
  if(duplicate){await reject(document,'Arquivo duplicado para esta empresa, pagador e competência.',session.account.id);throw new HttpError(409,'Este arquivo já foi importado anteriormente.');}
  const update=await db.from('insurance_documents').update({mime_type:file.type||document.mime_type,sha256,detected_format:format,upload_status:'READY',perseus_status:'NOT_ANALYZED',updated_at:new Date().toISOString(),updated_by:session.account.id}).eq('id',document.id).eq('upload_status','PENDING');
- if(update.error)throw update.error;return Response.json({ok:true,format});
+ if(update.error)throw update.error;await appendPerseusDocumentEvent(db,{documentId:document.id,eventType:'DOCUMENT_IMPORTED',eventOrigin:'USER',actorId:session.account.id,metadata:{format}});return Response.json({ok:true,format});
 }
 
 export async function GET(request:Request){try{const session=await getSession();manager(session);const documentId=new URL(request.url).searchParams.get('id');if(!documentId||!id(documentId))throw new HttpError(400,'Documento inválido.');const document=await documentFor(documentId);if(!document||document.upload_status!=='READY')throw new HttpError(404,'Documento não disponível.');const signed=await getSupabaseAdmin().storage.from(BUCKET).createSignedUrl(document.storage_path,60);if(signed.error||!signed.data)throw signed.error||new Error('signed-url');return new Response(null,{status:302,headers:{Location:signed.data.signedUrl,'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer'}})}catch(error){return failure(error)}}

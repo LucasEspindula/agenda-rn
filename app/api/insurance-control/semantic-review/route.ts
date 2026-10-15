@@ -54,6 +54,17 @@ export const PATCH=secureMutation(async request=>{
  }catch(error){return fail(error)}
 });
 
+export const DELETE=secureMutation(async request=>{
+ try{
+  const session=manager(await getSession());await consumeLimit('perseus-semantic-rule-revoke',String(session.account.id),30,3600);
+  const body=await readJson(request),ruleId=text(body.ruleId,40);
+  if(!uuid.test(ruleId))throw new HttpError(400,'Regra aprendida inválida.');
+  const result=await getSupabaseAdmin().rpc('revoke_perseus_semantic_rule',{p_rule_id:ruleId,p_updated_by:session.account.id});
+  if(result.error)throw result.error;
+  return Response.json({ok:true,result:result.data},{headers:{'Cache-Control':'private, no-store'}});
+ }catch(error){return fail(error)}
+});
+
 export async function GET(request:Request){
  try{manager(await getSession());const id=new URL(request.url).searchParams.get('id')||'';if(!uuid.test(id))throw new HttpError(400,'Documento inválido.');const db=getSupabaseAdmin();const [reviews,rules]=await Promise.all([db.from('perseus_semantic_reviews').select('id,table_id,source_key,semantic_field,state,applied_item_count,created_at').eq('document_id',id).neq('state','SUPERSEDED'),db.from('perseus_semantic_rules').select('id,column_normalized,semantic_field,state,version,created_at').eq('state','ACTIVE').limit(100)]);if(reviews.error)throw reviews.error;if(rules.error)throw rules.error;return Response.json({reviews:reviews.data||[],rules:rules.data||[]},{headers:{'Cache-Control':'private, no-store'}})}catch(error){return fail(error)}
 }

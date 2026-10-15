@@ -13,6 +13,7 @@ import { normalizeInsurancePayer } from "@/lib/insurance-control";
 import { interpretPerseusSemantics } from "@/lib/perseu/semantic/detect";
 import type { PerseusSemanticRule } from "@/lib/perseu/supervision/contracts";
 import { adaptSupabaseSemanticRule } from "@/lib/perseu/supervision/rules";
+import { appendPerseusDocumentEvent } from "@/lib/perseu/operational-events-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,6 +136,19 @@ async function fail(document: Document, actorId: number, message: string) {
     .eq("id", document.id)
     .eq("upload_status", "READY");
   if (result.error) throw result.error;
+  await appendPerseusDocumentEvent(getSupabaseAdmin(), {
+    documentId: document.id,
+    eventType: "ANALYSIS_FAILED",
+    eventOrigin: "SYSTEM",
+    actorId,
+  });
+}
+
+function reanalysisBlockReason(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (/revisão humana/i.test(message)) return "HUMAN_REVIEW";
+  if (/registros vinculados/i.test(message)) return "PROTECTED_LINK";
+  return "";
 }
 
 async function analyze(request: Request) {
@@ -160,11 +174,19 @@ async function analyze(request: Request) {
       document.detected_format,
       new Uint8Array(await download.data.arrayBuffer()),
     );
-    if (inspection.kind === "unsupported")
+    if (inspection.kind === "unsupported") {
+      await appendPerseusDocumentEvent(getSupabaseAdmin(), {
+        documentId: document.id,
+        eventType: "FORMAT_UNSUPPORTED",
+        eventOrigin: "SYSTEM",
+        actorId: session.account.id,
+        metadata: { format: document.detected_format || "" },
+      });
       return Response.json(
         { ok: false, unsupported: true, message: inspection.message },
         { headers: { "Cache-Control": "private, no-store" } },
       );
+    }
     const rules = await getSupabaseAdmin()
       .from("perseus_semantic_rules")
       .select("id,domain,billing_entity_id,payer_normalized,movement_kind,layout_fingerprint,table_signature,column_normalized,semantic_field,state,version")
@@ -199,6 +221,15 @@ async function analyze(request: Request) {
         { status: 422, headers: { "Cache-Control": "private, no-store" } },
       );
     }
+    const reason = reanalysisBlockReason(error);
+    if (reason)
+      await appendPerseusDocumentEvent(getSupabaseAdmin(), {
+        documentId: document.id,
+        eventType: "REANALYSIS_BLOCKED",
+        eventOrigin: "SYSTEM",
+        actorId: session.account.id,
+        metadata: { reason },
+      });
     throw error;
   }
 }
