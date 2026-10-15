@@ -7,6 +7,7 @@ import {
 import {
   decodePerseusTimelineCursor,
   paginatePerseusTimeline,
+  reconstructPerseusLegacyReviews,
 } from "@/lib/perseu/operational-timeline";
 import { HttpError } from "@/lib/security/http";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -64,14 +65,10 @@ export async function GET(request: Request) {
     if (events.error && !ledgerUnavailable) throw events.error;
     for (const result of [reviews, corrections, rules]) if (result.error) throw result.error;
     const persisted = ledgerUnavailable ? [] : ((events.data || []) as Row[]).map(persistedEvent);
-    const reviewKeys = new Set(persisted.filter((event) => event.relatedReviewId).map((event) => "review:" + event.relatedReviewId + ":" + event.eventType));
     const ruleKeys = new Set(persisted.filter((event) => event.relatedRuleId).map((event) => "rule:" + event.relatedRuleId + ":" + event.eventType));
     const correctionKeys = new Set(persisted.filter((event) => event.relatedCorrectionId).map((event) => "correction:" + event.relatedCorrectionId + ":" + event.eventType));
     const legacy: PerseusDocumentEvent[] = [
-      ...((reviews.data || []) as Row[]).flatMap((row) => {
-        const eventType = row.state === "REJECTED" ? "MAPPING_REVIEW_REJECTED" : row.state === "SUPERSEDED" ? "MAPPING_REVIEW_REPLACED" : "MAPPING_REVIEW_APPLIED";
-        return reviewKeys.has("review:" + row.id + ":" + eventType) ? [] : [{ id: "legacy-review-" + row.id, documentId, eventType, eventOrigin: "HISTORICAL_RECONSTRUCTED", occurredAt: String(row.created_at), actorId: typeof row.created_by === "number" ? row.created_by : null, metadata: safePerseusEventMetadata({ column: row.source_key, field: row.semantic_field }), historical: true } as PerseusDocumentEvent];
-      }),
+      ...reconstructPerseusLegacyReviews(documentId, (reviews.data || []) as Row[], persisted),
       ...((corrections.data || []) as Row[]).flatMap((row) => correctionKeys.has("correction:" + row.id + ":INDIVIDUAL_CORRECTION_APPLIED") ? [] : [{ id: "legacy-correction-" + row.id, documentId, eventType: "INDIVIDUAL_CORRECTION_APPLIED", eventOrigin: "HISTORICAL_RECONSTRUCTED", occurredAt: String(row.created_at), actorId: typeof row.created_by === "number" ? row.created_by : null, metadata: safePerseusEventMetadata({ field: row.semantic_field }), historical: true } as PerseusDocumentEvent]),
       ...((rules.data || []) as Row[]).flatMap((row) => {
         const created = ruleKeys.has("rule:" + row.id + ":LEARNED_RULE_CREATED") ? [] : [{ id: "legacy-rule-" + row.id, documentId, eventType: "LEARNED_RULE_CREATED" as const, eventOrigin: "HISTORICAL_RECONSTRUCTED" as const, occurredAt: String(row.created_at), actorId: typeof row.created_by === "number" ? row.created_by : null, metadata: safePerseusEventMetadata({ column: row.column_normalized, field: row.semantic_field }), historical: true }];

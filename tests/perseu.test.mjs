@@ -106,6 +106,38 @@ test('Perseu paginates one stable timeline without duplicating reconstructed eve
  assert.equal(seen.at(-1),'event-000');
 });
 
+test('Perseu reconstructs superseded reviews as original actions without doubling persisted events',()=>{
+ const documentId='test-document',now='2026-10-15T13:00:00.000Z';
+ const reviews=[
+  {id:'already-recorded',state:'SUPERSEDED',semantic_field:'amount_approved',source_key:'Valor',created_at:now,created_by:7},
+  {id:'historical-confirmed',state:'SUPERSEDED',semantic_field:'service_date',source_key:'Data',created_at:'2026-10-15T12:00:00.000Z',created_by:7},
+  {id:'historical-rejected',state:'SUPERSEDED',semantic_field:null,source_key:'Valor',created_at:'2026-10-15T11:00:00.000Z',created_by:7},
+  {id:'latest-confirmation',state:'CONFIRMED',semantic_field:'guide_number',source_key:'Guia',created_at:'2026-10-15T14:00:00.000Z',created_by:7},
+ ];
+ const persisted=[
+  {id:'ledger-original',documentId,eventType:'MAPPING_REVIEW_APPLIED',eventOrigin:'USER',relatedReviewId:'already-recorded',occurredAt:now,actorId:7,metadata:{}},
+  {id:'ledger-latest',documentId,eventType:'MAPPING_REVIEW_APPLIED',eventOrigin:'USER',relatedReviewId:'latest-confirmation',occurredAt:'2026-10-15T14:00:00.000Z',actorId:7,metadata:{}},
+  {id:'ledger-replaced',documentId,eventType:'MAPPING_REVIEW_REPLACED',eventOrigin:'USER',relatedReviewId:'latest-confirmation',occurredAt:'2026-10-15T14:00:00.000Z',actorId:7,metadata:{}},
+ ];
+ const legacy=operationalTimeline.reconstructPerseusLegacyReviews(documentId,reviews,persisted);
+ assert.deepEqual(legacy.map(event=>[event.id,event.eventType]),[
+  ['legacy-review-historical-confirmed','MAPPING_REVIEW_APPLIED'],
+  ['legacy-review-historical-rejected','MAPPING_REVIEW_REJECTED'],
+ ]);
+ assert.equal(legacy[0].occurredAt,'2026-10-15T12:00:00.000Z');
+ assert.ok(legacy.every(event=>event.historical===true));
+ assert.ok(legacy.every(event=>event.eventType!=='MAPPING_REVIEW_REPLACED'));
+ const seen=[];let cursor=null;
+ do {
+  const page=operationalTimeline.paginatePerseusTimeline([...persisted,...legacy],2,cursor);
+  seen.push(...page.events);
+  cursor=page.nextCursor?operationalTimeline.decodePerseusTimelineCursor(page.nextCursor):null;
+ } while(cursor);
+ assert.equal(seen.length,5);
+ assert.equal(new Set(seen.map(event=>event.id)).size,5);
+ assert.equal(seen.filter(event=>event.relatedReviewId==='already-recorded').length,1);
+});
+
 test('Perseu extracts repeated XML records and rejects malformed or unsafe XML',()=>{
  const inspection=engine.inspectPerseusDocument('XML',text('<retorno><itens><item><nome>Ana</nome><guia>1</guia></item><item><nome>Bruno</nome><guia>2</guia></item></itens></retorno>'));
  assert.equal(inspection.kind,'parsed');if(inspection.kind!=='parsed')return;
