@@ -1,57 +1,28 @@
 import { getSession } from "@/app/authz";
 import { canManageInsurance } from "@/lib/insurance-control";
-import { inspectGlobalPerseusDocument, type PerseusDocumentClass } from "@/lib/perseu/document-intelligence";
-import { inspectWithOpenAI, multimodalAvailability } from "@/lib/perseu/multimodal-provider";
+import { inspectGlobalPerseusDocument, type GlobalInspection, type PerseusDocumentClass } from "@/lib/perseu/document-intelligence";
+import { inspectWithOpenAI, multimodalAvailability, PerseusProviderError } from "@/lib/perseu/multimodal-provider";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-const bucket = "insurance-documents";
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const proposalFor: Partial<Record<PerseusDocumentClass, { type: string; title: string }>> = {
-  INSURANCE_PAYMENT: { type: "REVIEW_INSURANCE_PAYMENT", title: "Revisar pagamento de convênio" },
-  INVOICE: { type: "REVIEW_INVOICE", title: "Revisar nota fiscal" },
-  INVOICE_REQUEST: { type: "PREPARE_INVOICE_REQUEST", title: "Preparar solicitação de nota" },
-  GLOSS: { type: "REVIEW_GLOSS", title: "Revisar glosa" },
-  EXPENSE: { type: "REGISTER_EXPENSE_DRAFT", title: "Preparar despesa para revisão" },
-  ATTENDANCE_RELATION: { type: "LINK_ATTENDANCES", title: "Vincular atendimentos para revisão" },
+export const runtime="nodejs";export const dynamic="force-dynamic";
+const bucket="insurance-documents",uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type Proposal={proposal_type:string;title:string;rationale:string;proposal_data:Record<string,unknown>;missing_information:string[]};
+const proposalFor:Partial<Record<PerseusDocumentClass,(inspection:GlobalInspection,context:Record<string,unknown>)=>Proposal[]>>={
+ INSURANCE_PAYMENT:(i)=>[{proposal_type:"REVIEW_INSURANCE_PAYMENT",title:"Revisar demonstrativo de pagamento",rationale:"Há sinais documentais de pagamento/retorno; a liquidação bancária não foi presumida.",proposal_data:{fields:i.extractedData},missing_information:["Confirmação bancária, quando aplicável."]}],
+ INSURANCE_PROCESSING:(i)=>[{proposal_type:"REVIEW_INSURANCE_PAYMENT",title:"Conferir processamento do convênio",rationale:"O documento contém estrutura de demonstrativo; valores devem ser conferidos por guia/procedimento.",proposal_data:{fields:i.extractedData},missing_information:["Vínculo revisado com atendimentos."]}],
+ GLOSS_DETAIL:(i)=>[{proposal_type:"REVIEW_GLOSS",title:"Registrar ocorrência de glosa para revisão",rationale:"Foram localizados sinais de glosa; nenhuma contestação foi presumida.",proposal_data:{fields:i.extractedData},missing_information:["Justificativa e regra aplicável para eventual recurso."]},{proposal_type:"REQUEST_INFORMATION",title:"Avaliar preparo de recurso de glosa",rationale:"O recurso só deve ser preparado após revisar motivo, procedimento e evidências.",proposal_data:{fields:i.extractedData},missing_information:["Decisão humana sobre recorribilidade."]}],
+ GLOSS_APPEAL:()=>[{proposal_type:"REVIEW_GLOSS",title:"Revisar recurso de glosa",rationale:"O documento aparenta ser um recurso; a decisão não foi inferida.",proposal_data:{},missing_information:["Resultado do recurso."]}],
+ INVOICE_REQUEST:()=>[{proposal_type:"PREPARE_INVOICE_REQUEST",title:"Preparar solicitação de emissão de nota",rationale:"Há pedido explícito de nota, ainda sujeito às regras fiscais do RN Integra.",proposal_data:{},missing_information:["Entidade emissora e conferência fiscal."]}],
+ INVOICE:()=>[{proposal_type:"REVIEW_INVOICE",title:"Revisar nota fiscal identificada",rationale:"Foram encontrados elementos de nota emitida; não foi criada nem alterada NF.",proposal_data:{},missing_information:[]}],
+ EXPENSE_RECEIPT:(i,context)=>[{proposal_type:"REGISTER_EXPENSE_DRAFT",title:"Preparar despesa para revisão",rationale:"O documento aparenta comprovar uma despesa. Pessoa mencionada não define pagador ou responsável financeiro.",proposal_data:{fields:i.extractedData,context},missing_information:["Empresa/entidade responsável.","Responsável financeiro e confirmação do pagamento."]}],
+ ATTENDANCE_RELATION:(i)=>[{proposal_type:"LINK_ATTENDANCES",title:"Conferir atendimentos identificados",rationale:"A relação foi reconhecida como documento de atendimento; vínculos permanecem para revisão humana.",proposal_data:{fields:i.extractedData},missing_information:["Confirmação dos atendimentos vinculados."]}],
+ UNKNOWN:()=>[{proposal_type:"REQUEST_INFORMATION",title:"Solicitar identificação do documento",rationale:"Não há evidência suficiente para uma finalidade operacional segura.",proposal_data:{},missing_information:["Tipo e finalidade do documento."]}],
 };
-function manager(session: Awaited<ReturnType<typeof getSession>>) { if (!session || !canManageInsurance(session.account.role)) throw new HttpError(403, "Acesso restrito à Gerência."); return session; }
-function failure(error: unknown) { return Response.json({ error: error instanceof HttpError ? error.message : error instanceof Error ? error.message : "Não foi possível analisar o documento." }, { status: error instanceof HttpError ? error.status : 500, headers: { "Cache-Control": "private, no-store" } }); }
-
-async function analyze(request: Request) {
-  const session = manager(await getSession());
-  await consumeLimit("perseus-global-analyze", String(session.account.id), 12, 3600);
-  const id = (await readJson(request)).id;
-  if (typeof id !== "string" || !uuid.test(id)) throw new HttpError(400, "Documento inválido.");
-  const db = getSupabaseAdmin();
-  const claim = await db.rpc("claim_perseus_document_processing", { p_document_id: id, p_actor_id: session.account.id });
-  if (claim.error || !claim.data) throw new HttpError(409, claim.error?.message || "Documento indisponível para análise.");
-  const document = claim.data as { id: string; storage_path: string; original_filename: string };
-  try {
-    const download = await db.storage.from(bucket).download(document.storage_path);
-    if (download.error || !download.data) throw new HttpError(404, "Arquivo original não disponível.");
-    const bytes = new Uint8Array(await download.data.arrayBuffer());
-    let inspection = inspectGlobalPerseusDocument(bytes, document.original_filename);
-    if (inspection.format === "PDF" || inspection.format === "PNG" || inspection.format === "JPEG" || inspection.format === "WEBP") {
-      const remote = await inspectWithOpenAI(bytes, inspection.format);
-      if (remote) inspection = { ...inspection, documentClass: remote.documentClass, extractedData: remote.extractedData, evidence: [...inspection.evidence, ...remote.evidence.map((item) => ({ ...item, source: { method: "MULTIMODAL" as const, version: "openai-responses-v1", snippet: item.snippet } }))], limitations: [...inspection.limitations, ...remote.limitations] };
-      else inspection = { ...inspection, limitations: [...inspection.limitations, multimodalAvailability().message] };
-    }
-    const proposal = proposalFor[inspection.documentClass];
-    const evidenceRows = inspection.evidence.map((item) => ({ document_id: id, field_key: item.field, field_value: item.value.slice(0, 1000), source_page: item.source.page || null, source_snippet: item.source.snippet?.slice(0, 1000) || null, method: item.source.method, engine_version: item.source.version }));
-    if (evidenceRows.length) { const insert = await db.from("perseus_document_evidences").insert(evidenceRows); if (insert.error) throw insert.error; }
-    if (proposal) { const insert = await db.from("perseus_operational_proposals").insert({ document_id: id, proposal_type: proposal.type, status: "PROPOSED", title: proposal.title, rationale: "Proposta gerada a partir de evidências do documento. Nenhuma alteração financeira foi executada.", missing_information: [] }); if (insert.error) throw insert.error; }
-    const update = await db.from("perseus_documents").update({ processing_status: "REVIEW_REQUIRED", document_class: inspection.documentClass, extracted_data: inspection.extractedData, processing_metadata: { format: inspection.format, ...inspection.metadata, limitations: inspection.limitations, analyzed_at: new Date().toISOString() }, updated_at: new Date().toISOString(), updated_by: session.account.id }).eq("id", id);
-    if (update.error) throw update.error;
-    await db.from("perseus_global_events").insert({ document_id: id, event_type: "ANALYSIS_COMPLETED", actor_id: session.account.id, event_metadata: { format: inspection.format, class: inspection.documentClass, provider_used: inspection.evidence.some((e) => e.source.method === "MULTIMODAL") } });
-    return Response.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
-  } catch (error) {
-    await db.from("perseus_documents").update({ processing_status: "FAILED", error_message: error instanceof Error ? error.message.slice(0, 500) : "Falha na análise.", updated_at: new Date().toISOString(), updated_by: session.account.id }).eq("id", id);
-    await db.from("perseus_global_events").insert({ document_id: id, event_type: "ANALYSIS_FAILED", actor_id: session.account.id, event_metadata: {} });
-    throw error;
-  }
-}
-export const POST = secureMutation(async (request) => { try { return await analyze(request); } catch (error) { return failure(error); } });
+const manager=(session:Awaited<ReturnType<typeof getSession>>)=>{if(!session||!canManageInsurance(session.account.role))throw new HttpError(403,"Acesso restrito à Gerência.");return session};
+const failure=(error:unknown)=>Response.json({error:error instanceof HttpError||error instanceof PerseusProviderError?error.message:"Não foi possível analisar o documento."},{status:error instanceof HttpError?error.status:500,headers:{"Cache-Control":"private, no-store"}});
+const nameKey=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR").replace(/\s+/g," ").trim();
+async function contextualMatches(value:GlobalInspection){const candidate=value.extractedData.doctor_name?.value||value.extractedData.professional_name?.value;if(!candidate)return{};const db=getSupabaseAdmin(),result=await db.from("doctors").select("id,name").eq("active",true).limit(500);if(result.error)throw result.error;const matches=(result.data||[]).filter((doctor:{name:string})=>nameKey(doctor.name)===nameKey(candidate)).map((doctor:{id:string;name:string})=>({id:doctor.id,name:doctor.name}));return matches.length===1?{doctor:matches[0]}:matches.length?{doctor_candidates:matches}:{};}
+async function analyze(request:Request){const session=manager(await getSession());await consumeLimit("perseus-global-analyze",String(session.account.id),12,3600);const id=(await readJson(request)).id;if(typeof id!=="string"||!uuid.test(id))throw new HttpError(400,"Documento inválido.");const db=getSupabaseAdmin(),claim=await db.rpc("claim_perseus_document_processing",{p_document_id:id,p_actor_id:session.account.id});if(claim.error||!claim.data)throw new HttpError(409,claim.error?.message||"Documento indisponível para análise.");const document=claim.data as {id:string;storage_path:string;original_filename:string;analysis_version:number};try{const downloaded=await db.storage.from(bucket).download(document.storage_path);if(downloaded.error||!downloaded.data)throw new HttpError(404,"Arquivo original não disponível.");const bytes=new Uint8Array(await downloaded.data.arrayBuffer());let inspection=await inspectGlobalPerseusDocument(bytes,document.original_filename);let providerUsed=false;if(["PDF","PNG","JPEG","WEBP"].includes(inspection.format)){const remote=await inspectWithOpenAI(bytes,inspection.format as "PDF"|"PNG"|"JPEG"|"WEBP");if(remote){providerUsed=true;inspection={...inspection,documentClass:remote.documentClass,extractedData:{...inspection.extractedData,...remote.extractedData},evidence:[...inspection.evidence,...remote.evidence.map(item=>({...item,source:{method:"MULTIMODAL" as const,version:"openai-responses-v1",snippet:item.snippet}}))],limitations:[...inspection.limitations,...remote.limitations],outcome:remote.status};}else inspection={...inspection,limitations:[...inspection.limitations,multimodalAvailability().message]};}
+const context=await contextualMatches(inspection),make=proposalFor[inspection.documentClass]||proposalFor.UNKNOWN!,proposals=make(inspection,context),evidences=inspection.evidence.map(item=>({field_key:item.field,field_value:item.value,source_page:item.source.page||null,source_snippet:item.source.snippet||null,method:item.source.method,engine_version:item.source.version}));const result=await db.rpc("complete_perseus_document_analysis",{p_document_id:id,p_expected_version:document.analysis_version,p_document_class:inspection.documentClass,p_extracted_data:inspection.extractedData,p_processing_metadata:{format:inspection.format,...inspection.metadata,limitations:inspection.limitations,outcome:inspection.outcome,context,provider_used:providerUsed,analyzed_at:new Date().toISOString()},p_evidences:evidences,p_proposals:proposals,p_outcome:inspection.outcome,p_actor_id:session.account.id});if(result.error)throw result.error;return Response.json({ok:true},{headers:{"Cache-Control":"private, no-store"}})}catch(error){await db.from("perseus_documents").update({processing_status:"FAILED",error_message:error instanceof Error?error.message.slice(0,500):"Falha na análise.",updated_at:new Date().toISOString(),updated_by:session.account.id}).eq("id",id).eq("processing_status","PROCESSING");await db.from("perseus_global_events").insert({document_id:id,event_type:"ANALYSIS_FAILED",actor_id:session.account.id,event_metadata:{}});throw error}}
+export const POST=secureMutation(async request=>{try{return await analyze(request)}catch(error){return failure(error)}});

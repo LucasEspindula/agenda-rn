@@ -1,7 +1,10 @@
 export const PERSEUS_PARSER_VERSION = "1.1.0";
 export const PERSEUS_LIMITS = {
-  maxItems: 2000,
-  maxRows: 10000,
+  // O parser mantém limite total finito; a persistência pode enviar lotes menores.
+  // Isso cobre demonstrativos operacionais grandes sem aceitar arquivos ilimitados.
+  maxItems: 5000,
+  maxPersistBatch: 500,
+  maxRows: 15000,
   maxColumns: 160,
   maxCellLength: 10000,
   maxSheets: 20,

@@ -1,113 +1,26 @@
 import "server-only";
-
 import { inspectPerseusDocument } from "./inspect";
+import type { PerseusParseResult } from "./contracts";
 
 export const PERSEUS_GLOBAL_MAX_SIZE = 20 * 1024 * 1024;
-export const PERSEUS_GLOBAL_LIMITS = {
-  maxImagePixels: 24_000_000,
-  maxTextCharacters: 250_000,
-  maxPagesForProvider: 20,
-} as const;
+export const PERSEUS_GLOBAL_LIMITS = { maxImagePixels: 24_000_000, maxTextCharacters: 250_000, maxPagesForProvider: 20, maxRecords: 5_000, maxEvidence: 120, maxFieldLength: 2_000 } as const;
+export type PerseusGlobalFormat = "PDF" | "PNG" | "JPEG" | "WEBP" | "TXT" | "CSV" | "XLSX" | "XML";
+export const PERSEUS_DOCUMENT_CLASSES = ["INSURANCE_PROCESSING","INSURANCE_PAYMENT","ATTENDANCE_RELATION","GUIDE","GLOSS_DETAIL","GLOSS_APPEAL","GLOSS_APPEAL_RESPONSE","HONORARIUM_REPORT","TRANSFER_PROOF","INVOICE","INVOICE_REQUEST","EXPENSE_RECEIPT","UNKNOWN","MULTIPLE"] as const;
+export type PerseusDocumentClass = typeof PERSEUS_DOCUMENT_CLASSES[number];
+export type Evidence = { field:string; value:string; source:{page?:number;snippet?:string;method:"LOCAL_TEXT"|"STRUCTURAL"|"MULTIMODAL";version:string} };
+export type ExtractedField = { value:string; kind:"text"|"date"|"amount"|"identifier"; confidence:"DETERMINISTIC"|"PROBABLE"; evidence:number[] };
+export type GlobalInspection = { format:PerseusGlobalFormat; documentClass:PerseusDocumentClass; extractedData:Record<string,ExtractedField>; evidence:Evidence[]; limitations:string[]; metadata:Record<string,unknown>; outcome:"COMPLETE"|"PARTIAL"|"UNKNOWN"|"NEEDS_MULTIMODAL" };
+const decoder=new TextDecoder("utf-8",{fatal:false}),text=(bytes:Uint8Array)=>decoder.decode(bytes);
+const starts=(bytes:Uint8Array,values:number[])=>values.every((value,index)=>bytes[index]===value);
+const fold=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR");
+export function detectPerseusGlobalFormat(bytes:Uint8Array,filename=""):PerseusGlobalFormat|null{const lower=filename.toLowerCase();if(text(bytes.slice(0,5))==="%PDF-")return"PDF";if(starts(bytes,[0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))return"PNG";if(starts(bytes,[0xff,0xd8,0xff]))return"JPEG";if(text(bytes.slice(0,4))==="RIFF"&&text(bytes.slice(8,12))==="WEBP")return"WEBP";if(/\.xlsx$/i.test(lower)&&starts(bytes,[0x50,0x4b]))return"XLSX";const sample=text(bytes.slice(0,4096)).trimStart();if(/\.xml$/i.test(lower)&&/^<\?xml|^<[^>]+>/.test(sample))return"XML";if(/\.csv$/i.test(lower)&&/[,;\t]/.test(sample))return"CSV";if(/\.txt$/i.test(lower)&&!/[\x00-\x08\x0e-\x1f]/.test(sample))return"TXT";return null}
 
-export type PerseusGlobalFormat =
-  | "PDF"
-  | "PNG"
-  | "JPEG"
-  | "WEBP"
-  | "TXT"
-  | "CSV"
-  | "XLSX"
-  | "XML";
-export type PerseusDocumentClass =
-  | "INSURANCE_PAYMENT"
-  | "PROCESSING_RETURN"
-  | "ATTENDANCE_RELATION"
-  | "GUIDE"
-  | "GLOSS"
-  | "TRANSFER_PROOF"
-  | "INVOICE"
-  | "INVOICE_REQUEST"
-  | "EXPENSE"
-  | "UNKNOWN"
-  | "MULTIPLE";
-export type Evidence = {
-  field: string;
-  value: string;
-  source: { page?: number; snippet?: string; method: "LOCAL_TEXT" | "STRUCTURAL" | "MULTIMODAL"; version: string };
-};
-export type GlobalInspection = {
-  format: PerseusGlobalFormat;
-  documentClass: PerseusDocumentClass;
-  extractedData: Record<string, string>;
-  evidence: Evidence[];
-  limitations: string[];
-  metadata: Record<string, unknown>;
-};
-
-const text = (bytes: Uint8Array) => new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-const starts = (bytes: Uint8Array, values: number[]) => values.every((value, index) => bytes[index] === value);
-
-export function detectPerseusGlobalFormat(bytes: Uint8Array, filename = ""): PerseusGlobalFormat | null {
-  const lower = filename.toLowerCase();
-  if (text(bytes.slice(0, 5)) === "%PDF-") return "PDF";
-  if (starts(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "PNG";
-  if (starts(bytes, [0xff, 0xd8, 0xff])) return "JPEG";
-  if (text(bytes.slice(0, 4)) === "RIFF" && text(bytes.slice(8, 12)) === "WEBP") return "WEBP";
-  if (/\.xlsx$/i.test(lower) && starts(bytes, [0x50, 0x4b])) return "XLSX";
-  const sample = text(bytes.slice(0, 4096)).trimStart();
-  if (/\.xml$/i.test(lower) && /^<\?xml|^<[^>]+>/.test(sample)) return "XML";
-  if (/\.csv$/i.test(lower) && /[,;\t]/.test(sample)) return "CSV";
-  if (/\.txt$/i.test(lower) && !/[\x00-\x08\x0e-\x1f]/.test(sample)) return "TXT";
-  return null;
-}
-
-export function classifyPerseusText(value: string): PerseusDocumentClass {
-  const normalized = value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
-  if (/glosa|glosado/.test(normalized)) return "GLOSS";
-  if (/nota fiscal|nf-e|nfe\b/.test(normalized)) return "INVOICE";
-  if (/solicitacao.*nota|pedido.*nota/.test(normalized)) return "INVOICE_REQUEST";
-  if (/despesa|boleto|conta a pagar/.test(normalized)) return "EXPENSE";
-  if (/comprovante|pix|ted|transferencia/.test(normalized)) return "TRANSFER_PROOF";
-  if (/guia/.test(normalized)) return "GUIDE";
-  if (/demonstrativo|processamento|lote/.test(normalized)) return "PROCESSING_RETURN";
-  if (/convenio|operadora|pagador/.test(normalized)) return "INSURANCE_PAYMENT";
-  if (/paciente|atendimento|procedimento/.test(normalized)) return "ATTENDANCE_RELATION";
-  return "UNKNOWN";
-}
-
-function extractPdfText(bytes: Uint8Array) {
-  // Conservative extraction of literal text operators. Scanned PDFs intentionally
-  // remain unclassified locally and can only be sent to the configured provider.
-  const source = new TextDecoder("latin1").decode(bytes);
-  return [...source.matchAll(/\(([^()]{1,500})\)\s*Tj/g)]
-    .map((match) => match[1].replace(/\\([()\\])/g, "$1"))
-    .join(" ")
-    .slice(0, PERSEUS_GLOBAL_LIMITS.maxTextCharacters);
-}
-
-export function inspectGlobalPerseusDocument(bytes: Uint8Array, filename: string): GlobalInspection {
-  const format = detectPerseusGlobalFormat(bytes, filename);
-  if (!format) throw new Error("O tipo real do arquivo não é suportado pelo Perseu.");
-  if (format === "CSV" || format === "XLSX" || format === "XML") {
-    const structural = inspectPerseusDocument(format, bytes);
-    if (structural.kind === "unsupported") throw new Error(structural.message);
-    const headings = structural.result.structure.columns?.map((column) => column.original).join(" ") || "";
-    return {
-      format,
-      documentClass: classifyPerseusText(headings),
-      extractedData: {},
-      evidence: headings ? [{ field: "structure", value: headings.slice(0, 240), source: { method: "STRUCTURAL", version: structural.result.parserVersion } }] : [],
-      limitations: structural.result.warnings,
-      metadata: { parser_key: structural.result.parserKey, parser_version: structural.result.parserVersion, layout_fingerprint: structural.result.layoutFingerprint, row_count: structural.result.structure.rowCount, column_count: structural.result.structure.columnCount, sheet_count: structural.result.structure.sheetCount },
-    };
-  }
-  if (format === "PDF") {
-    const extracted = extractPdfText(bytes);
-    return { format, documentClass: classifyPerseusText(extracted), extractedData: {}, evidence: extracted ? [{ field: "document_text", value: extracted.slice(0, 240), source: { method: "LOCAL_TEXT", version: "1.0.0", snippet: extracted.slice(0, 240) } }] : [], limitations: extracted ? [] : ["PDF sem texto selecionável: análise multimodal depende de configuração explícita."], metadata: { text_characters: extracted.length } };
-  }
-  if (format === "TXT") {
-    const extracted = text(bytes).slice(0, PERSEUS_GLOBAL_LIMITS.maxTextCharacters);
-    return { format, documentClass: classifyPerseusText(extracted), extractedData: {}, evidence: extracted ? [{ field: "document_text", value: extracted.slice(0, 240), source: { method: "LOCAL_TEXT", version: "1.0.0", snippet: extracted.slice(0, 240) } }] : [], limitations: [], metadata: { text_characters: extracted.length } };
-  }
-  return { format, documentClass: "UNKNOWN", extractedData: {}, evidence: [], limitations: ["Imagem validada. A interpretação requer provedor multimodal configurado e consentido."], metadata: {} };
-}
+export function classifyPerseusEvidence(content:string,structured=false){const value=fold(content),scores=new Map<PerseusDocumentClass,number>(),add=(kind:PerseusDocumentClass,points:number)=>scores.set(kind,(scores.get(kind)||0)+points),has=(re:RegExp)=>re.test(value);if(has(/solicit(a|acao|ar)|pedido|emitir/)&&has(/nota fiscal|\bnf-?e?\b/))add("INVOICE_REQUEST",8);if(has(/nota fiscal|\bnf-?e?\b/)&&has(/numero.*nota|chave de acesso|codigo de verificacao|emitente/))add("INVOICE",6);if(has(/recurso|contestacao|impugnacao/)&&has(/glosa/))add("GLOSS_APPEAL",8);if(has(/resposta|deferido|indeferido/)&&has(/recurso.*glosa|glosa.*recurso/))add("GLOSS_APPEAL_RESPONSE",8);if(has(/codigo.*glosa|motivo.*glosa|valor.*glosad|glosa detalhada/))add("GLOSS_DETAIL",7);if(has(/demonstrativo|processamento|protocolo|lote/)&&(has(/guia|beneficiario|valor aprovado|valor liberado/)||structured))add("INSURANCE_PROCESSING",6);if(has(/honorario|repasse.*medic|profissional/)&&has(/valor|total/))add("HONORARIUM_REPORT",6);if(has(/comprovante|pix|ted|transferencia/)&&has(/banco|agencia|conta|autenticacao/))add("TRANSFER_PROOF",7);if(has(/estacionamento|recibo|despesa|cupom fiscal|cartao/)&&has(/valor|r\$/))add("EXPENSE_RECEIPT",7);if(has(/relacao.*atendimento|paciente|procedimento/)&&(has(/data|guia|quantidade/)||structured))add("ATTENDANCE_RELATION",4);if(has(/guia/)&&has(/beneficiario|procedimento|prestador/))add("GUIDE",4);if(has(/pagamento|credito|liquidacao/)&&has(/convenio|operadora|prestador/))add("INSURANCE_PAYMENT",4);const ordered=[...scores.entries()].sort((a,b)=>b[1]-a[1]);if(!ordered.length)return{documentClass:"UNKNOWN" as const,signals:[]};if(ordered.length>1&&ordered[0][1]-ordered[1][1]<2)return{documentClass:"MULTIPLE" as const,signals:ordered.slice(0,2).map(([kind])=>kind)};return{documentClass:ordered[0][0],signals:ordered.filter(([,score])=>score===ordered[0][1]).map(([kind])=>kind)}}
+const field=(kind:ExtractedField["kind"],value:string,evidence:number[]):ExtractedField=>({value:value.slice(0,PERSEUS_GLOBAL_LIMITS.maxFieldLength),kind,confidence:"DETERMINISTIC",evidence});
+function fieldsFromText(value:string,evidence:Evidence[]){const fields:Record<string,ExtractedField>={};const add=(key:string,kind:ExtractedField["kind"],pattern:RegExp)=>{const result=value.match(pattern);if(result){const index=evidence.push({field:key,value:result[1],source:{method:"LOCAL_TEXT",version:"1.1.0",snippet:value.slice(Math.max(0,(result.index||0)-80),Math.min(value.length,(result.index||0)+220))}})-1;fields[key]=field(kind,result[1],[index])}};add("amount","amount",/(?:total|valor)\s*[:\-]?\s*(R?\$?\s*[\d.]+,\d{2})/i);add("document_date","date",/(?:data|emissao)\s*[:\-]?\s*(\d{2}[\/-]\d{2}[\/-]\d{2,4})/i);add("protocol","identifier",/(?:protocolo|lote)\s*[:#\-]?\s*([A-Z0-9._/-]{4,})/i);add("guide_number","identifier",/(?:guia)\s*[:#\-]?\s*([A-Z0-9._/-]{3,})/i);return fields}
+function structuredExtraction(result:PerseusParseResult){const extracted:Record<string,ExtractedField>={},evidence:Evidence[]=[];for(const item of result.items.slice(0,PERSEUS_GLOBAL_LIMITS.maxRecords))for(const [key,value] of Object.entries(item.normalizedData||{})){if(typeof value!=="string"||!value||extracted[key])continue;const sourceIndex=evidence.push({field:key,value,source:{method:"STRUCTURAL",version:result.parserVersion,snippet:`Registro ${item.sourceIndex+1}`}})-1,kind:ExtractedField["kind"]=(key==="service_date"?"date":key.startsWith("amount_")?"amount":key.endsWith("_number")||key==="guide_number"?"identifier":"text");extracted[key]=field(kind,value,[sourceIndex])}return{extracted,evidence}}
+async function extractPdfPages(bytes:Uint8Array){const pdfjs=await import("pdfjs-dist/legacy/build/pdf.mjs"),task=pdfjs.getDocument({data:bytes,disableWorker:true,stopAtErrors:false} as never),document=await task.promise,pages:string[]=[];for(let number=1;number<=Math.min(document.numPages,PERSEUS_GLOBAL_LIMITS.maxPagesForProvider);number++){const page=await document.getPage(number),content=await page.getTextContent();pages.push(content.items.map((item)=>"str"in item?item.str:"").join(" ").replace(/\s+/g," ").trim())}const pageCount=document.numPages;await document.destroy();return{pages,pageCount}}
+export async function inspectGlobalPerseusDocument(bytes:Uint8Array,filename:string):Promise<GlobalInspection>{const format=detectPerseusGlobalFormat(bytes,filename);if(!format)throw new Error("O tipo real do arquivo não é suportado pelo Perseu.");if(format==="CSV"||format==="XLSX"||format==="XML"){const structural=inspectPerseusDocument(format,bytes);if(structural.kind!=="parsed")throw new Error(structural.message);if(structural.result.items.length>PERSEUS_GLOBAL_LIMITS.maxRecords)throw new Error("O documento excede o limite seguro de registros do Perseu.");const headings=structural.result.structure.tables?.flatMap((table)=>table.columns.map((column)=>column.original)).join(" ")||"",semantic=structuredExtraction(structural.result),classification=classifyPerseusEvidence(headings+" "+Object.keys(semantic.extracted).join(" "),true);return{format,documentClass:classification.documentClass,extractedData:semantic.extracted,evidence:[...semantic.evidence,{field:"classification",value:classification.signals.join(",")||"sem sinal suficiente",source:{method:"STRUCTURAL",version:structural.result.parserVersion}}],limitations:structural.result.warnings,metadata:{parser_key:structural.result.parserKey,parser_version:structural.result.parserVersion,layout_fingerprint:structural.result.layoutFingerprint,row_count:structural.result.structure.rowCount,column_count:structural.result.structure.columnCount,sheet_count:structural.result.structure.sheetCount,semantic_version:structural.result.semantic?.version},outcome:semantic.evidence.length?"COMPLETE":"PARTIAL"}}
+if(format==="PDF"){const pdf=await extractPdfPages(bytes),combined=pdf.pages.join("\n").slice(0,PERSEUS_GLOBAL_LIMITS.maxTextCharacters),evidence:Evidence[]=pdf.pages.flatMap((page,index)=>page?[{field:"page_text",value:page.slice(0,240),source:{page:index+1,method:"LOCAL_TEXT" as const,version:"pdfjs-5.4",snippet:page.slice(0,240)}}]:[]),extracted=fieldsFromText(combined,evidence),classification=classifyPerseusEvidence(combined);return{format,documentClass:classification.documentClass,extractedData:extracted,evidence,limitations:combined?[]:["PDF sem texto extraível; requer análise multimodal autorizada."],metadata:{page_count:pdf.pageCount,text_pages:pdf.pages.filter(Boolean).length},outcome:combined?"COMPLETE":"NEEDS_MULTIMODAL"}}
+if(format==="TXT"){const content=text(bytes).slice(0,PERSEUS_GLOBAL_LIMITS.maxTextCharacters),evidence:Evidence[]=[],extracted=fieldsFromText(content,evidence),classification=classifyPerseusEvidence(content);return{format,documentClass:classification.documentClass,extractedData:extracted,evidence,limitations:[],metadata:{text_characters:content.length},outcome:content?"COMPLETE":"UNKNOWN"}}
+return{format,documentClass:"UNKNOWN",extractedData:{},evidence:[],limitations:["Imagem validada; é necessária análise multimodal configurada e consentida para interpretar seu conteúdo."],metadata:{},outcome:"NEEDS_MULTIMODAL"}}
