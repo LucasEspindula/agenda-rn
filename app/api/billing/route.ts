@@ -17,14 +17,13 @@ export async function GET(request:Request){
   if(session.account.role==='secretary'||appointmentId){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
    if(appointmentId&&!allowed.has(appointmentId))return Response.json({error:'Atendimento sem acesso.'},{status:404});
-   const existingChargesForAppointment=!!appointmentId&&data.rows.some(r=>r.appointment_id===appointmentId&&!!r.record);
    data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id)&&(
     session.account.role!=='secretary'||session.agendaIds.includes(r.doctor_id)
    ));
    const accessibleRecordIds=new Set(data.rows.map(row=>row.record?.id).filter(Boolean));
    data.requests=(data.requests||[]).filter(r=>accessibleRecordIds.has(r.billing_record_id));
    // A scoped read may project an authorized scheduled appointment without writing finance.
-   if(appointmentId&&!data.rows.length&&!existingChargesForAppointment){
+   if(appointmentId&&!data.rows.length){
     const a=(state.appointments||[]).find((a:Row)=>a.id===appointmentId);
     const p=(state.patients||[]).find((p:Row)=>p.id===a.patientId);
     const provisional=projectFinancialRow({id:a.id,appointment_id:a.id,patient_id:a.patientId||null,origin:'AGENDA',doctor_id:a.doctorId,anesthetist_id:a.anesthetistId,date:a.date,procedure:a.procedure,insurance:a.insurance??p?.insurance??'',status:a.status,billing_method:a.forma_cobranca||null},null,null,null,p?.name||'Paciente não informado');
