@@ -41,6 +41,7 @@ export default function DenialManager(){
  const total=(cases:DenialCase[],field:"denied_amount"|"recovered_amount")=>
    cases.reduce((sum,c)=>sum+Number(c[field]),0);
  const active=all.filter(c=>c.status!=="CLOSED");
+ const closed=all.filter(c=>c.status==="CLOSED");
  const entities=[...new Map(data.cases.map(c=>[c.billing_entity_id,c.entity_name])).entries()];
  const doctors=[...new Map(data.cases.map(c=>[c.professional_id,c.professional_name])).entries()];
  function open(action:DenialAction,denial:DenialCase|null=null){setSelected(denial);setAction(action);}
@@ -60,7 +61,8 @@ export default function DenialManager(){
     <article><span>Glosas registradas</span><strong>{all.length}</strong></article>
     <article><span>Valor glosado</span><strong>{formatBRL(total(all,"denied_amount"))}</strong></article>
     <article><span>Recuperado informado</span><strong>{formatBRL(total(all,"recovered_amount"))}</strong></article>
-    <article><span>Saldo em aberto</span><strong>{formatBRL(active.reduce((sum,c)=>sum+Math.max(0,Number(c.denied_amount)-Number(c.recovered_amount)),0))}</strong></article>
+    <article><span>Saldo ainda em acompanhamento</span><strong>{formatBRL(active.reduce((sum,c)=>sum+Math.max(0,Number(c.denied_amount)-Number(c.recovered_amount)),0))}</strong></article>
+    <article><span>Encerrado sem recuperação</span><strong>{formatBRL(closed.reduce((sum,c)=>sum+Math.max(0,Number(c.denied_amount)-Number(c.recovered_amount)),0))}</strong></article>
    </div>
    <div className="denial-filters">
     <label>Paciente, pagador ou motivo
@@ -91,7 +93,8 @@ export default function DenialManager(){
        <td><strong>{c.patient}</strong><small>{date(c.service_date)} · {c.procedure}</small>
         <small>{c.payer}</small></td>
        <td>{c.professional_name}<small>{c.entity_name}</small></td>
-       <td>{date(c.denied_on)}<small>{c.reason}</small>{c.payer_reference&&<small>Referência: {c.payer_reference}</small>}</td>
+       <td><strong>{c.denial_kind==="TOTAL"?"Glosa total":"Glosa parcial"}</strong>
+        <small>{date(c.denied_on)}</small><small>{c.reason}</small>{c.payer_reference&&<small>Referência: {c.payer_reference}</small>}</td>
        <td><strong>{formatBRL(c.denied_amount)}</strong>
         <small>Recuperado: {formatBRL(c.recovered_amount)}</small>
         <small>Restante: {formatBRL(Math.max(0,Number(c.denied_amount)-Number(c.recovered_amount)))}</small></td>
