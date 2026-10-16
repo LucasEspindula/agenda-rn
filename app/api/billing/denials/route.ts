@@ -60,7 +60,7 @@ export async function GET(){
     recoveries:recoveries.filter(r=>validCaseIds.has(String(r.denial_id))&&validAppealIds.has(String(r.appeal_id))),
     events:events.filter(e=>validCaseIds.has(String(e.denial_id)))
       .map(e=>({id:e.id,denial_id:e.denial_id,actor_id:e.actor_id,event_type:e.event_type,created_at:e.created_at})),
-    can_manage:true},{headers:{"Cache-Control":"private, no-store"}});
+    can_manage:true,today:new Intl.DateTimeFormat("en-CA",{timeZone:"America/Sao_Paulo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())},{headers:{"Cache-Control":"private, no-store"}});
  }catch{return Response.json({error:"Não foi possível consultar o módulo de glosas."},{status:503});}
 }
 
