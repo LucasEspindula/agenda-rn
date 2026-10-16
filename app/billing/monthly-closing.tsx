@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from "react";
 import AppDialog from "@/components/app-dialog";
 import {formatBRL} from "@/lib/money";
+import {monthlyCash,canCloseMonthlySnapshot} from "@/lib/monthly-closing-math";
 import {formatDateBR} from "@/lib/date-format";
 import "./monthly-closing.css";
 
@@ -39,7 +40,8 @@ const date=(v:string|null|undefined)=>v?formatDateBR(v.slice(0,10)):"—";
 const cash=(n:number|null|undefined)=>formatBRL(n??0);
 const previousMonth=()=>{
  const now=new Date();
- return new Date(now.getFullYear(),now.getMonth()-1,1).toLocaleDateString("en-CA",{year:"numeric",month:"2-digit"}).slice(0,7);
+ const prior=new Date(now.getFullYear(),now.getMonth()-1,1);
+ return prior.getFullYear()+"-"+String(prior.getMonth()+1).padStart(2,"0");
 };
 
 export default function MonthlyClosing(){
@@ -81,14 +83,14 @@ export default function MonthlyClosing(){
  useEffect(()=>{void loadPreview(entity,month);},[entity,month,loadPreview]);
  const valid=!!preview&&loadedKey===entity+"|"+month;
  const data=valid?(preview!.closed&&!showCurrent?preview!.closing?.snapshot||preview!.current:preview!.current):null;
- const totalCash=(data?.cash.direct_received||0)+(data?.cash.insurance_invoice_received||0);
- const netCash=totalCash-(data?.expenses.paid_total||0);
+ const summary=data?monthlyCash(data.cash,data.expenses):null;
+ const totalCash=summary?.revenue||0;
+ const netCash=summary?.result||0;
  const selectedEntity=entities.find(e=>e.id===entity);
  const priorHistory=history.filter(h=>h.billing_entity_id===entity).sort((a,b)=>b.competence_month.localeCompare(a.competence_month));
- const nowMonth=new Date().toLocaleDateString("en-CA",{year:"numeric",month:"2-digit"}).slice(0,7);
- const canClose=valid&&!preview!.closed&&month<nowMonth&&
-  data?.issued_invoices.without_net_amount===0&&
-  data?.cash.insurance_paid_invoices_without_net===0;
+ const now=new Date();
+ const nowMonth=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+ const canClose=valid&&!preview!.closed&&month<nowMonth&&!!data&&canCloseMonthlySnapshot(data);
  const warnings=useMemo(()=>{
   if(!data)return [];
   const w:string[]=[];
