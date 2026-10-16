@@ -3,6 +3,7 @@
 import InsurancePending from "./insurance-pending";
 import BillingSubnav from "./billing-subnav";
 import ProfessionalChargeDialog from "./professional-charge-dialog";
+import ProfessionalInvoiceDialog from "./professional-invoice-dialog";
 import { filterPendingRows, pendingAction } from "@/lib/insurance-pending";
 import PaymentParts, { PaymentPartsReadOnly } from "@/components/payment-parts";
 import PaymentProofs, { paymentProofLabel } from "@/components/payment-proofs";
@@ -111,6 +112,7 @@ export default function BillingClient({
   const [manual, setManual] = useState<BillingRow | true | null>(null);
   const [professionalSource, setProfessionalSource] = useState<BillingRow | null>(null);
   const [professionalEdit, setProfessionalEdit] = useState(false);
+  const [professionalInvoice, setProfessionalInvoice] = useState<Invoice | true | null>(null);
   const deepLinkHandled = useRef(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const initialTab =
@@ -455,9 +457,9 @@ export default function BillingClient({
     });
   }
   function editInvoice(i?: Invoice) {
-    if (professionalBillingEnabled && i && invoiceRows(i,data).some(({row}) =>
-      data.rows.filter(other => other.attendance_id === row.attendance_id && !!other.record).length > 1)) {
-      setMessage("NF com cobranças independentes: edição antiga bloqueada para evitar alterar o profissional errado."); return;
+    if (professionalBillingEnabled && i && invoiceRows(i,data).some(({row}) => !!row.record?.professional_id)) {
+      setProfessionalInvoice(i);
+      return;
     }
     setReplacement(null);
     setParts(
@@ -533,6 +535,11 @@ export default function BillingClient({
   function linkPending(invoice?: Invoice) {
     if (!pendingSource) return;
     const row = pendingSource;
+    if (professionalBillingEnabled && row.record?.professional_id) {
+      setPendingSource(null);
+      setProfessionalInvoice(invoice || true);
+      return;
+    }
     editInvoice(invoice);
     setPendingContext(true);
     if (invoice)
@@ -784,7 +791,7 @@ export default function BillingClient({
     ));
   const nfCandidates = data.rows.filter(
     (r) =>
-      (!professionalBillingEnabled || data.rows.filter(other => other.attendance_id === r.attendance_id && !!other.record).length <= 1) &&
+      (!professionalBillingEnabled || !r.record?.professional_id) &&
       eligibleForInvoice(
         r,
         data,
@@ -1220,6 +1227,13 @@ export default function BillingClient({
           )}
         </div>
         <div className="billing-filter-action">
+          {professionalBillingEnabled && tab === "invoices" && (
+            <button type="button" className="billing-secondary"
+              onClick={() => setProfessionalInvoice(true)}
+              title="Criar uma NF vinculando cobranças profissionais por ID">
+              + NF profissional
+            </button>
+          )}
           {!insurancePendingActive && (
             <button
               className="billing-icon-action billing-add"
@@ -1749,6 +1763,11 @@ export default function BillingClient({
               válidos.
             </p>
           </AppDialog>
+        )}
+        {professionalInvoice && professionalBillingEnabled && (
+          <ProfessionalInvoiceDialog data={data} initial={professionalInvoice === true ? null : professionalInvoice}
+            onClose={() => setProfessionalInvoice(null)}
+            onSaved={() => { setProfessionalInvoice(null); notifyFinancialChange(); void load(); }} />
         )}
         {professionalSource && professionalBillingEnabled && (
           <ProfessionalChargeDialog source={professionalSource} edit={professionalEdit} data={data}
