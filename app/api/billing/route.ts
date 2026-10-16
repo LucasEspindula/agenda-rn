@@ -27,12 +27,15 @@ export async function GET(request:Request){
    if(appointmentId&&!data.rows.length&&!existingChargesForAppointment){
     const a=(state.appointments||[]).find((a:Row)=>a.id===appointmentId);
     const p=(state.patients||[]).find((p:Row)=>p.id===a.patientId);
-    data.rows=[projectFinancialRow({id:a.id,appointment_id:a.id,patient_id:a.patientId||null,origin:'AGENDA',doctor_id:a.doctorId,anesthetist_id:a.anesthetistId,date:a.date,procedure:a.procedure,insurance:a.insurance??p?.insurance??'',status:a.status,billing_method:a.forma_cobranca||null},null,null,null,p?.name||'Paciente não informado')];
+    const provisional=projectFinancialRow({id:a.id,appointment_id:a.id,patient_id:a.patientId||null,origin:'AGENDA',doctor_id:a.doctorId,anesthetist_id:a.anesthetistId,date:a.date,procedure:a.procedure,insurance:a.insurance??p?.insurance??'',status:a.status,billing_method:a.forma_cobranca||null},null,null,null,p?.name||'Paciente não informado');
+    const scopedProfessional=session.account.role==='secretary'?[a.doctorId,a.anesthetistId].find((id:string)=>session.agendaIds.includes(id)):a.doctorId;
+    data.rows=scopedProfessional?[{...provisional,doctor_id:scopedProfessional}]:[];
    }
   }
   if(summary)return Response.json({rows:data.rows.map(r=>({appointment_id:r.appointment_id,invoice_number:r.invoice?.invoice_number||r.record?.invoice_number||null}))},{headers:{'Cache-Control':'private, no-store'}});
   if(session.account.role==='secretary'){
-   const entityIds=new Set(data.rows.map(r=>r.record?.billing_entity_id));const doctors=new Set(data.rows.map(r=>r.doctor_id));
+   const entityIds=new Set(data.rows.map(r=>r.record?.billing_entity_id));
+   const doctors=new Set([...data.rows.map(r=>r.doctor_id),...data.rows.flatMap(r=>[r.clinical_doctor_id,r.anesthetist_id]).filter((id):id is string=>!!id&&session.agendaIds.includes(id))]);
    data.links=data.links.filter(l=>doctors.has(l.doctor_id));data.links.forEach(l=>entityIds.add(l.billing_entity_id));
    data.entities=data.entities.filter(e=>entityIds.has(e.id));data.doctors=data.doctors.filter(d=>doctors.has(d.id));
    data.rows=data.rows.map(r=>({...r,invoice:r.invoice?{...r.invoice,total_amount:null,net_amount:null,notes:null,recipient_tax_id:null,recipient_address:null}:null}));
