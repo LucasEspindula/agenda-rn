@@ -22,6 +22,7 @@ export default function DenialActionDialog({
  const [date,setDate]=useState(today);
  const [amount,setAmount]=useState("");
  const [reason,setReason]=useState("");
+ const [denialKind,setDenialKind]=useState<"TOTAL"|"PARCIAL">("PARCIAL");
  const [protocol,setProtocol]=useState("");
  const [notes,setNotes]=useState("");
  const [decision,setDecision]=useState<"ACCEPTED"|"PARTIAL"|"REJECTED">("REJECTED");
@@ -40,7 +41,7 @@ export default function DenialActionDialog({
   const data:Record<string,unknown>={};
   if(action==="OPEN_CASE"){
    if(!selectedCharge){setError("Selecione uma cobrança de convênio.");return;}
-   data.billing_record_id=chargeId;data.denied_on=date;
+   data.billing_record_id=chargeId;data.denied_on=date;data.denial_kind=denialKind;
    data.reason=reason;data.payer_reference=protocol;data.notes=notes;
   }else{
    if(!denial)return;
@@ -90,6 +91,11 @@ export default function DenialActionDialog({
   <form onSubmit={e=>void submit(e)}>
    <div className="billing-form-grid">
     {action==="OPEN_CASE"&&<>
+     <label>Tipo de glosa
+      <select value={denialKind} onChange={e=>setDenialKind(e.target.value as "TOTAL"|"PARCIAL")}>
+       <option value="PARCIAL">Glosa parcial</option><option value="TOTAL">Glosa total</option>
+      </select>
+     </label>
      <label>Cobrança profissional
       <select required value={chargeId} onChange={e=>setChargeId(e.target.value)}>
        <option value="">Selecione a cobrança</option>
