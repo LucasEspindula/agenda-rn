@@ -115,7 +115,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
      <input value={draft.effective_payer_name_snapshot} maxLength={200} onChange={e=>set("effective_payer_name_snapshot",e.target.value)} placeholder="Ex.: Coopmed, Coopa"/></label>
     {direct&&<>
      <label>Status de pagamento<select value={draft.payment_status} onChange={e=>set("payment_status",e.target.value)}>
-      <option value="PENDENTE">Pendente</option><option value="PAGO">Pago</option></select></label>
+      <option value="PENDENTE">Pendente</option><option value="PAGO" disabled={draft.billing_method==="CONVENIO"}>Pago</option></select></label>
      <label>Valor recebido<MoneyInput value={draft.received_amount} onChange={v=>set("received_amount",v)} aria-label="Valor recebido"/></label>
      <label>Data de pagamento<input type="date" value={draft.paid_at} onChange={e=>set("paid_at",e.target.value)}/></label>
      {draft.billing_method==="PARTICULAR"&&
@@ -123,6 +123,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
     </>}
    </div>
    {direct&&paid&&!(draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&!(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED"))&&<PaymentParts value={parts} onChange={setParts} amount={safeAmount()}/>}
+   {direct&&draft.billing_method==="CONVENIO"&&<p className="billing-historical-note">Convênio com recebimento direto: a quitação ficará pendente até configurarmos o fluxo fiscal do repasse. Não marque como pago nesta tela.</p>}
    {direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&
     <p className="billing-historical-note">Ao confirmar o pagamento particular, será solicitada a NF automaticamente, vinculada a esta cobrança e a esta entidade recebedora. Os dados do tomador serão confirmados antes de salvar.</p>}
    {!entities.length&&<p role="alert" className="billing-error">Cadastre o vínculo do profissional com uma entidade recebedora ativa.</p>}
