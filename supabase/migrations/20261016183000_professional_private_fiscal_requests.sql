@@ -48,6 +48,7 @@ begin
 
   if old_request.status='ISSUED' then
     if p_data->>'billing_method' is distinct from prior.billing_method
+       or p_data->>'professional_id' is distinct from prior.professional_id
        or p_data->>'payment_status' is distinct from prior.payment_status
        or nullif(p_data->>'billing_entity_id','')::uuid is distinct from prior.billing_entity_id
        or nullif(p_data->>'received_amount','')::numeric is distinct from prior.received_amount
@@ -59,6 +60,7 @@ begin
 
   if old_request.status='PENDING' and p_data->>'payment_status'='PAGO' then
     if p_data->>'billing_method'<>'PARTICULAR'
+       or p_data->>'professional_id' is distinct from prior.professional_id
        or nullif(p_data->>'received_amount','')::numeric is distinct from old_request.received_amount_snapshot
        or nullif(p_data->>'paid_at','')::date is distinct from old_request.paid_at_snapshot
        or nullif(p_data->>'billing_entity_id','')::uuid is distinct from old_request.billing_entity_id
