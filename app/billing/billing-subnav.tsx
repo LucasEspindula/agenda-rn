@@ -5,6 +5,7 @@ export type BillingNavigationView =
   | "records"
   | "invoices"
   | "insurance"
+  | "denials"
   | "expenses"
   | "entities"
   | "logs"
@@ -24,11 +25,13 @@ export default function BillingSubnav({
   pendingCount = 0,
   insurancePendingCount = 0,
   perseusEnabled = false,
+  denialsEnabled = false,
 }: {
   active: BillingNavigationView;
   pendingCount?: number;
   insurancePendingCount?: number;
   perseusEnabled?: boolean;
+  denialsEnabled?: boolean;
 }) {
   return (
     <div className="billing-subnav no-print">
@@ -50,6 +53,12 @@ export default function BillingSubnav({
               )}
             </a>
           ))}
+          {denialsEnabled && (
+            <a href="/billing/glosas" aria-current={active === "denials" ? "page" : undefined}>
+              <NavIcon kind="insurance" />
+              Glosas
+            </a>
+          )}
         </div>
         {perseusEnabled && (
           <a
