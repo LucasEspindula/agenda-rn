@@ -457,7 +457,9 @@ export default function BillingClient({
     });
   }
   function editInvoice(i?: Invoice) {
-    if (professionalBillingEnabled && i && i.recipient_type !== "PARTICULAR" && invoiceRows(i,data).some(({row}) => !!row.record?.professional_id)) {
+    if (professionalBillingEnabled && i && i.recipient_type !== "PARTICULAR" && invoiceRows(i,data).some(({row}) =>
+      !!row.record && (row.record.professional_role !== "PRIMARY" ||
+        data.rows.filter(other => other.attendance_id === row.attendance_id && !!other.record).length > 1))) {
       setProfessionalInvoice(i);
       return;
     }
@@ -791,7 +793,8 @@ export default function BillingClient({
     ));
   const nfCandidates = data.rows.filter(
     (r) =>
-      (!professionalBillingEnabled || !r.record?.professional_id) &&
+      (!professionalBillingEnabled || ((!r.record?.professional_id || r.record.professional_role === "PRIMARY") &&
+        data.rows.filter(other => other.attendance_id === r.attendance_id && !!other.record).length <= 1)) &&
       eligibleForInvoice(
         r,
         data,
