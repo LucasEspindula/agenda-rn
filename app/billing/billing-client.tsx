@@ -457,7 +457,7 @@ export default function BillingClient({
     });
   }
   function editInvoice(i?: Invoice) {
-    if (professionalBillingEnabled && i && invoiceRows(i,data).some(({row}) => !!row.record?.professional_id)) {
+    if (professionalBillingEnabled && i && i.recipient_type !== "PARTICULAR" && invoiceRows(i,data).some(({row}) => !!row.record?.professional_id)) {
       setProfessionalInvoice(i);
       return;
     }
