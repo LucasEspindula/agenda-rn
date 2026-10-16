@@ -3,7 +3,7 @@ export type DenialCharge={
  professional_id:string;professional_name:string;entity_name:string;billing_entity_id:string;payer:string;
 };
 export type DenialCase={
- id:string;billing_record_id:string;billing_entity_id:string;denied_on:string;
+ id:string;billing_record_id:string;billing_entity_id:string;denied_on:string;denial_kind:"TOTAL"|"PARCIAL";
  denied_amount:number;recovered_amount:number;reason:string;payer_reference:string|null;notes:string|null;
  status:"OPEN"|"APPEALED"|"DECIDED"|"PARTIAL"|"RECOVERED"|"CLOSED";
  closing_reason:string|null;closed_at:string|null;created_at:string;updated_at:string;
