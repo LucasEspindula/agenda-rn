@@ -20,7 +20,7 @@ export type DenialRecovery={
 };
 export type DenialEvent={id:string;denial_id:string;actor_id:number;event_type:string;created_at:string};
 export type DenialData={charges:DenialCharge[];cases:DenialCase[];appeals:DenialAppeal[];
- recoveries:DenialRecovery[];events:DenialEvent[];can_manage:boolean};
+ recoveries:DenialRecovery[];events:DenialEvent[];can_manage:boolean;today:string};
 export const denialStatuses:Record<DenialCase["status"],string>={
  OPEN:"Em aberto",APPEALED:"Em recurso",DECIDED:"Recurso decidido",
  PARTIAL:"Parcialmente recuperada",RECOVERED:"Recuperação integral",CLOSED:"Encerrada"
