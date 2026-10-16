@@ -50,7 +50,9 @@ export default function ProfessionalInvoiceDialog({data,initial,onClose,onSaved}
    setError("");
    if(!entity||!payer||!number.trim()||!issued){setError("Informe empresa, pagador, número da NF e data de emissão.");return}
    if(!selected.length||picked.length!==selected.length){setError("Selecione cobranças válidas para a empresa e o pagador.");return}
-   if(selected.some(id=>amounts[id]===undefined||amounts[id]===""||tryMoney(amounts[id])<0)){setError("Informe o valor de cada cobrança.");return}
+   try {
+     for(const id of selected){const value=parseBRL(amounts[id]);if(value==null||value<0)throw Error("Informe um valor válido para cada cobrança.");}
+   }catch{setError("Confira o valor individual de cada cobrança.");return}
    const netValue=tryMoney(net),grossValue=tryMoney(gross);
    if(net===null||net===""||netValue<0||gross===null||gross===""||grossValue<0){setError("Informe os valores bruto e líquido.");return}
    if(delta!==0){setError("A soma dos valores individuais deve conferir com o valor líquido da NF.");return}
