@@ -176,7 +176,8 @@ begin
       raise exception 'Atendimento com NF: preserve realização, médico, anestesista e paciente';
     end if;
     if entry.independent then
-      if entry.professional_id not in (appointment->>'doctorId',appointment->>'anesthetistId') then
+      if entry.professional_id is distinct from appointment->>'doctorId'
+         and entry.professional_id is distinct from appointment->>'anesthetistId' then
         raise exception 'Profissional faturado não participa mais do atendimento';
       end if;
     else
@@ -206,7 +207,8 @@ begin
       raise exception 'Atendimento com solicitação fiscal: preserve o paciente';
     end if;
     if entry.independent then
-      if entry.professional_id not in (appointment->>'doctorId',appointment->>'anesthetistId') then
+      if entry.professional_id is distinct from appointment->>'doctorId'
+         and entry.professional_id is distinct from appointment->>'anesthetistId' then
         raise exception 'Profissional da solicitação fiscal não participa do atendimento';
       end if;
     elsif appointment->>'forma_cobranca' is distinct from 'PARTICULAR' then
