@@ -134,7 +134,7 @@ where a.id=b.attendance_id;
 end;
 $professional_metadata_backfill$;
 
-do $ begin
+do $$ begin
   if exists (select 1 from pg_constraint where conrelid='public.billing_records'::regclass and conname='billing_attendance_unique') then
     alter table public.billing_records drop constraint billing_attendance_unique;
   else
