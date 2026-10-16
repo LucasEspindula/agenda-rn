@@ -2,6 +2,7 @@
 import {useEffect,useState} from "react";
 import {formatDateBR} from "@/lib/date-format";
 import PortalGuideDialog from "./portal-guide-dialog";
+import PortalRuleManager from "./portal-rule-manager";
 import "./portal-submissions.css";
 
 type DeadlineState="SUBMITTED"|"NO_RULE"|"WAITING_GUIDE"|"NO_DATE"|"OVERDUE"|"ALERT"|"ON_TIME";
@@ -12,7 +13,9 @@ type PortalItem={
  notes:string;destination_key:string;submission_channel_code:string;destination_confirmed:boolean;
  deadline:{state:DeadlineState;deadline:string|null;remaining:number|null};payment_status:string;
 };
-type PanelData={items:PortalItem[];today:string;can_manage_rules:boolean;
+type DeadlineRule={id?:string;destination_key:string;submission_channel_code:string;professional_id:string|null;
+ starts_from:string;deadline_days:number;alert_before_days:number;valid_from:string;valid_to:string|null};
+type PanelData={items:PortalItem[];rules:DeadlineRule[];today:string;can_manage_rules:boolean;
  entities:{id:string;name:string}[];professionals:{id:string;name:string}[]};
 const statuses:Record<DeadlineState,string>={
  SUBMITTED:"Faturado no portal",NO_RULE:"Sem regra de prazo",WAITING_GUIDE:"Aguardando guia",
@@ -92,6 +95,8 @@ export default function PortalSubmissions(){
      </tr>)}</tbody>
     </table></div>
     {!rows.length&&<p className="billing-empty">Nenhuma guia encontrada com esses filtros.</p>}
+    {data.can_manage_rules&&<PortalRuleManager rules={data.rules} professionals={data.professionals}
+      today={data.today} onSaved={()=>{setNotice("Regra cadastrada; alertas recalculados.");void refresh();}}/>}
    </>}
    {editingGuide&&data&&<PortalGuideDialog item={editingGuide} today={data.today}
      onClose={()=>setEditingGuide(null)}
