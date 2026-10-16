@@ -153,7 +153,11 @@ begin
     )>1 then
       raise exception 'Atendimento possui cobranças independentes; selecione a cobrança profissional específica';
     end if;
-  elsif p_kind in ('invoice','replace_invoice') and exists (
+  elsif (
+    (p_kind='invoice' and coalesce(p_data->>'recipient_type','CONVENIO')='CONVENIO')
+    or (p_kind='replace_invoice' and exists(
+      select 1 from public.invoices where id=nullif(p_data->>'id','')::uuid and recipient_type='CONVENIO'))
+  ) and exists (
     with selected_attendances as (
       select value::text as attendance_id
       from jsonb_array_elements_text(coalesce(p_data->'attendance_ids',p_data->'appointment_ids','[]'::jsonb))
@@ -283,6 +287,7 @@ set search_path to ''
 as $$
 declare
   role_name text;
+  previous_invoice public.invoices%rowtype;
   target_invoice_id uuid := coalesce(nullif(p_data->>'id','')::uuid,gen_random_uuid());
   entity_id uuid := nullif(p_data->>'billing_entity_id','')::uuid;
   payer_value text := public.billing_payer_key(p_data->>'payer');
@@ -298,7 +303,13 @@ begin
   if entity_id is null or not exists(select 1 from public.billing_entities where id=entity_id and active) then raise exception 'Entidade recebedora inativa ou inexistente'; end if;
   if payer_value='' or nullif(trim(p_data->>'invoice_number'),'') is null or nullif(p_data->>'issue_date','') is null then raise exception 'Preencha número, pagador e emissão'; end if;
   if jsonb_typeof(p_data->'record_ids') is distinct from 'array' or jsonb_array_length(p_data->'record_ids')=0 or jsonb_typeof(p_data->'item_amounts') is distinct from 'object' then raise exception 'Selecione as cobranças e informe cada valor'; end if;
-  if exists(select 1 from public.invoices where id=target_invoice_id and (status<>'ACTIVE' or voided_at is not null)) then raise exception 'Documento histórico não pode ser editado'; end if;
+  select * into previous_invoice from public.invoices where id=target_invoice_id for update;
+  if previous_invoice.id is not null then
+    if previous_invoice.status<>'ACTIVE' or previous_invoice.voided_at is not null then raise exception 'Documento histórico não pode ser editado'; end if;
+    if previous_invoice.recipient_type<>'CONVENIO' then raise exception 'Documento não é NF de convênio'; end if;
+    if previous_invoice.updated_at is distinct from nullif(p_data->>'updated_at','')::timestamptz then raise exception 'NF alterada. Atualize a página'; end if;
+    if previous_invoice.paid_at is not null then raise exception 'NF já paga. Utilize o fluxo fiscal de correção ou substituição'; end if;
+  end if;
   for record_id in select distinct value::uuid from jsonb_array_elements_text(p_data->'record_ids') loop
     select * into charge from public.billing_records where id=record_id for update;
     if not found or charge.billing_method<>'CONVENIO' or charge.settlement_mode='DIRECT' then raise exception 'Cobrança não elegível para NF de convênio'; end if;
