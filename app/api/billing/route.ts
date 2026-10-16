@@ -18,7 +18,7 @@ export async function GET(request:Request){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
    if(appointmentId&&!allowed.has(appointmentId))return Response.json({error:'Atendimento sem acesso.'},{status:404});
    const existingChargesForAppointment=!!appointmentId&&data.rows.some(r=>r.appointment_id===appointmentId&&!!r.record);
-   data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id)&&
+   data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id)&&(
     session.account.role!=='secretary'||session.agendaIds.includes(r.doctor_id)
    ));
    const accessibleRecordIds=new Set(data.rows.map(row=>row.record?.id).filter(Boolean));
