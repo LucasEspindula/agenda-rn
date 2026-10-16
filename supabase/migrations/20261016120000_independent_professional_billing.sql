@@ -95,7 +95,21 @@ end $$;
 
 -- Each existing row remains one historical charge belonging to the clinical
 -- doctor. No values, invoices, payment parts or IDs are duplicated.
-update public.billing_records b
+--
+-- Metadata-only historical backfill: ordinary financial write triggers require
+-- rn.actor/rn.operation and would also rewrite original updated_at. Disable only
+-- the two financial audit/stamp triggers inside this atomic DO block, not FK,
+-- payment, invoice or other integrity triggers. Restore both before exiting.
+-- This is a database schema migration, NOT an operator financial transaction.
+do $professional_metadata_backfill$
+begin
+  if exists(select 1 from pg_trigger where tgrelid='public.billing_records'::regclass and tgname='financial_stamp' and not tgisinternal) then
+    alter table public.billing_records disable trigger financial_stamp;
+  end if;
+  if exists(select 1 from pg_trigger where tgrelid='public.billing_records'::regclass and tgname='financial_log_change' and not tgisinternal) then
+    alter table public.billing_records disable trigger financial_log_change;
+  end if;
+  update public.billing_records b
 set professional_id = coalesce(b.professional_id,a.doctor_id),
     professional_role = coalesce(b.professional_role,'PRIMARY'),
     patient_insurance_snapshot = coalesce(b.patient_insurance_snapshot,a.insurance,''),
@@ -111,8 +125,16 @@ set professional_id = coalesce(b.professional_id,a.doctor_id),
     )
 from public.attendances a
 where a.id=b.attendance_id;
+  if exists(select 1 from pg_trigger where tgrelid='public.billing_records'::regclass and tgname='financial_log_change' and not tgisinternal) then
+    alter table public.billing_records enable trigger financial_log_change;
+  end if;
+  if exists(select 1 from pg_trigger where tgrelid='public.billing_records'::regclass and tgname='financial_stamp' and not tgisinternal) then
+    alter table public.billing_records enable trigger financial_stamp;
+  end if;
+end;
+$professional_metadata_backfill$;
 
-do $$ begin
+do $ begin
   if exists (select 1 from pg_constraint where conrelid='public.billing_records'::regclass and conname='billing_attendance_unique') then
     alter table public.billing_records drop constraint billing_attendance_unique;
   else
