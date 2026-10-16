@@ -85,11 +85,13 @@ export default function BillingClient({
   initialView,
   professionalBillingEnabled = false,
   portalSubmissionsEnabled = false,
+  denialsEnabled = false,
 }: {
   appointmentId?: string;
   initialView?: string;
   professionalBillingEnabled?: boolean;
   portalSubmissionsEnabled?: boolean;
+  denialsEnabled?: boolean;
 }) {
   const [pendingSearch, setPendingSearch] = useState("");
   const [pendingSource, setPendingSource] = useState<BillingRow | null>(null),
@@ -1280,6 +1282,7 @@ export default function BillingClient({
           active={tab}
           pendingCount={pendingCount}
           insurancePendingCount={insurancePendingCount}
+          denialsEnabled={denialsEnabled}
         />
       )}
       <main
