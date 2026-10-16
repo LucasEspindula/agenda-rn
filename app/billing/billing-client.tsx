@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 import InsurancePending from "./insurance-pending";
+import PortalSubmissions from "./portal-submissions";
 import BillingSubnav from "./billing-subnav";
 import ProfessionalChargeDialog from "./professional-charge-dialog";
 import ProfessionalInvoiceDialog from "./professional-invoice-dialog";
@@ -83,10 +84,12 @@ export default function BillingClient({
   appointmentId,
   initialView,
   professionalBillingEnabled = false,
+  portalSubmissionsEnabled = false,
 }: {
   appointmentId?: string;
   initialView?: string;
   professionalBillingEnabled?: boolean;
+  portalSubmissionsEnabled?: boolean;
 }) {
   const [pendingSearch, setPendingSearch] = useState("");
   const [pendingSource, setPendingSource] = useState<BillingRow | null>(null),
@@ -105,6 +108,7 @@ export default function BillingClient({
   } | null>(null);
   const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null);
   const [invoiceView, setInvoiceView] = useState("requests");
+  const [insuranceView, setInsuranceView] = useState<"payments"|"portal">("payments");
   const [privateInvoice, setPrivateInvoice] = useState<
     InvoiceRequest | Invoice | true | null
   >(null);
@@ -1255,7 +1259,7 @@ export default function BillingClient({
             className="billing-icon-action"
             aria-label="Imprimir / gerar relatório"
             title="Imprimir / gerar relatório"
-            disabled={loading}
+            disabled={loading || (tab === "insurance" && portalSubmissionsEnabled && insuranceView === "portal")}
             onClick={() => {
               if (tab === "records") {
                 setPrintError("");
@@ -1309,6 +1313,14 @@ export default function BillingClient({
             </button>
           </nav>
         )}
+        {tab === "insurance" && portalSubmissionsEnabled && (
+          <nav className="billing-tabs" aria-label="Convênios">
+            <button type="button" aria-current={insuranceView === "payments" ? "page" : undefined}
+              onClick={() => setInsuranceView("payments")}>Pendências de pagamento</button>
+            <button type="button" aria-current={insuranceView === "portal" ? "page" : undefined}
+              onClick={() => setInsuranceView("portal")}>Guias e faturamento no portal</button>
+          </nav>
+        )}
         {tab !== "insurance" && filterBar}
         {error && (
           <p role="alert" className="billing-error">
@@ -1326,7 +1338,10 @@ export default function BillingClient({
         ) : (
           <>
             {tab === "records" && table(rows)}
-            {tab === "insurance" && (
+            {tab === "insurance" && portalSubmissionsEnabled && insuranceView === "portal" && (
+              <PortalSubmissions />
+            )}
+            {tab === "insurance" && (!portalSubmissionsEnabled || insuranceView === "payments") && (
               <section className="insurance-view-frame">
                 <InsurancePending
                   filters={filterBar}
