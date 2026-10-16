@@ -2,6 +2,7 @@
 "use client";
 import InsurancePending from "./insurance-pending";
 import BillingSubnav from "./billing-subnav";
+import ProfessionalChargeDialog from "./professional-charge-dialog";
 import { filterPendingRows, pendingAction } from "@/lib/insurance-pending";
 import PaymentParts, { PaymentPartsReadOnly } from "@/components/payment-parts";
 import PaymentProofs, { paymentProofLabel } from "@/components/payment-proofs";
@@ -34,6 +35,7 @@ import {
   rowEntityId,
   companyLabel,
   isInsurancePending,
+  billingRowKey,
   matchesRow,
   matchesInvoice,
   rowStatus,
@@ -79,9 +81,11 @@ const dr = (s: string) => (/^Dr\.?\s/i.test(s) ? s : `Dr. ${s}`);
 export default function BillingClient({
   appointmentId,
   initialView,
+  professionalBillingEnabled = false,
 }: {
   appointmentId?: string;
   initialView?: string;
+  professionalBillingEnabled?: boolean;
 }) {
   const [pendingSearch, setPendingSearch] = useState("");
   const [pendingSource, setPendingSource] = useState<BillingRow | null>(null),
@@ -105,6 +109,8 @@ export default function BillingClient({
   >(null);
   const [printMenu, setPrintMenu] = useState(false);
   const [manual, setManual] = useState<BillingRow | true | null>(null);
+  const [professionalSource, setProfessionalSource] = useState<BillingRow | null>(null);
+  const [professionalEdit, setProfessionalEdit] = useState(false);
   const deepLinkHandled = useRef(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const initialTab =
@@ -427,6 +433,9 @@ export default function BillingClient({
     setItemEnd("");
   }
   function editRecord(r: BillingRow) {
+    if (professionalBillingEnabled && (!r.record || r.record.professional_id)) {
+      setProfessionalSource(r); setProfessionalEdit(!!r.record); return;
+    }
     setParts(
       (data.payment_parts || []).filter(
         (p) => p.billing_record_id === r.record?.id,
@@ -446,6 +455,10 @@ export default function BillingClient({
     });
   }
   function editInvoice(i?: Invoice) {
+    if (professionalBillingEnabled && i && invoiceRows(i,data).some(({row}) =>
+      data.rows.filter(other => other.attendance_id === row.attendance_id && !!other.record).length > 1)) {
+      setMessage("NF com cobranças independentes: edição antiga bloqueada para evitar alterar o profissional errado."); return;
+    }
     setReplacement(null);
     setParts(
       (data.payment_parts || []).filter((p) => !!i && p.invoice_id === i.id),
@@ -771,6 +784,7 @@ export default function BillingClient({
     ));
   const nfCandidates = data.rows.filter(
     (r) =>
+      (!professionalBillingEnabled || data.rows.filter(other => other.attendance_id === r.attendance_id && !!other.record).length <= 1) &&
       eligibleForInvoice(
         r,
         data,
@@ -861,7 +875,7 @@ export default function BillingClient({
         </thead>
         <tbody>
           {items.map((r) => (
-            <tr key={r.attendance_id}>
+            <tr key={billingRowKey(r)}>
               <td>
                 {r.patient}
                 <small className="billing-origin">
@@ -950,6 +964,12 @@ export default function BillingClient({
                     >
                       <WalletIcon />
                     </button>
+                    {professionalBillingEnabled && tab === "records" && !!r.record && r.status_atendimento !== "cancelled" &&
+                      [...new Set([r.clinical_doctor_id || r.doctor_id, r.anesthetist_id].filter(Boolean))]
+                        .some(id => !data.rows.some(other => other.attendance_id === r.attendance_id && other.record?.professional_id === id)) && (
+                        <button type="button" className="billing-secondary" title="Nova cobrança por profissional"
+                          onClick={() => { setProfessionalEdit(false); setProfessionalSource(r); }}>+ Cobrança</button>
+                      )}
                     {r.origin !== "AGENDA" &&
                       r.status_atendimento !== "cancelled" && (
                         <button
@@ -1730,6 +1750,11 @@ export default function BillingClient({
             </p>
           </AppDialog>
         )}
+        {professionalSource && professionalBillingEnabled && (
+          <ProfessionalChargeDialog source={professionalSource} edit={professionalEdit} data={data}
+            onClose={() => setProfessionalSource(null)}
+            onSaved={() => { setProfessionalSource(null); notifyFinancialChange(); void load(); }}/>
+        )}
         {editing && (
           <AppDialog
             label="Configuração financeira"
@@ -2029,7 +2054,7 @@ export default function BillingClient({
                       </thead>
                       <tbody>
                         {linkedRows.map((r) => (
-                          <tr key={r.attendance_id}>
+                          <tr key={billingRowKey(r)}>
                             <td>{r.patient}</td>
                             <td>{date(r.date)}</td>
                             <td>{doctorName(r.doctor_id)}</td>
