@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import {formatBRL} from "@/lib/money";
+import {summarizeDenials} from "@/lib/denial-totals";
 import {formatDateBR} from "@/lib/date-format";
 import DenialActionDialog,{type DenialAction} from "./denial-action-dialog";
 import {denialStatuses,appealDecisions,type DenialData,type DenialCase} from "@/lib/billing-denials";
@@ -38,10 +39,7 @@ export default function DenialManager(){
     " "+(c.payer_reference||"")).toLocaleLowerCase("pt-BR").includes(search.trim().toLocaleLowerCase("pt-BR")))
  ).sort((a,b)=>Number(a.status==="CLOSED")-Number(b.status==="CLOSED")||
    b.denied_on.localeCompare(a.denied_on)),[all,status,entity,professional,search]);
- const total=(cases:DenialCase[],field:"denied_amount"|"recovered_amount")=>
-   cases.reduce((sum,c)=>sum+Number(c[field]),0);
- const active=all.filter(c=>c.status!=="CLOSED");
- const closed=all.filter(c=>c.status==="CLOSED");
+ const totals=summarizeDenials(all);
  const entities=[...new Map(data.cases.map(c=>[c.billing_entity_id,c.entity_name])).entries()];
  const doctors=[...new Map(data.cases.map(c=>[c.professional_id,c.professional_name])).entries()];
  function open(action:DenialAction,denial:DenialCase|null=null){setSelected(denial);setAction(action);}
@@ -58,11 +56,11 @@ export default function DenialManager(){
   {notice&&<p role="status" className="billing-message">{notice}</p>}
   {loading?<p className="billing-empty">Carregando glosas…</p>:<>
    <div className="denial-summary">
-    <article><span>Glosas registradas</span><strong>{all.length}</strong></article>
-    <article><span>Valor glosado</span><strong>{formatBRL(total(all,"denied_amount"))}</strong></article>
-    <article><span>Recuperado informado</span><strong>{formatBRL(total(all,"recovered_amount"))}</strong></article>
-    <article><span>Saldo ainda em acompanhamento</span><strong>{formatBRL(active.reduce((sum,c)=>sum+Math.max(0,Number(c.denied_amount)-Number(c.recovered_amount)),0))}</strong></article>
-    <article><span>Encerrado sem recuperação</span><strong>{formatBRL(closed.reduce((sum,c)=>sum+Math.max(0,Number(c.denied_amount)-Number(c.recovered_amount)),0))}</strong></article>
+    <article><span>Glosas registradas</span><strong>{totals.total}</strong></article>
+    <article><span>Valor glosado</span><strong>{formatBRL(totals.denied)}</strong></article>
+    <article><span>Recuperado informado</span><strong>{formatBRL(totals.recovered)}</strong></article>
+    <article><span>Saldo ainda em acompanhamento</span><strong>{formatBRL(totals.activeBalance)}</strong></article>
+    <article><span>Encerrado sem recuperação</span><strong>{formatBRL(totals.closedLoss)}</strong></article>
    </div>
    <div className="denial-filters">
     <label>Paciente, pagador ou motivo
