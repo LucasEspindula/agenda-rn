@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {formatDateBR} from "@/lib/date-format";
+import PortalGuideDialog from "./portal-guide-dialog";
 import "./portal-submissions.css";
 
 type DeadlineState="SUBMITTED"|"NO_RULE"|"WAITING_GUIDE"|"NO_DATE"|"OVERDUE"|"ALERT"|"ON_TIME";
@@ -20,6 +21,8 @@ const statuses:Record<DeadlineState,string>={
 const fmt=(value:string|null)=>value?formatDateBR(value):"—";
 export default function PortalSubmissions(){
  const [data,setData]=useState<PanelData|null>(null);
+ const [editingGuide,setEditingGuide]=useState<PortalItem|null>(null);
+ const [notice,setNotice]=useState("");
  const [error,setError]=useState("");
  const [loading,setLoading]=useState(true);
  const [filter,setFilter]=useState("");
@@ -48,6 +51,7 @@ export default function PortalSubmissions(){
  return <section className="portal-submissions" aria-label="Guias de convênio">
    <div className="portal-section-heading"><div><h2>Guias e apresentação no portal</h2>
     <p>Faturado no portal é diferente de Pago. Os prazos só aparecem quando existe uma regra configurada.</p></div></div>
+   {notice&&<p role="status" className="billing-message">{notice}</p>}
    {error&&<p role="alert" className="billing-error">{error} <button type="button" onClick={()=>void refresh()}>Tentar novamente</button></p>}
    {loading?<p className="billing-empty">Carregando guias…</p>:data&&<>
     <div className="portal-summary">
@@ -71,7 +75,7 @@ export default function PortalSubmissions(){
     </div>
     <div className="portal-table-wrap"><table className="billing-table portal-table">
      <thead><tr><th>Paciente</th><th>Atendimento</th><th>Profissional / empresa</th><th>Destino</th>
-      <th>Envio ao portal</th><th>Prazo</th><th>Pagamento</th></tr></thead>
+      <th>Envio ao portal</th><th>Prazo</th><th>Pagamento</th><th>Ação</th></tr></thead>
      <tbody>{rows.map(row=><tr key={row.billing_record_id}>
       <td>{row.patient}<small>{row.patient_insurance}</small></td>
       <td>{fmt(row.service_date)}<small>{row.procedure}</small></td>
@@ -83,9 +87,14 @@ export default function PortalSubmissions(){
       <td><span className={"portal-deadline "+row.deadline.state.toLowerCase()}>{statuses[row.deadline.state]}</span>
        {row.deadline.deadline&&<small>{fmt(row.deadline.deadline)}</small>}</td>
       <td>{row.payment_status==="PAGO"?"Pago":"Pendente"}</td>
+      <td><button type="button" className="billing-secondary" onClick={()=>setEditingGuide(row)}>
+       {row.status==="FATURADO"?"Ver protocolo":"Registrar guia"}</button></td>
      </tr>)}</tbody>
     </table></div>
     {!rows.length&&<p className="billing-empty">Nenhuma guia encontrada com esses filtros.</p>}
    </>}
+   {editingGuide&&data&&<PortalGuideDialog item={editingGuide} today={data.today}
+     onClose={()=>setEditingGuide(null)}
+     onSaved={()=>{setEditingGuide(null);setNotice("Registro da guia salvo. O pagamento permanece independente.");void refresh();}}/>}
  </section>;
 }
