@@ -101,9 +101,15 @@ set professional_id = coalesce(b.professional_id,a.doctor_id),
     patient_insurance_snapshot = coalesce(b.patient_insurance_snapshot,a.insurance,''),
     commercial_modality_code = coalesce(b.commercial_modality_code,case when b.billing_method='PARTICULAR' then 'PARTICULAR' else 'LEGADO' end),
     submission_channel_code = coalesce(b.submission_channel_code,case when b.settlement_mode='DIRECT' then 'DIRETO' else 'LEGADO' end),
-    billing_entity_name_snapshot = coalesce(b.billing_entity_name_snapshot,e.trade_name,e.name)
+    billing_entity_name_snapshot = coalesce(
+      b.billing_entity_name_snapshot,
+      (
+        select coalesce(e.trade_name,e.name)
+        from public.billing_entities e
+        where e.id=b.billing_entity_id
+      )
+    )
 from public.attendances a
-left join public.billing_entities e on e.id=b.billing_entity_id
 where a.id=b.attendance_id;
 
 do $$ begin
@@ -127,9 +133,49 @@ create index if not exists billing_professional_rules_lookup_idx
   on public.billing_professional_commercial_rules(professional_id,patient_insurance_key,valid_from desc)
   where active;
 
+-- The legacy RPC identifies a charge from an attendance.  Keep it available
+-- for historical one-charge attendances, but fail closed once an attendance
+-- has independent professional charges.  This prevents an old client from
+-- mutating an arbitrary record after the unique attendance key is removed.
+alter function public.save_billing(bigint,text,jsonb) rename to save_billing_legacy_single_charge;
+create function public.save_billing(p_actor bigint,p_kind text,p_data jsonb)
+returns uuid
+language plpgsql
+set search_path to ''
+as $$
+declare
+  attendance_key text;
+begin
+  if p_kind='record' then
+    attendance_key:=coalesce(nullif(p_data->>'attendance_id',''),nullif(p_data->>'appointment_id',''));
+    if attendance_key is not null and (
+      select count(*) from public.billing_records where attendance_id=attendance_key
+    )>1 then
+      raise exception 'Atendimento possui cobranças independentes; selecione a cobrança profissional específica';
+    end if;
+  elsif p_kind in ('invoice','replace_invoice') and exists (
+    with selected_attendances as (
+      select value::text as attendance_id
+      from jsonb_array_elements_text(coalesce(p_data->'attendance_ids',p_data->'appointment_ids','[]'::jsonb))
+      union
+      select b.attendance_id
+      from public.billing_records b
+      join jsonb_array_elements_text(coalesce(p_data->'record_ids','[]'::jsonb)) selected(id) on selected.id=b.id::text
+    )
+    select 1 from selected_attendances s
+    where (select count(*) from public.billing_records b where b.attendance_id=s.attendance_id)>1
+  ) then
+    raise exception 'NF com cobranças independentes deve usar os IDs das cobranças profissionais';
+  end if;
+  return public.save_billing_legacy_single_charge(p_actor,p_kind,p_data);
+end;
+$$;
+revoke all on function public.save_billing(bigint,text,jsonb) from public, anon, authenticated;
+grant execute on function public.save_billing(bigint,text,jsonb) to service_role;
+
 -- The service route is the only caller. The function locks the attendance and
--- charge row, preserves optimistic concurrency, and lets the existing audit
--- trigger record before/after values under financial_operation().
+-- charge row, preserves optimistic concurrency, and initializes the existing
+-- audit trigger context before any financial write.
 create or replace function public.save_professional_charge(p_actor bigint,p_data jsonb)
 returns uuid
 language plpgsql
@@ -154,15 +200,24 @@ begin
   perform pg_advisory_xact_lock(194701,3);
   select role into role_name from public.users where id=p_actor;
   if role_name is null or role_name not in ('general_manager','secretary') then raise exception 'Acesso negado'; end if;
-  if nullif(current_setting('rn.operation',true),'') is null or current_setting('rn.actor',true)<>p_actor::text then raise exception 'Operação fiscal obrigatória'; end if;
   if coalesce(nullif(trim(p_data->>'attendance_id'),''),'')='' or coalesce(nullif(trim(p_data->>'professional_id'),''),'')='' then raise exception 'Informe atendimento e profissional responsável'; end if;
   select * into attendance from public.attendances where id=p_data->>'attendance_id' for update;
   if not found or attendance.status='cancelled' then raise exception 'Atendimento cancelado ou inexistente'; end if;
+  if not (
+    attendance.doctor_id=p_data->>'professional_id'
+    or exists (
+      select 1
+      from public.app_state s
+      cross join lateral jsonb_array_elements(coalesce(s.payload->'appointments','[]')) clinical
+      where s.id=1
+        and clinical->>'id'=attendance.appointment_id
+        and p_data->>'professional_id' in (clinical->>'doctorId',clinical->>'anesthetistId')
+    )
+  ) then raise exception 'Profissional não participa deste atendimento'; end if;
   if role_name='secretary' and not exists (
-    select 1 from public.app_state s cross join lateral jsonb_array_elements(coalesce(s.payload->'appointments','[]')) clinical
-    join public.agenda_access g on g.user_id=p_actor and g.professional_id in (clinical->>'doctorId',clinical->>'anesthetistId')
-    where s.id=1 and clinical->>'id'=attendance.appointment_id
-  ) then raise exception 'Agenda sem permissão'; end if;
+    select 1 from public.agenda_access g
+    where g.user_id=p_actor and g.professional_id=p_data->>'professional_id'
+  ) then raise exception 'Agenda sem permissão para este profissional'; end if;
   if not exists(select 1 from public.doctors where id=p_data->>'professional_id' and active and billing_enabled) then raise exception 'Profissional inexistente ou sem faturamento habilitado'; end if;
   entity_id:=nullif(p_data->>'billing_entity_id','')::uuid;
   if entity_id is null or not exists(select 1 from public.billing_entities where id=entity_id and active) then raise exception 'Entidade recebedora inativa ou inexistente'; end if;
@@ -188,6 +243,7 @@ begin
     if found then raise exception 'Já existe uma cobrança para este profissional neste atendimento'; end if;
     target_id:=gen_random_uuid();
   end if;
+  perform public.financial_operation(p_actor,'professional_charge',target_id::text);
   settlement:=case when method='PARTICULAR' or channel='DIRETO' then 'DIRECT' else 'INVOICE' end;
   if settlement='INVOICE' and status_value='PAGO' then raise exception 'Registre o pagamento do convênio na NF/lote'; end if;
   paid_on:=nullif(p_data->>'paid_at','')::date; received:=nullif(p_data->>'received_amount','')::numeric;

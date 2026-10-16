@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "../vendor/shadcn-tailwind-4.13.0.css";
 
 .login-scene { position:absolute; inset:0; overflow:hidden; pointer-events:none; --dx:0px; --dy:0px; --mx:50%; --my:50%; background:linear-gradient(135deg,#edf5ef,#e3efee 55%,#dbe9f1); }
 .login-orbit { position:absolute; width:65vw; height:65vw; border-radius:42%; border:1px solid rgba(255,255,255,.7); transform:translate(var(--dx),var(--dy)) rotate(-25deg); transition:transform 1.2s ease-out; }
@@ -142,3 +141,4 @@ html{scrollbar-gutter:auto}body{margin:0}body:has(dialog[open]),body:has(.modal:
 dialog:has(.fiscal-confirmation){border:0;border-radius:18px;width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:24px;background:#fff;color:#17354c;overflow:auto;box-shadow:0 24px 80px #092b4b40}dialog:has(.fiscal-confirmation)::backdrop{background:#0b254566}.fiscal-confirmation{display:grid;gap:14px}.fiscal-confirmation h2{font-size:22px;font-weight:700}.fiscal-confirmation h3{font-size:15px;font-weight:700;margin-top:8px}.fiscal-confirmation label:not(.fiscal-radio){display:grid;gap:6px;font-size:14px}.fiscal-confirmation input:not([type=radio]),.fiscal-confirmation textarea{border:1px solid #cbd5e1;border-radius:8px;padding:10px;width:100%;background:#fff;color:#18354d}.fiscal-confirmation fieldset{border:0;display:flex;flex-wrap:wrap;gap:16px}.fiscal-radio{display:flex;align-items:center;gap:7px}.fiscal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.fiscal-actions button{padding:10px 14px;border-radius:8px;border:1px solid #ccd6e0;cursor:pointer}.fiscal-actions .fiscal-primary{background:#075b91;color:#fff;border-color:#075b91}.fiscal-confirmation [role=alert]{color:#b42318}
 
 dialog:has(.fiscal-confirmation){margin:auto;inset:0}.fiscal-radio input[type=radio]{width:18px;height:18px;min-height:0;padding:0;flex:0 0 18px}.fiscal-radio{font-size:14px}.fiscal-confirmation fieldset{gap:12px}.fiscal-confirmation legend{margin-bottom:10px}
+

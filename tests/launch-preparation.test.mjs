@@ -54,5 +54,9 @@ test('professional mutations stay isolated from the legacy record endpoint and n
  assert.match(route,/save_professional_charge/);
  assert.match(route,/professional_invoice/);
  assert.match(route,/save_professional_invoice/);
+ assert.match(route,/session\.agendaIds\.includes\(r\.doctor_id\)/);
+ assert.match(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/perform public\.financial_operation\(p_actor,'professional_charge',target_id::text\)/);
+ assert.match(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/Profissional não participa deste atendimento/);
+ assert.match(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/cobranças independentes/);
  assert.doesNotMatch(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/perseus_documents|openai/i);
 });

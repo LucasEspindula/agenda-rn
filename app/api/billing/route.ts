@@ -17,7 +17,9 @@ export async function GET(request:Request){
   if(session.account.role==='secretary'||appointmentId){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
    if(appointmentId&&!allowed.has(appointmentId))return Response.json({error:'Atendimento sem acesso.'},{status:404});
-   data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id));
+   data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id)&&(
+    session.account.role!=='secretary'||session.agendaIds.includes(r.doctor_id)
+   ));
    data.requests=(data.requests||[]).filter(r=>data.rows.some(row=>row.attendance_id===r.attendance_id));
    // A scoped read may project an authorized scheduled appointment without writing finance.
    if(appointmentId&&!data.rows.length){
