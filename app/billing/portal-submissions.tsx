@@ -56,7 +56,7 @@ export default function PortalSubmissions(){
   (!search||destinationKey(i.patient+" "+i.procedure+" "+i.destination_key+" "+i.patient_insurance+" "+i.professional_name)
     .includes(destinationKey(search)))
  ).sort((a,b)=>order[a.deadline.state]-order[b.deadline.state]||a.service_date.localeCompare(b.service_date)||a.patient.localeCompare(b.patient,"pt-BR")),
- [items,entity,professional,status,search]);
+ [data,entity,professional,status,search]);
  const counts={
   pending:items.filter(i=>i.status!=="FATURADO").length,
   alert:items.filter(i=>i.deadline.state==="ALERT").length,
@@ -118,7 +118,7 @@ export default function PortalSubmissions(){
   <div className="portal-section-heading">
    <div><h2>Guias e apresentação no portal</h2><p>O envio da guia e o pagamento do convênio são controles independentes. Os alertas dependem de uma regra cadastrada.</p></div>
    {data?.can_manage_rules&&<button type="button" className="billing-secondary"
-    onClick={()=>{setRuleOpen(true);setDialogError("");setRule(r=>({...r,valid_from:data.today}));}}>+ Regra de prazo</button>}
+    onClick={()=>{setRuleOpen(true);setDialogError("");setRule(r=>({...r,valid_from:data?.today||""}));}}>+ Regra de prazo</button>}
   </div>
   {error&&<p role="alert" className="billing-error">{error} <button type="button" onClick={()=>void load()}>Tentar novamente</button></p>}
   {message&&<p role="status" className="billing-message">{message}</p>}
