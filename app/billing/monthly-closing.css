@@ -1,0 +1,56 @@
+.monthly-closing{color:#183d52;min-width:0;padding:12px 0 30px}
+.monthly-heading{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin:0 0 20px}
+.monthly-heading h1{font-size:25px;margin:0 0 6px;font-weight:730}
+.monthly-heading p{font-size:13px;color:#60758a;line-height:1.55;max-width:800px;margin:0}
+.monthly-filters{background:#fff;border:1px solid #dce7ef;border-radius:12px;padding:16px;
+ display:flex;align-items:end;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.monthly-filters label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:650;color:#476070}
+.monthly-filters label:first-child{flex:1;min-width:280px}
+.monthly-filters :is(select,input){height:40px;min-width:170px;padding:8px;border:1px solid #cedce6;
+ border-radius:7px;background:#fff;color:#213c51}
+.monthly-report-heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin:20px 0}
+.monthly-report-heading h2{font-size:21px;margin:0 0 4px}
+.monthly-report-heading p{margin:0;color:#617b90;font-size:13px}
+.monthly-report-status{display:flex;flex-direction:column;gap:5px;font-size:13px;text-align:right}
+.monthly-report-status small{font-size:11px;color:#60778a}
+.monthly-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.monthly-summary article{display:flex;flex-direction:column;gap:7px;padding:17px;background:#fff;
+ border:1px solid #dce7ef;border-radius:11px}
+.monthly-summary span{font-size:12px;color:#557185}
+.monthly-summary strong{font-size:21px;color:#173c54;overflow-wrap:anywhere}
+.monthly-summary small{font-size:11px;color:#738698;line-height:1.4}
+.monthly-panel{margin:17px 0;background:#fff;border:1px solid #dce7ef;border-radius:12px;padding:17px}
+.monthly-panel h3{font-size:16px;margin:0 0 10px}
+.monthly-panel>p{line-height:1.55;font-size:12px;color:#6a7c8c}
+.monthly-panel details{margin-top:13px}
+.monthly-panel summary{cursor:pointer;font-size:12px;font-weight:650;color:#265876}
+.monthly-scroll{overflow-x:auto;max-width:100%}
+.monthly-scroll .billing-table{min-width:680px;width:100%;border-collapse:collapse}
+.monthly-scroll .billing-table :is(th,td){font-size:12px;line-height:1.4}
+.monthly-pair{display:flex;gap:8px 24px;flex-wrap:wrap;font-size:12px}
+.monthly-pair p{margin:5px 0}
+.monthly-history-alert{padding:13px 16px;margin:12px 0;background:#f3f6fa;
+ border-left:3px solid #6888a2;border-radius:7px;font-size:12px;line-height:1.6}
+.monthly-view-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.monthly-view-actions button[aria-pressed="true"]{outline:2px solid #638bac;outline-offset:2px}
+.monthly-warnings{border-left:3px solid #c99738}
+.monthly-warnings ul{padding-left:18px;margin:8px 0;font-size:12px;line-height:1.7}
+.monthly-disclaimer{font-size:11px!important;color:#63778b!important}
+.monthly-closing-actions{display:flex;align-items:center;flex-wrap:wrap;gap:15px;margin:18px 0}
+.monthly-closing-actions>span{font-size:12px;color:#5d7283}
+.monthly-history-list{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:960px){.monthly-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.monthly-summary{grid-template-columns:1fr}
+ .monthly-heading,.monthly-report-heading{flex-direction:column}
+ .monthly-report-status{text-align:left}
+ .monthly-filters{display:grid;grid-template-columns:1fr}
+ .monthly-filters label:first-child{min-width:0}}
+@media print{
+ .monthly-closing{color:#111;background:#fff;padding:0}
+ .monthly-closing .no-print,.billing-subnav,.site-header,.billing-header,header.rn-header{display:none!important}
+ .monthly-panel{break-inside:avoid;border-color:#ccc;padding:8px}
+ .monthly-summary article{border-color:#ccc}
+ .monthly-scroll{overflow:visible}
+ .monthly-scroll .billing-table{min-width:0}
+ .monthly-panel details:not([open]){display:none}
+}
