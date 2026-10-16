@@ -8,6 +8,7 @@ create table public.billing_denial_cases (
  billing_record_id uuid not null references public.billing_records(id),
  billing_entity_id uuid not null references public.billing_entities(id),
  denied_on date not null,
+ denial_kind text not null check(denial_kind in ('TOTAL','PARCIAL')),
  denied_amount numeric(14,2) not null check(denied_amount>0),
  recovered_amount numeric(14,2) not null default 0 check(recovered_amount>=0 and recovered_amount<=denied_amount),
  reason text not null check(length(trim(reason)) between 5 and 2000),
@@ -129,20 +130,24 @@ begin
  if act='OPEN_CASE' then
    action_date:=nullif(p_data->>'denied_on','')::date;
    value_amount:=nullif(p_data->>'denied_amount','')::numeric;
+   if p_data->>'denial_kind' not in ('TOTAL','PARCIAL')
+      then raise exception 'Informe se a glosa foi total ou parcial';end if;
    if action_date is null or action_date<attendance.date or action_date>current_date
       or value_amount is null or value_amount<=0 or value_amount>999999999999.99
       or length(trim(coalesce(p_data->>'reason',''))) not between 5 and 2000
       or length(coalesce(p_data->>'payer_reference',''))>120
       then raise exception 'Informe data, valor e motivo válidos para a glosa';end if;
    insert into public.billing_denial_cases(
-      billing_record_id,billing_entity_id,denied_on,denied_amount,reason,payer_reference,
+      billing_record_id,billing_entity_id,denied_on,denial_kind,denied_amount,reason,payer_reference,
       notes,created_by,updated_by)
-   values(charge.id,charge.billing_entity_id,action_date,value_amount,
+   values(charge.id,charge.billing_entity_id,action_date,p_data->>'denial_kind',value_amount,
       trim(p_data->>'reason'),nullif(trim(p_data->>'payer_reference'),''),
       note_value,p_actor,p_actor) returning * into case_row;
    event_name:='OPENED';
 
  elsif act='FILE_APPEAL' then
+   if case_row.recovered_amount>=case_row.denied_amount then
+     raise exception 'Glosa integralmente recuperada. Não é possível abrir outro recurso';end if;
    action_date:=nullif(p_data->>'filed_on','')::date;
    value_amount:=nullif(p_data->>'appealed_amount','')::numeric;
    if action_date is null or action_date<case_row.denied_on or action_date>current_date
