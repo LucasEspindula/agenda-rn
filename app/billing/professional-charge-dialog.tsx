@@ -7,6 +7,7 @@ import {parseBRL} from "@/lib/money";
 import {formatDateBR} from "@/lib/date-format";
 import type {BillingRow,BillingData} from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
+import {confirmFiscalPayment} from "@/components/confirm-fiscal-payment";
 type Draft={professional_id:string;professional_role:string;billing_entity_id:string;billing_method:string;
   commercial_modality_code:string;submission_channel_code:string;effective_payer_name_snapshot:string;
   patient_insurance_snapshot:string;payment_status:string;received_amount:string;paid_at:string;invoice_number:string;notes:string};
@@ -46,14 +47,23 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
   let amount:number|null=null;
   try{
    amount=draft.received_amount.trim()?parseBRL(draft.received_amount):null;
-   if(direct&&paid&&(amount==null||amount<0||!draft.paid_at||!validPaymentParts(parts,amount))){
+   const needsFiscal=direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&
+     !(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED");
+   if(direct&&paid&&(amount==null||amount<0||!draft.paid_at||(!needsFiscal&&!validPaymentParts(parts,amount)))){
     setError("Informe valor, data e formas de pagamento que totalizem o valor recebido.");return;
    }
    setBusy(true);
+   const activeRequest=(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED");
+   let fiscal:Awaited<ReturnType<typeof confirmFiscalPayment>>=null;
+   if(direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&!activeRequest){
+     const patient=data.patients?.find(p=>p.id===source.patient_id) || {id:source.patient_id||"",name:source.patient};
+     fiscal=await confirmFiscalPayment({patient,amount,paidAt:draft.paid_at});
+     if(!fiscal)return;
+   }
    const body={kind:"professional_charge",data:{...draft,id:existing?.id||undefined,attendance_id:source.attendance_id,
     updated_at:existing?.updated_at||undefined,payment_status:direct?draft.payment_status:"PENDENTE",
     received_amount:direct?amount:null,paid_at:direct&&draft.paid_at?draft.paid_at:null,
-    payment_parts:direct&&paid?parts:[]}};
+    fiscal:fiscal||undefined,payment_parts:direct&&paid?(fiscal?.payment_parts||parts):[]}};
    const response=await fetch("/api/billing",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
    const result=await response.json();if(!response.ok)throw Error(result.error||"Erro ao salvar cobrança.");
    onSaved();
@@ -112,9 +122,9 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
       <label>Número da NF (se já emitida)<input value={draft.invoice_number} onChange={e=>set("invoice_number",e.target.value)}/></label>}
     </>}
    </div>
-   {direct&&paid&&<PaymentParts value={parts} onChange={setParts} amount={safeAmount()}/>}
-   {direct&&paid&&draft.billing_method==="PARTICULAR"&&
-    <p className="billing-historical-note">Esta operação não solicita NF automaticamente. Verifique a emissão no módulo Notas Fiscais.</p>}
+   {direct&&paid&&!(draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&!(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED"))&&<PaymentParts value={parts} onChange={setParts} amount={safeAmount()}/>}
+   {direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&
+    <p className="billing-historical-note">Ao confirmar o pagamento particular, será solicitada a NF automaticamente, vinculada a esta cobrança e a esta entidade recebedora. Os dados do tomador serão confirmados antes de salvar.</p>}
    {!entities.length&&<p role="alert" className="billing-error">Cadastre o vínculo do profissional com uma entidade recebedora ativa.</p>}
    <label>Observações<textarea value={draft.notes} onChange={e=>set("notes",e.target.value)}/></label>
    {error&&<p role="alert" className="billing-error">{error}</p>}
