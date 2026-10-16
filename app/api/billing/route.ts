@@ -17,12 +17,14 @@ export async function GET(request:Request){
   if(session.account.role==='secretary'||appointmentId){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
    if(appointmentId&&!allowed.has(appointmentId))return Response.json({error:'Atendimento sem acesso.'},{status:404});
-   data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id)&&(
+   const existingChargesForAppointment=!!appointmentId&&data.rows.some(r=>r.appointment_id===appointmentId&&!!r.record);
+   data.rows=data.rows.filter(r=>!!r.appointment_id&&allowed.has(r.appointment_id)&&
     session.account.role!=='secretary'||session.agendaIds.includes(r.doctor_id)
    ));
-   data.requests=(data.requests||[]).filter(r=>data.rows.some(row=>row.attendance_id===r.attendance_id));
+   const accessibleRecordIds=new Set(data.rows.map(row=>row.record?.id).filter(Boolean));
+   data.requests=(data.requests||[]).filter(r=>accessibleRecordIds.has(r.billing_record_id));
    // A scoped read may project an authorized scheduled appointment without writing finance.
-   if(appointmentId&&!data.rows.length){
+   if(appointmentId&&!data.rows.length&&!existingChargesForAppointment){
     const a=(state.appointments||[]).find((a:Row)=>a.id===appointmentId);
     const p=(state.patients||[]).find((p:Row)=>p.id===a.patientId);
     data.rows=[projectFinancialRow({id:a.id,appointment_id:a.id,patient_id:a.patientId||null,origin:'AGENDA',doctor_id:a.doctorId,anesthetist_id:a.anesthetistId,date:a.date,procedure:a.procedure,insurance:a.insurance??p?.insurance??'',status:a.status,billing_method:a.forma_cobranca||null},null,null,null,p?.name||'Paciente não informado')];
@@ -46,6 +48,7 @@ export const POST=secureMutation(async request=>{
  const {kind,data}=await readJson(request);
  if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
  if(session.account.role!=='general_manager'&&!['record','professional_charge'].includes(kind)) throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
+ if(['professional_charge','professional_invoice'].includes(kind)&&process.env.RN_PROFESSIONAL_BILLING_ENABLED!=='true') throw new HttpError(404,'Faturamento por profissional aguarda homologação da migration.');
  const rpc=kind==='cancel_attendance'?'cancel_manual_attendance':kind==='attendance'?'save_manual_attendance':['expense','associate'].includes(kind)?'save_company_finance':kind==='professional_charge'?'save_professional_charge':kind==='professional_invoice'?'save_professional_invoice':'save_billing';
  const args=['attendance','cancel_attendance'].includes(kind)||['professional_charge','professional_invoice'].includes(kind)?{}:{p_kind:kind};
  const {data:id,error}=await getSupabaseAdmin().rpc(rpc,{p_actor:session.account.id,...args,p_data:data});
