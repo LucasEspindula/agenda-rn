@@ -3,10 +3,11 @@ import { canManageInsurance } from "@/lib/insurance-control";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
+import { isPerseusOperationalEnabled, perseusUnavailableMessage } from "@/lib/perseu/availability";
 
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-async function manager(){const session=await getSession();if(!session||!canManageInsurance(session.account.role))throw new HttpError(403,"Acesso restrito à Gerência.");return session;}
+async function manager(){if(!isPerseusOperationalEnabled())throw new HttpError(404,perseusUnavailableMessage);const session=await getSession();if(!session||!canManageInsurance(session.account.role))throw new HttpError(403,"Acesso restrito à Gerência.");return session;}
 const fail=(error:unknown)=>Response.json({error:error instanceof HttpError?error.message:"Não foi possível acessar as conversas do Perseu."},{status:error instanceof HttpError?error.status:500,headers:{"Cache-Control":"private, no-store"}});
 const conversation=(row:Record<string,unknown>)=>({id:row.id,title:row.title,status:row.status,createdAt:row.created_at,updatedAt:row.updated_at});
 

@@ -5,6 +5,7 @@ import { inspectWithOpenAI, multimodalAvailability, PerseusProviderError } from 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
+import { isPerseusOperationalEnabled, perseusUnavailableMessage } from "@/lib/perseu/availability";
 export const runtime="nodejs";export const dynamic="force-dynamic";
 const bucket="insurance-documents",uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type Proposal={proposal_type:string;title:string;rationale:string;proposal_data:Record<string,unknown>;missing_information:string[]};
@@ -19,7 +20,7 @@ const proposalFor:Partial<Record<PerseusDocumentClass,(inspection:GlobalInspecti
  ATTENDANCE_RELATION:(i)=>[{proposal_type:"LINK_ATTENDANCES",title:"Conferir atendimentos identificados",rationale:"A relação foi reconhecida como documento de atendimento; vínculos permanecem para revisão humana.",proposal_data:{fields:i.extractedData},missing_information:["Confirmação dos atendimentos vinculados."]}],
  UNKNOWN:()=>[{proposal_type:"REQUEST_INFORMATION",title:"Solicitar identificação do documento",rationale:"Não há evidência suficiente para uma finalidade operacional segura.",proposal_data:{},missing_information:["Tipo e finalidade do documento."]}],
 };
-const manager=(session:Awaited<ReturnType<typeof getSession>>)=>{if(!session||!canManageInsurance(session.account.role))throw new HttpError(403,"Acesso restrito à Gerência.");return session};
+const manager=(session:Awaited<ReturnType<typeof getSession>>)=>{if(!isPerseusOperationalEnabled())throw new HttpError(404,perseusUnavailableMessage);if(!session||!canManageInsurance(session.account.role))throw new HttpError(403,"Acesso restrito à Gerência.");return session};
 const failure=(error:unknown)=>Response.json({error:error instanceof HttpError||error instanceof PerseusProviderError?error.message:"Não foi possível analisar o documento."},{status:error instanceof HttpError?error.status:500,headers:{"Cache-Control":"private, no-store"}});
 const nameKey=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("pt-BR").replace(/\s+/g," ").trim();
 async function contextualMatches(value:GlobalInspection){const candidate=value.extractedData.doctor_name?.value||value.extractedData.professional_name?.value;if(!candidate)return{};const db=getSupabaseAdmin(),result=await db.from("doctors").select("id,name").eq("active",true).limit(500);if(result.error)throw result.error;const matches=(result.data||[]).filter((doctor:{name:string})=>nameKey(doctor.name)===nameKey(candidate)).map((doctor:{id:string;name:string})=>({id:doctor.id,name:doctor.name}));return matches.length===1?{doctor:matches[0]}:matches.length?{doctor_candidates:matches}:{};}

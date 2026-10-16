@@ -2,9 +2,11 @@ import { getSession } from "@/app/authz";
 import { canManageInsurance } from "@/lib/insurance-control";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
+import { isPerseusOperationalEnabled, perseusUnavailableMessage } from "@/lib/perseu/availability";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const PATCH = secureMutation(async (request) => {
+  if (!isPerseusOperationalEnabled()) throw new HttpError(404, perseusUnavailableMessage);
   const session = await getSession();
   if (!session || !canManageInsurance(session.account.role)) throw new HttpError(403, "Acesso restrito à Gerência.");
   const body = await readJson(request), id = body.id, status = body.status;

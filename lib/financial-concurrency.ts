@@ -11,7 +11,7 @@ export function withExpectedFinancialVersion<T extends Record<string, unknown>>(
  editing: string,
  expectedRecordVersion: FinancialVersion,
 ): T {
- if (editing !== 'record' || !expectedRecordVersion) return payload;
+ if (!['record','professional_charge'].includes(editing) || !expectedRecordVersion) return payload;
  return {...payload,updated_at:expectedRecordVersion};
 }
 
@@ -22,3 +22,4 @@ export function financialVersionIsStale(
 ): boolean {
  return !persistedVersion || !expectedVersion || persistedVersion !== expectedVersion;
 }
+

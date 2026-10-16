@@ -23,10 +23,12 @@ export default function BillingSubnav({
   active,
   pendingCount = 0,
   insurancePendingCount = 0,
+  perseusEnabled = false,
 }: {
   active: BillingNavigationView;
   pendingCount?: number;
   insurancePendingCount?: number;
+  perseusEnabled?: boolean;
 }) {
   return (
     <div className="billing-subnav no-print">
@@ -49,14 +51,16 @@ export default function BillingSubnav({
             </a>
           ))}
         </div>
-        <a
-          className="billing-subnav-perseus"
-          href="/perseu"
-          aria-current={active === "perseu" ? "page" : undefined}
-        >
-          <PerseusMark size={22} />
-          <span>Perseu</span>
-        </a>
+        {perseusEnabled && (
+          <a
+            className="billing-subnav-perseus"
+            href="/perseu"
+            aria-current={active === "perseu" ? "page" : undefined}
+          >
+            <PerseusMark size={22} />
+            <span>Perseu</span>
+          </a>
+        )}
       </nav>
     </div>
   );

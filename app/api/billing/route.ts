@@ -42,9 +42,12 @@ export const POST=secureMutation(async request=>{
  const session=await getSession();
  if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
  const {kind,data}=await readJson(request);
- if(!['entity','link','record','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
- if(session.account.role!=='general_manager'&&kind!=='record') throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
- const {data:id,error}=await getSupabaseAdmin().rpc(kind==='cancel_attendance'?'cancel_manual_attendance':kind==='attendance'?'save_manual_attendance':['expense','associate'].includes(kind)?'save_company_finance':'save_billing',{p_actor:session.account.id,...(['attendance','cancel_attendance'].includes(kind)?{}:{p_kind:kind}),p_data:data});
+ if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ if(session.account.role!=='general_manager'&&!['record','professional_charge'].includes(kind)) throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
+ const rpc=kind==='cancel_attendance'?'cancel_manual_attendance':kind==='attendance'?'save_manual_attendance':['expense','associate'].includes(kind)?'save_company_finance':kind==='professional_charge'?'save_professional_charge':kind==='professional_invoice'?'save_professional_invoice':'save_billing';
+ const args=['attendance','cancel_attendance'].includes(kind)||['professional_charge','professional_invoice'].includes(kind)?{}:{p_kind:kind};
+ const {data:id,error}=await getSupabaseAdmin().rpc(rpc,{p_actor:session.account.id,...args,p_data:data});
  if(error){if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
  return Response.json({id});
 });
+

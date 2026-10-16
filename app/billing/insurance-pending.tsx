@@ -2,7 +2,7 @@
 "use client";
 import {useState,type ReactNode} from 'react';
 import type {BillingData,BillingRow} from '@/lib/billing-types';
-import {companyLabel,isInsurancePending,rowEntityId} from '@/lib/billing-row';
+import {billingRowKey,companyLabel,isInsurancePending,rowEntityId} from '@/lib/billing-row';
 import {formatDateBR} from '@/lib/date-format';
 import {groupPendingRows,pendingAction,pendingAge,pendingStatus,pendingSummary,pendingToday} from '@/lib/insurance-pending';
 import {NavIcon,PrintIcon,WalletIcon} from '@/components/billing-icons';
@@ -12,7 +12,7 @@ const date=formatDateBR;
 const taxLabel=(value:string)=>value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5').replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');
 const ageLabel=(age:number)=>`${age} ${age===1?'dia':'dias'}`;
 function PendingTable({data,rows,today,onResolve}:{data:BillingData;rows:BillingRow[];today:string;onResolve?:(row:BillingRow)=>void}){
- return <div className="pending-table-scroll"><table className="billing-table pending-table"><thead><tr><th>Paciente / origem</th><th>Data</th><th>Procedimento</th><th>Médico</th><th>Empresa</th><th>NF / lote</th><th>Status</th><th>Em aberto</th>{onResolve&&<th>Ação</th>}</tr></thead><tbody>{rows.map(row=>{const action=pendingAction(row,data);return <tr key={row.attendance_id}><td><strong>{row.patient}</strong><small className="billing-origin">{row.origin==='AGENDA'?'Agenda':row.origin==='FISCAL_MANUAL'?'Manual fiscal':'Manual'}</small></td><td>{date(row.date)}</td><td>{row.procedure||'—'}</td><td>{data.doctors.find(d=>d.id===row.doctor_id)?.name||'Não informado'}</td><td>{rowEntityId(row)?companyLabel(data,rowEntityId(row)):'Não definida'}</td><td>{action.kind==='invoice'?row.invoice?.invoice_number:action.kind==='payment'?'Não gerenciada':'—'}</td><td><span className="billing-badge pending">{pendingStatus(row,data)}</span></td><td className={pendingAge(row.date,today)>60?'pending-overdue':''}>{ageLabel(pendingAge(row.date,today))}</td>{onResolve&&<td><button className="billing-secondary pending-resolve" title={action.label+' · '+row.patient} aria-label={action.label+' · '+row.patient} onClick={()=>onResolve(row)}>{action.kind==='payment'?<WalletIcon/>:<NavIcon kind="invoices"/>}{action.label}</button></td>}</tr>})}</tbody></table></div>;
+ return <div className="pending-table-scroll"><table className="billing-table pending-table"><thead><tr><th>Paciente / origem</th><th>Data</th><th>Procedimento</th><th>Médico</th><th>Empresa</th><th>NF / lote</th><th>Status</th><th>Em aberto</th>{onResolve&&<th>Ação</th>}</tr></thead><tbody>{rows.map(row=>{const action=pendingAction(row,data);return <tr key={billingRowKey(row)}><td><strong>{row.patient}</strong><small className="billing-origin">{row.origin==='AGENDA'?'Agenda':row.origin==='FISCAL_MANUAL'?'Manual fiscal':'Manual'}</small></td><td>{date(row.date)}</td><td>{row.procedure||'—'}</td><td>{data.doctors.find(d=>d.id===row.doctor_id)?.name||'Não informado'}</td><td>{rowEntityId(row)?companyLabel(data,rowEntityId(row)):'Não definida'}</td><td>{action.kind==='invoice'?row.invoice?.invoice_number:action.kind==='payment'?'Não gerenciada':'—'}</td><td><span className="billing-badge pending">{pendingStatus(row,data)}</span></td><td className={pendingAge(row.date,today)>60?'pending-overdue':''}>{ageLabel(pendingAge(row.date,today))}</td>{onResolve&&<td><button className="billing-secondary pending-resolve" title={action.label+' · '+row.patient} aria-label={action.label+' · '+row.patient} onClick={()=>onResolve(row)}>{action.kind==='payment'?<WalletIcon/>:<NavIcon kind="invoices"/>}{action.label}</button></td>}</tr>})}</tbody></table></div>;
 }
 
 function Chevron({open}:{open:boolean}){return <svg className={'pending-chevron'+(open?' is-open':'')} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>}
@@ -52,3 +52,4 @@ export default function InsurancePending({data,rows,onResolve,reportUrl,filters}
   <details className="pending-empty-companies"><summary>Sem pendências ({emptyCompanies.length})</summary><ul>{emptyCompanies.map(e=><li key={e.id}>{e.trade_name||e.name}{!e.active&&<small> · Inativa</small>}</li>)}</ul>{!emptyCompanies.length&&<p>Todas as entidades possuem pendências.</p>}</details>
  </section>;
 }
+

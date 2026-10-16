@@ -27,5 +27,7 @@ export function doctorCanReadFinancialAttachment(data:BillingData,principal:Fina
 }
 
 export function projectFinancialRow(t:RecordData,record:BillingRow['record'],invoice:BillingRow['invoice'],item:BillingRow['invoice_item'],patient:string):BillingRow{
- return {...t,attendance_id:String(t.id),appointment_id:t.appointment_id as string|null,patient_id:t.patient_id as string|null,origin:String(t.origin),date:String(t.date),time:'',patient,doctor_id:String(t.doctor_id),anesthetist_id:String(t.anesthetist_id||''),procedure:String(t.procedure),insurance:String(t.insurance||''),status_atendimento:String(t.status),forma_cobranca:t.billing_method as string|null,record,invoice,invoice_item:item,legacy_payment:null,legacy_invoice:null} as BillingRow;
+ const clinicalDoctorId=String(t.doctor_id);
+ return {...t,attendance_id:String(t.id),appointment_id:t.appointment_id as string|null,patient_id:t.patient_id as string|null,origin:String(t.origin),date:String(t.date),time:'',patient,doctor_id:String(record?.professional_id||clinicalDoctorId),clinical_doctor_id:clinicalDoctorId,anesthetist_id:String(t.anesthetist_id||''),procedure:String(t.procedure),insurance:String(record?.patient_insurance_snapshot??t.insurance??''),status_atendimento:String(t.status),forma_cobranca:(record?.billing_method||t.billing_method) as string|null,record,invoice,invoice_item:item,legacy_payment:null,legacy_invoice:null} as BillingRow;
 }
+

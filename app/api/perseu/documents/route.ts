@@ -6,10 +6,11 @@ import { detectPerseusGlobalFormat, PERSEUS_GLOBAL_MAX_SIZE } from "@/lib/perseu
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import sharp from "sharp";
+import { isPerseusOperationalEnabled, perseusUnavailableMessage } from "@/lib/perseu/availability";
 
 const BUCKET = "insurance-documents";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-function manager(session: Awaited<ReturnType<typeof getSession>>) { if (!session || !canManageInsurance(session.account.role)) throw new HttpError(403, "Acesso restrito à Gerência."); return session; }
+function manager(session: Awaited<ReturnType<typeof getSession>>) { if (!isPerseusOperationalEnabled()) throw new HttpError(404, perseusUnavailableMessage); if (!session || !canManageInsurance(session.account.role)) throw new HttpError(403, "Acesso restrito à Gerência."); return session; }
 function name(value: unknown) { return typeof value === "string" && value === value.trim() && value.length > 0 && value.length <= 200 && !/[\\/\x00-\x1f]/.test(value) ? value : null; }
 const fail = (error: unknown) => Response.json({ error: error instanceof HttpError ? error.message : "Não foi possível processar o documento." }, { status: error instanceof HttpError ? error.status : 500, headers: { "Cache-Control": "private, no-store" } });
 
