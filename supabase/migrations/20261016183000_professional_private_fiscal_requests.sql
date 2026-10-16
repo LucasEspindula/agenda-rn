@@ -26,6 +26,14 @@ declare
   recipient_cpf text;
   charge_id uuid;
 begin
+  -- Enquanto a composição de pagamentos DIRETOS de convênio não estiver
+  -- representada no controle fiscal, não registrar pagamento inconsistente.
+  if p_data->>'billing_method'='CONVENIO' and p_data->>'payment_status'='PAGO'
+     and p_data->>'submission_channel_code'='DIRETO'
+  then
+    raise exception 'Pagamento direto de convênio depende da configuração fiscal do repasse';
+  end if;
+
   -- O núcleo faz o bloqueio da cobrança, verifica os vínculos do profissional,
   -- atualiza a composição de pagamento e abre o contexto auditável.
   if nullif(p_data->>'id','') is not null then
