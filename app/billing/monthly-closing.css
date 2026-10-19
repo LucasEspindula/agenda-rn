@@ -65,3 +65,9 @@
 .monthly-nf-cancelled{background:rgba(208,69,69,.060)}
 .monthly-nf-replaced:hover{background:rgba(230,157,40,.080)}
 .monthly-nf-cancelled:hover{background:rgba(208,69,69,.090)}
+
+.monthly-attendance-count{display:flex;align-items:center;gap:10px;padding:11px 14px;
+ margin:12px 0;background:#fff8f3;border:1px solid #edd9c8;border-radius:9px;color:#7e472f;font-size:12px}
+.monthly-attendance-count strong{font-size:18px}
+.monthly-attendance-cancelled{background:#fff8f4}
+.monthly-attendance-cancelled:hover{background:#fff2eb}
