@@ -46,8 +46,29 @@ export class PdfReport{
     this.page.drawLine({start:{x,y:yTop},end:{x,y:yBottom},thickness:.35,color:gridColor});
    }
   };
-  const layout=(values:readonly string[],fontSize:number)=>{
-   return columns.map((col,index)=>this.wrap(String(values[index]??'—'),widths[index]-2*padding,fontSize));
+  const wrapGrid=(value:string,width:number,fontSize:number,bold:boolean):string[]=>{
+   const face=bold?this.bold:this.font;
+   const words=(value.trim()||'—').split(/\\s+/);
+   const lines:string[]=[];
+   let current='';
+   for(const word of words){
+    const combined=current?current+' '+word:word;
+    if(face.widthOfTextAtSize(combined,fontSize)<=width){current=combined;continue}
+    if(current){lines.push(current);current=''}
+    let chunk='';
+    for(const letter of word){
+     if(chunk&&face.widthOfTextAtSize(chunk+letter,fontSize)>width){
+      lines.push(chunk);chunk=letter;
+     }else{chunk+=letter}
+    }
+    current=chunk;
+   }
+   if(current)lines.push(current);
+   return lines.length?lines:['—'];
+  };
+  const layout=(values:readonly string[],fontSize:number,bold:boolean)=>{
+   return columns.map((col,index)=>wrapGrid(String(values[index]??'—'),
+    widths[index]-2*padding,fontSize,bold));
   };
   const rowHeight=(cells:string[][],fontSize:number)=>Math.max(22,...cells.map(lines=>lines.length*(fontSize+3)+11));
   const paint=(cells:string[][],fontSize:number,bold:boolean,yTop:number)=>{
@@ -65,7 +86,7 @@ export class PdfReport{
     x+=cellWidth;
    }
   };
-  const headerCells=layout(columns.map(c=>c.label.toUpperCase()),headerSize);
+  const headerCells=layout(columns.map(c=>c.label.toUpperCase()),headerSize,true);
   const headerHeight=rowHeight(headerCells,headerSize);
   const drawHeader=()=>{
    this.ensureSpace(headerHeight+22);
@@ -77,7 +98,7 @@ export class PdfReport{
   };
   drawHeader();
   for(const values of rows){
-   const cells=layout(values,bodySize);
+   const cells=layout(values,bodySize,false);
    const height=rowHeight(cells,bodySize);
    if(this.y-height<this.margin+6){
     this.addPage();
