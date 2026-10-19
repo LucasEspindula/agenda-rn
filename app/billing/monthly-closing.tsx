@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import AppDialog from "@/components/app-dialog";
 import {PrintIcon} from "@/components/billing-icons";
 import {formatBRL} from "@/lib/money";
+import {monthlyInvoiceStatus} from "@/lib/monthly-invoice-status";
 import {monthlyCash,canCloseMonthlySnapshot} from "@/lib/monthly-closing-math";
 import {formatDateBR} from "@/lib/date-format";
 import "./monthly-closing.css";
@@ -13,7 +14,8 @@ type Professional={professional_id:string;professional_name:string;charges:numbe
  private_charges:number;insurance_charges:number;pending_charges_now:number;attributed_invoice_items:number};
 type Invoice={id:string;invoice_number:string;payer:string|null;issue_date:string|null;paid_at:string|null;
  recipient_type:string;total_amount:number|null;net_amount:number|null;
- status?:"ACTIVE"|"CANCELLED"|"REPLACED"};
+ status?:"ACTIVE"|"CANCELLED"|"REPLACED";
+ replaced_by_invoice_id?:string|null;replacement_invoice_number?:string|null};
 type DirectPayment={id:string;attendance_id:string;professional_id:string;professional_name:string;
  paid_at:string;received_amount:number|null;billing_method:string};
 type Expense={id:string;description:string;category:string;competence_date:string;paid_at:string|null;
@@ -198,7 +200,7 @@ export default function MonthlyClosing(){
    </div>}
    <div className="monthly-summary">
     <article><span>Atendimentos realizados</span><strong>{data.production.attendances}</strong>
-      <small>{data.production.charges} cobranças · {data.production.professionals} profissionais</small></article>
+      <small>{data.production.charges} cobranças</small></article>
     <article><span>NFs emitidas (líquido)</span><strong>{cash(data.issued_invoices.net_total)}</strong>
      <small>{data.issued_invoices.count} documentos por data de emissão</small></article>
     <article><span>Recebimentos no mês</span><strong>{cash(totalCash)}</strong>
@@ -249,7 +251,7 @@ export default function MonthlyClosing(){
       <td>{i.total_amount==null?"Não informado":cash(i.total_amount)}</td>
       <td>{i.net_amount==null?"Não informado":cash(i.net_amount)}</td>
       <td>{i.recipient_type}</td>
-      <td>{i.status==="CANCELLED"?"Cancelada":i.status==="REPLACED"?"Substituída":"Ativa"}</td>
+      <td>{monthlyInvoiceStatus(i,data.invoices)}</td>
      </tr>)}</tbody></table></div>
     {!data.invoices.length&&<p>Nenhuma NF emitida ou recebida nesta competência.</p>}
    </section>
