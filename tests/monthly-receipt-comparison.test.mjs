@@ -11,6 +11,7 @@ test("compara Particular com uma barra para cada convênio, somente pagamentos c
   {billing_method:"CONVENIO",insurance_name:"unimed",payment_status:"PAGO",invoice_item_received:30},
   {billing_method:"CONVENIO",insurance_name:"IPE",payment_status:"PAGO",invoice_item_received:80},
   {billing_method:"CONVENIO",insurance_name:"IPE",payment_status:"PENDENTE",invoice_item_received:500},
+  {billing_method:"CONVENIO",payer_name:"Convênio legado",payment_status:"PAGO",received_amount:20},
  ]);
  assert.deepEqual(result.groups.map(g=>[g.label,g.receivedCents]),[
   ["Particular",10000],["Unimed",15000],["IPE",8000]
