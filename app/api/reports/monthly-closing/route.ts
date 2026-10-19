@@ -9,6 +9,8 @@ const monthPattern=/^\d{4}-(0[1-9]|1[0-2])$/;
 type MonthlyAttendance={attendance_id:string;service_date:string;status:"realized"|"cancelled";
  patient_name:string;professional_name:string;procedure:string;billing_method:string;
  insurance_name:string;cancelled_at?:string|null;cancellation_reason?:string|null};
+type PaidUnrealized={billing_record_id:string;service_date:string;clinical_status:string;
+ patient_name:string;professional_name:string;procedure:string;paid_at:string;received_amount:number|null};
 type Snapshot={
  entity:{name:string;trade_name:string|null;tax_id:string|null;person_type:string};
  competence:string;
@@ -23,6 +25,7 @@ type Snapshot={
   replaced_by_invoice_id?:string|null;replacement_invoice_number?:string|null}>;
  cash:{direct_received:number;insurance_invoice_received:number};
  direct_payments:Array<{id:string;professional_name:string;paid_at:string;received_amount:number|null;billing_method:string}>;
+ paid_unrealized?:PaidUnrealized[];
  expenses:{competence_total:number;paid_total:number};
  expense_items:Array<{id:string;description:string;category:string;competence_date:string;paid_at:string|null;amount:number;status:string}>;
  denial_items:Array<{id:string;denied_on:string;denial_kind:string;reason:string;denied_amount:number;recovered_amount:number;status:string}>;
@@ -80,6 +83,15 @@ export async function GET(request:Request){
   ],[[brl(snap.cash.direct_received),brl(snap.cash.insurance_invoice_received),
     brl(snap.expenses.paid_total),brl(balance)]],true);
 
+  if(snap.paid_unrealized?.length){
+   grid(pdf,"Recebidos sem realização clínica confirmada ("+snap.paid_unrealized.length+")",[
+    {label:"Paciente",width:150},{label:"Atendimento",width:80},
+    {label:"Procedimento",width:140},{label:"Médico",width:125},
+    {label:"Status clínico",width:94},{label:"Pago em",width:82},
+    {label:"Valor",width:104,align:"right"}
+   ],snap.paid_unrealized.map(p=>[p.patient_name,brDate(p.service_date),p.procedure,
+     p.professional_name,p.clinical_status,brDate(p.paid_at),money(p.received_amount)]));
+  }
   // Uma linha por atendimento, inclusive cancelamentos sem cobrança financeira.
   // Fechamentos históricos anteriores à mudança não são alterados retroativamente.
   const overview=snap.attendance_overview;

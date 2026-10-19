@@ -25,6 +25,9 @@ type Denial={id:string;billing_record_id:string;denial_kind:string;denied_on:str
 type ProfessionalAttendance={billing_record_id:string;professional_id:string;professional_name:string;
  patient_name:string;procedure:string;service_date:string;payer_name:string;insurance_name?:string;billing_method:string;payment_status:string;no_invoice?:boolean;received_amount?:number|null;invoice_item_received?:number|null};
 type ProfessionalInvoiceLink={professional_id:string;invoice_id:string;invoice_number:string};
+type PaidUnrealized={billing_record_id:string;attendance_id:string;service_date:string;
+ clinical_status:string;procedure:string;professional_name:string;patient_name:string;
+ billing_method:string;received_amount:number|null;paid_at:string;insurance_name:string};
 type MonthlyAttendance={attendance_id:string;service_date:string;status:"realized"|"cancelled";
  patient_name:string;professional_name:string;procedure:string;billing_method:string;insurance_name:string;
  cancelled_at?:string|null;cancellation_reason?:string|null};
@@ -41,6 +44,7 @@ type Snapshot={
  invoices:Invoice[];
  cash:{direct_received:number;insurance_invoice_received:number;insurance_paid_invoices_without_net:number};
  direct_payments:DirectPayment[];
+ paid_unrealized?:PaidUnrealized[];
  expenses:{competence_total:number;paid_total:number};expense_items:Expense[];
  denials:{denied_in_month:number;recovered_in_month:number;loss_on_cases_opened_in_month_now:number};
  denial_items:Denial[];
@@ -226,6 +230,19 @@ export default function MonthlyClosing(){
     <article><span>Glosas do mês</span><strong>{cash(data.denials.denied_in_month)}</strong>
       <small>Recuperações informadas: {cash(data.denials.recovered_in_month)} (não somadas ao caixa)</small></article>
    </div>
+   {!!data.paid_unrealized?.length&&<section className="monthly-panel monthly-paid-not-realized">
+    <h3>Pagamentos recebidos sem realização clínica confirmada ({data.paid_unrealized.length})</h3>
+    <p className="monthly-disclaimer">Esses pagamentos entram no caixa por data de pagamento,
+     mas não são contabilizados como atendimentos realizados. Confirme o status na Agenda antes de corrigir a produção.</p>
+    <div className="monthly-scroll"><table className="billing-table">
+     <thead><tr><th>Paciente</th><th>Atendimento</th><th>Procedimento</th><th>Médico</th>
+      <th>Status clínico</th><th>Pago em</th><th>Valor recebido</th></tr></thead>
+     <tbody>{data.paid_unrealized.map(p=><tr key={p.billing_record_id}>
+      <td>{p.patient_name}</td><td>{date(p.service_date)}</td><td>{p.procedure}</td>
+      <td>{p.professional_name}</td><td>{p.clinical_status}</td><td>{date(p.paid_at)}</td>
+      <td>{cash(p.received_amount)}</td></tr>)}</tbody>
+    </table></div>
+   </section>}
    <section className="monthly-panel">
     <h3>Relação de atendimentos da competência</h3>
     {data.attendance_overview?<>
