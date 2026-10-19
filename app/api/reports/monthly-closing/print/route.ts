@@ -25,6 +25,9 @@ type Attendance={attendance_id:string;billing_record_id:string;professional_id:s
  payer_name:string;insurance_name?:string;billing_method:string;payment_status:string;no_invoice?:boolean;
  received_amount?:number|null;paid_at?:string|null;invoice_item_received?:number|null};
 type Link={professional_id:string;invoice_id:string;attributed_amount?:number|null};
+type PaidUnrealized={billing_record_id:string;attendance_id:string;service_date:string;clinical_status:string;
+ patient_name:string;professional_name:string;procedure:string;billing_method:string;received_amount:number|null;
+ paid_at:string;insurance_name:string};
 type MonthlyAttendance={attendance_id:string;service_date:string;status:"realized"|"cancelled";
  patient_name:string;professional_name:string;procedure:string;billing_method:string;
  insurance_name:string;cancelled_at?:string|null;cancellation_reason?:string|null};
@@ -32,6 +35,7 @@ type Snapshot={entity:{name:string;trade_name:string|null;tax_id:string|null};
  competence:string;issued_invoices:{count:number;gross_total:number;net_total:number};
  professionals:Doctor[];professional_attendances?:Attendance[];
  attendance_overview?:MonthlyAttendance[];
+ paid_unrealized?:PaidUnrealized[];
  professional_invoice_rows?:Link[];invoices:Inv[]};
 const heading=(title:string,company:string,month:string,extra:string)=>
  '<div class="head"><div><div class="brand">RN INTEGRA</div><h1>'+esc(title)+
@@ -305,7 +309,11 @@ export async function GET(request:Request){
    }).join("");
   // Valores por atendimento realizado nesta competência, sem ratear o total de NFs.
   // A seção permanece na mesma página lógica de "Atendimentos por convênio".
-  const comparison=monthlyReceiptComparison(details);
+  const extraPaid=(snap.paid_unrealized||[]).map(p=>({
+   billing_method:p.billing_method,payment_status:"PAGO",insurance_name:p.insurance_name,
+   received_amount:p.received_amount
+  }));
+  const comparison=monthlyReceiptComparison([...details,...extraPaid]);
   const receiptColumns=receiptChartSvg(comparison.groups);
   const receiptChart='<div class="receipt-chart"><div class="receipt-chart-head">'+
    '<h2>Recebimentos por origem</h2><strong>Total: '+
@@ -346,6 +354,11 @@ export async function GET(request:Request){
    [a.patient_name],[date(a.service_date)],[a.procedure||"—"],
    [payer(a)],[a.professional_name],[date(a.cancelled_at)],[a.cancellation_reason||"—"]
   ])).join("");
+  const paidUnrealized=snap.paid_unrealized||[];
+  const paidUnrealizedRows=paidUnrealized.map(p=>row([
+   [p.patient_name],[date(p.service_date)],[p.procedure||"—"],[p.professional_name],
+   [p.clinical_status],[date(p.paid_at)],[amount(p.received_amount),"money"]
+  ])).join("");
   const fifth=page(heading("Atendimentos da competência",company,label,
    performed.length+" realizado(s) · "+
    (snap.attendance_overview?cancellations.length+" cancelado(s)":"Cancelamentos não disponíveis neste histórico"))+
@@ -358,6 +371,10 @@ export async function GET(request:Request){
     cancellations.length+')</div><div class="attendance-cancelled">'+
     table(["Paciente","Data prevista","Procedimento","Convênio / cobrança","Médico responsável","Cancelado em","Motivo"],
      cancellationRows,[17,10,19,16,15,10,13])+'</div>':"")+
+   (paidUnrealized.length?'<div class="attendance-heading">PAGOS SEM REALIZAÇÃO CONFIRMADA ('+
+    paidUnrealized.length+')</div><p class="attendance-note">Entram no caixa por pagamento, mas NÃO na produção realizada. Confira o status na Agenda.</p>'+
+    table(["Paciente","Atendimento","Procedimento","Médico","Status clínico","Pago em","Recebido"],
+     paidUnrealizedRows,[16,11,20,16,12,10,15]):"")+
    (!snap.attendance_overview?'<p class="attendance-note">Fechamento anterior à inclusão '+
     'do histórico de cancelamentos. A posição atual não foi usada para alterar o histórico.</p>':"")+
    '<div class="footer"><span>RN Integra · Relação de atendimentos</span><span>'+
