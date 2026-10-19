@@ -326,7 +326,7 @@ export async function GET(request:Request){
    '<span>Valores individuais disponíveis</span></div>',true);
   // A relação clínica não depende de cobrança: um atendimento pode ter vários itens.
   // Fechamentos antigos não contêm cancelamentos; nunca inferi-los da posição atual.
-  const legacyOverview=[...new Map(details.map(a=>[a.attendance_id,{
+  const legacyOverview:MonthlyAttendance[]=[...new Map<string,MonthlyAttendance>(details.map(a=>[a.attendance_id,{
    attendance_id:a.attendance_id,service_date:a.service_date,status:"realized" as const,
    patient_name:a.patient_name,professional_name:a.professional_name,procedure:a.procedure,
    billing_method:a.billing_method,insurance_name:a.insurance_name||a.payer_name
