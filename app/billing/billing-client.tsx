@@ -108,6 +108,8 @@ export default function BillingClient({
     } | null>(null),
     [reason, setReason] = useState("");
   const [fiscalPassword,setFiscalPassword]=useState("");
+  const [fiscalApprover,setFiscalApprover]=useState("");
+  const [fiscalApprovers,setFiscalApprovers]=useState<{id:number;name:string}[]>([]);
   const [replacement, setReplacement] = useState<{
     invoice: Invoice;
     reason: string;
@@ -193,6 +195,16 @@ export default function BillingClient({
       setLoading(false);
     }
   }, []);
+  useEffect(()=>{
+    let active=true;
+    void fetch("/api/billing/approvers",{cache:"no-store"}).then(async r=>{
+      if(!r.ok)throw Error("Sem gerentes disponíveis");
+      return r.json();
+    }).then(payload=>{
+      if(active)setFiscalApprovers(payload.managers||[]);
+    }).catch(()=>{});
+    return ()=>{active=false};
+  },[]);
   useEffect(() => {
     refresh.current = financialRefresh(async () => {
       const r = await fetch(
@@ -251,6 +263,7 @@ export default function BillingClient({
           body: JSON.stringify({
             kind: lifecycle.kind,
             manager_password:fiscalPassword,
+            manager_user_id:fiscalApprover?Number(fiscalApprover):undefined,
             data: {
               id: lifecycle.id,
               updated_at: lifecycle.updated_at,
@@ -279,6 +292,7 @@ export default function BillingClient({
   ) => {
     setReason("");
     setFiscalPassword("");
+    setFiscalApprover("");
     setModalError("");
     setLifecycle({ kind, id, updated_at, label });
   };
@@ -682,6 +696,7 @@ export default function BillingClient({
             ? {
                 kind: "replace_invoice",
                 manager_password:fiscalPassword,
+                manager_user_id:fiscalApprover?Number(fiscalApprover):undefined,
                 data: {
                   id: replacement.invoice.id,
                   updated_at: replacement.invoice.updated_at,
@@ -2196,6 +2211,13 @@ export default function BillingClient({
                     />
                   )}
                   {replacement?.invoice&&isInvoiceFromEarlierMonth(replacement.invoice.issue_date)&&
+                   <label>Gerente Geral que autoriza
+                    <select value={fiscalApprover} onChange={e=>setFiscalApprover(e.target.value)}>
+                     <option value="">Meu usuário de gerência</option>
+                     {fiscalApprovers.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                   </label>}
+                  {replacement?.invoice&&isInvoiceFromEarlierMonth(replacement.invoice.issue_date)&&
                    <label>
                     Senha atual do Gerente Geral — substituir NF de mês anterior
                     <input type="password" required minLength={8} maxLength={128}
@@ -2406,6 +2428,14 @@ export default function BillingClient({
                 onChange={(e) => setReason(e.target.value)}
               />
             </label>
+            {["cancel_invoice","undo_invoice","replace_invoice"].includes(lifecycle.kind) &&
+              data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date))&&
+              <label>Gerente Geral que autoriza
+               <select value={fiscalApprover} onChange={e=>setFiscalApprover(e.target.value)}>
+                <option value="">Meu usuário de gerência</option>
+                {fiscalApprovers.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+               </select>
+              </label>}
             {["cancel_invoice","undo_invoice"].includes(lifecycle.kind) &&
              data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date)) &&
              <label>
