@@ -71,3 +71,6 @@
 .monthly-attendance-count strong{font-size:18px}
 .monthly-attendance-cancelled{background:#fff8f4}
 .monthly-attendance-cancelled:hover{background:#fff2eb}
+
+.monthly-paid-not-realized{border-left:4px solid #b08037}
+.monthly-paid-not-realized h3{color:#805628}
