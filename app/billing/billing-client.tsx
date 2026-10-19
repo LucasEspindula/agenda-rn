@@ -908,6 +908,7 @@ export default function BillingClient({
             <th>Valor recebido</th>
             <th>Pagamento</th>
             <th>Status</th>
+            {tab === "records" && statusFilter === "Cancelado" && <th>Motivo do cancelamento</th>}
             {insurancePendingActive && <th>Em aberto</th>}
             {!report && (
               <>
@@ -984,6 +985,9 @@ export default function BillingClient({
                   {rowStatus(r)}
                 </span>
               </td>
+              {tab === "records" && statusFilter === "Cancelado" && (
+                <td>{r.cancellation_reason || "—"}</td>
+              )}
               {insurancePendingActive && (
                 <td>
                   {Math.max(
@@ -1000,14 +1004,14 @@ export default function BillingClient({
                 <>
                   <td>{userName(r.created_by)}</td>
                   <td className="no-print">
-                    <button
+                    {r.status_atendimento !== "cancelled" && <button
                       className="billing-icon-action"
                       aria-label="Abrir financeiro"
                       title="Financeiro"
                       onClick={() => editRecord(r)}
                     >
                       <WalletIcon />
-                    </button>
+                    </button>}
                     {professionalBillingEnabled && tab === "records" && !!r.record && r.status_atendimento !== "cancelled" &&
                       [...new Set([r.clinical_doctor_id || r.doctor_id, r.anesthetist_id].filter(Boolean))]
                         .some(id => !data.rows.some(other => other.attendance_id === r.attendance_id && other.record?.professional_id === id)) && (
