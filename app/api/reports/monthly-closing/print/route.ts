@@ -250,11 +250,11 @@ export async function GET(request:Request){
      esc(amount(subtotal))+'</strong><small>Itens de NFs discriminados no período</small></div>';
    }).join("");
   const allocation=distribution?'<div class="dist-title">VALORES DE NFs DISCRIMINADOS POR MÉDICO / PROFISSIONAL</div><div class="dist-grid">'+distribution+'</div>':"";
-  const first=page(heading("Relatório mensal de Notas Fiscais",company,label,
+  const partnerInvoicePage=page(heading("Divisão das Notas Fiscais por Sócio / Médico",company,label,
    "Distribuição por médico / profissional · "+valid.length+" NFs válidas")+
    summary+allocation+doctorTables+
    '<div class="footer"><span>RN Integra · Distribuição por profissional</span><span>'+
-   esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+"</span></div>");
+   esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+"</span></div>",true);
   const validCols=["NF","Pagador","Referente a","Emissão","Pagamento",
    "Forma de pagamento","Valor bruto","Valor líquido","Sócio / Médico","Emitido por"];
   const validRows=valid.map(i=>row([
@@ -264,7 +264,7 @@ export async function GET(request:Request){
    [amount(i.total_amount),"money"],[amount(i.net_amount),"money strong"],
    [assocs(i.id),"partner"],[userName.get(issuedBy.get(i.id)||0)||"—"]
   ])).join("");
-  const second=page(heading("Lista de Notas Fiscais válidas",company,label,
+  const validInvoicePage=page(heading("Lista de Notas Fiscais válidas",company,label,
     valid.length+" NFs válidas")+
     '<div class="section-head"><h2>NFs válidas</h2><small>Estrutura de 10 colunas</small></div>'+
     table(validCols,validRows+
@@ -280,7 +280,7 @@ export async function GET(request:Request){
    [methods(i.id)],[amount(i.total_amount),"money"],[amount(i.net_amount),"money"],
    [assocs(i.id)],[userName.get(issuedBy.get(i.id)||0)||"—"]
   ],statusClass(i.status))).join(""),[6,14,15,8,8,14,9,9,10,7]);
-  const third=cancelled.length||replaced.length?page(
+  const fiscalEventsPage=cancelled.length||replaced.length?page(
    heading("Ocorrências fiscais do período",company,label,"NFs canceladas e substituídas")+
    (cancelled.length?'<div class="status-title cancel">NFS CANCELADAS — FORA DOS TOTAIS E DISTRIBUIÇÃO</div>'+
      occurrenceRows(cancelled):"")+
@@ -326,7 +326,7 @@ export async function GET(request:Request){
      '<p class="receipt-warning">'+comparison.missingPaidAmounts+
      ' cobrança(s) paga(s) sem valor individualizado foram excluídas dos totais.</p>':"")+
    '</div>';
-  const fourth=page(heading("Atendimentos por convênio",company,label,
+  const insurancePage=page(heading("Atendimentos por convênio",company,label,
    "Todos os médicos · "+insurance.length+" cobrança(s)")+
    (insuranceBlocks||'<div class="empty">Nenhum atendimento por convênio nesta competência.</div>')+
    receiptChart+
@@ -359,9 +359,11 @@ export async function GET(request:Request){
    [p.patient_name],[date(p.service_date)],[p.procedure||"—"],[p.professional_name],
    [p.clinical_status],[date(p.paid_at)],[amount(p.received_amount),"money"]
   ])).join("");
-  const fifth=page(heading("Atendimentos da competência",company,label,
+  const attendancePage=page(heading("Relatório de Fechamento Mensal",company,label,
    performed.length+" realizado(s) · "+
    (snap.attendance_overview?cancellations.length+" cancelado(s)":"Cancelamentos não disponíveis neste histórico"))+
+   '<div class="section-head"><h2>Atendimentos da competência</h2>'+
+   '<small>Relação assistencial · separada dos documentos fiscais</small></div>'+
    '<p class="attendance-note">Uma linha por atendimento, por data prevista/realizada. '+
    'Cancelamentos não entram na produção realizada nem nos recebimentos.</p>'+
    '<div class="attendance-heading">ATENDIMENTOS REALIZADOS ('+performed.length+')</div>'+
@@ -384,10 +386,10 @@ export async function GET(request:Request){
    "window.addEventListener('load',()=>setTimeout(()=>window.print(),350));";
   const html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">'+
    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
-   '<title>RN Integra · '+esc(label)+' · Relatório mensal</title><style>'+CSS+
+   '<title>RN Integra · '+esc(label)+' · Relatório de Fechamento Mensal</title><style>'+CSS+
    '</style></head><body><div class="print-toolbar"><span>RN Integra · Impressão '+esc(label)+
    '</span><button type="button" id="print">Imprimir / Salvar PDF</button></div>'+
-   first+second+third+fourth+fifth+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
+   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
   return new Response(html,{headers:{"Content-Type":"text/html; charset=utf-8",
    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
    "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+
