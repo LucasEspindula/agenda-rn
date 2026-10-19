@@ -18,6 +18,7 @@ import {
 } from "@/lib/fiscal-document";
 import { formatBRL as money, parseBRL, moneyInput } from "@/lib/money";
 import { formatDateBR } from "@/lib/date-format";
+import {isInvoiceFromEarlierMonth} from "@/lib/invoice-prior-month";
 import {
   notifyFinancialChange,
   isExternalFinancialChange,
@@ -106,6 +107,7 @@ export default function BillingClient({
       label: string;
     } | null>(null),
     [reason, setReason] = useState("");
+  const [fiscalPassword,setFiscalPassword]=useState("");
   const [replacement, setReplacement] = useState<{
     invoice: Invoice;
     reason: string;
@@ -248,6 +250,7 @@ export default function BillingClient({
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             kind: lifecycle.kind,
+            manager_password:fiscalPassword,
             data: {
               id: lifecycle.id,
               updated_at: lifecycle.updated_at,
@@ -258,6 +261,7 @@ export default function BillingClient({
         j = await r.json();
       if (!r.ok) throw Error(j.error);
       setLifecycle(null);
+      setFiscalPassword("");
       notifyFinancialChange();
     } catch (e) {
       setModalError(
@@ -274,6 +278,7 @@ export default function BillingClient({
     label: string,
   ) => {
     setReason("");
+    setFiscalPassword("");
     setModalError("");
     setLifecycle({ kind, id, updated_at, label });
   };
@@ -676,6 +681,7 @@ export default function BillingClient({
           replacement && editing === "invoice"
             ? {
                 kind: "replace_invoice",
+                manager_password:fiscalPassword,
                 data: {
                   id: replacement.invoice.id,
                   updated_at: replacement.invoice.updated_at,
@@ -716,6 +722,8 @@ export default function BillingClient({
         }
       }
       setEditing("");
+      setFiscalPassword("");
+      setReplacement(null);
       setMessage(
         shouldUpload ? "Pagamento e comprovante salvos." : "Alteração salva.",
       );
@@ -2187,6 +2195,13 @@ export default function BillingClient({
                       onChanged={() => void load()}
                     />
                   )}
+                  {replacement?.invoice&&isInvoiceFromEarlierMonth(replacement.invoice.issue_date)&&
+                   <label>
+                    Senha atual do Gerente Geral — substituir NF de mês anterior
+                    <input type="password" required minLength={8} maxLength={128}
+                     autoComplete="current-password" value={fiscalPassword}
+                     onChange={e=>setFiscalPassword(e.target.value)}/>
+                   </label>}
                   <button
                     type="button"
                     className="billing-secondary"
@@ -2391,6 +2406,16 @@ export default function BillingClient({
                 onChange={(e) => setReason(e.target.value)}
               />
             </label>
+            {["cancel_invoice","undo_invoice"].includes(lifecycle.kind) &&
+             data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date)) &&
+             <label>
+              Senha atual do Gerente Geral — NF de mês anterior
+              <input type="password" value={fiscalPassword}
+               autoComplete="current-password" minLength={8} maxLength={128} required
+               onChange={e=>setFiscalPassword(e.target.value)}/>
+             </label>}
+            {lifecycle.kind==="replace_invoice"&&data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date))&&
+             <p>NF de mês anterior: a senha do Gerente Geral será solicitada ao salvar a substituta.</p>}
             {modalError && <p role="alert">{modalError}</p>}
             <div className="billing-modal-actions">
               <button
