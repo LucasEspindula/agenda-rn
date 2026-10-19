@@ -16,7 +16,7 @@ test("compara Particular com uma barra para cada convênio, somente pagamentos c
  assert.deepEqual(result.groups.map(g=>[g.label,g.receivedCents]),[
   ["Particular",10000],["Unimed",15000],["IPE",8000],["Convênio legado",2000]
  ]);
- assert.equal(result.totalCents,33000);
+ assert.equal(result.totalCents,35000);
 });
 test("não duplica total de NF nem soma item de particular à cobrança direta",()=>{
  const result=monthlyReceiptComparison([
