@@ -1,5 +1,6 @@
 import {getSession} from "@/app/authz";
 import {getSupabaseAdmin} from "@/lib/supabase-admin";
+import {monthlyInvoiceStatus} from "@/lib/monthly-invoice-status";
 import {PdfReport,brDate,brDateTime,brl,pdfResponse,type PdfColumn} from "@/lib/reports/pdf";
 
 export const dynamic="force-dynamic";
@@ -12,7 +13,8 @@ type Snapshot={
  professionals:Array<{professional_name:string;attendances:number;charges:number;private_charges:number;insurance_charges:number;pending_charges_now:number;attributed_invoice_items:number}>;
  invoices:Array<{id:string;invoice_number:string;payer:string|null;issue_date:string|null;
   paid_at:string|null;recipient_type:string;total_amount:number|null;net_amount:number|null;
-  status?:"ACTIVE"|"CANCELLED"|"REPLACED"}>;
+  status?:"ACTIVE"|"CANCELLED"|"REPLACED";
+  replaced_by_invoice_id?:string|null;replacement_invoice_number?:string|null}>;
  cash:{direct_received:number;insurance_invoice_received:number};
  direct_payments:Array<{id:string;professional_name:string;paid_at:string;received_amount:number|null;billing_method:string}>;
  expenses:{competence_total:number;paid_total:number};
@@ -20,8 +22,6 @@ type Snapshot={
  denial_items:Array<{id:string;denied_on:string;denial_kind:string;reason:string;denied_amount:number;recovered_amount:number;status:string}>;
 };
 const money=(n:number|null|undefined)=>n==null?"Não informado":brl(Number(n));
-const invoiceStatus=(s:Snapshot["invoices"][number]["status"])=>
- s==="CANCELLED"?"CANCELADA":s==="REPLACED"?"SUBSTITUÍDA":s==="ACTIVE"?"ATIVA":"—";
 const invoiceSequence=new Intl.Collator("pt-BR",{numeric:true,sensitivity:"base"});
 
 function grid(pdf:PdfReport,title:string,columns:PdfColumn[],rows:string[][],showWhenEmpty=false){
@@ -61,9 +61,9 @@ export async function GET(request:Request){
 
   grid(pdf,"Resumo da competência",[
    {label:"Atendimentos",width:1},{label:"Cobranças",width:1},
-   {label:"Profissionais",width:1},{label:"Pendentes",width:1}
+   {label:"Pendentes",width:1}
   ],[[String(snap.production.attendances),String(snap.production.charges),
-     String(snap.production.professionals),String(snap.production.pending_charges_now)]],true);
+     String(snap.production.pending_charges_now)]],true);
 
   grid(pdf,"Resultado de caixa — data do pagamento",[
    {label:"Pagamento direto",width:1,align:"right"},
@@ -97,7 +97,7 @@ export async function GET(request:Request){
    {label:"Tipo",width:93},{label:"Status",width:105}
   ],invoices.map(i=>[i.invoice_number,i.payer||"—",brDate(i.issue_date),
     brDate(i.paid_at),money(i.total_amount),money(i.net_amount),i.recipient_type,
-    invoiceStatus(i.status)]));
+    monthlyInvoiceStatus(i,invoices)]));
 
   grid(pdf,"Pagamentos diretos",[
    {label:"Profissional",width:290},{label:"Data",width:130},
