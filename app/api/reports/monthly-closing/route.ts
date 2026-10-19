@@ -6,11 +6,15 @@ import {PdfReport,brDate,brDateTime,brl,pdfResponse,type PdfColumn} from "@/lib/
 export const dynamic="force-dynamic";
 const uuid=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const monthPattern=/^\d{4}-(0[1-9]|1[0-2])$/;
+type MonthlyAttendance={attendance_id:string;service_date:string;status:"realized"|"cancelled";
+ patient_name:string;professional_name:string;procedure:string;billing_method:string;
+ insurance_name:string;cancelled_at?:string|null;cancellation_reason?:string|null};
 type Snapshot={
  entity:{name:string;trade_name:string|null;tax_id:string|null;person_type:string};
  competence:string;
  production:{attendances:number;charges:number;professionals:number;pending_charges_now:number};
  professionals:Array<{professional_id:string;professional_name:string;attendances:number;charges:number;private_charges:number;insurance_charges:number;pending_charges_now:number;attributed_invoice_items:number}>;
+ attendance_overview?:MonthlyAttendance[];
  professional_attendances?:Array<{billing_record_id:string;professional_id:string;professional_name:string;patient_name:string;procedure:string;service_date:string;payer_name:string;billing_method:string;payment_status:string}>;
  professional_invoice_rows?:Array<{professional_id:string;invoice_id:string;invoice_number:string}>;
  invoices:Array<{id:string;invoice_number:string;payer:string|null;issue_date:string|null;
@@ -75,6 +79,34 @@ export async function GET(request:Request){
    {label:"Resultado",width:1,align:"right"}
   ],[[brl(snap.cash.direct_received),brl(snap.cash.insurance_invoice_received),
     brl(snap.expenses.paid_total),brl(balance)]],true);
+
+  // Uma linha por atendimento, inclusive cancelamentos sem cobrança financeira.
+  // Fechamentos históricos anteriores à mudança não são alterados retroativamente.
+  const overview=snap.attendance_overview;
+  if(overview){
+   const payer=(a:MonthlyAttendance)=>a.billing_method==="PARTICULAR"?"Particular":
+    a.insurance_name||"Convênio não informado";
+   const done=overview.filter(a=>a.status==="realized");
+   const cancelled=overview.filter(a=>a.status==="cancelled");
+   grid(pdf,"Atendimentos realizados ("+done.length+")",[
+    {label:"Paciente",width:175},{label:"Atendimento",width:83},
+    {label:"Procedimento",width:171},{label:"Convênio / cobrança",width:155},
+    {label:"Médico",width:190}
+   ],done.map(a=>[a.patient_name,brDate(a.service_date),a.procedure||"—",
+    payer(a),a.professional_name]),true);
+   if(cancelled.length)grid(pdf,"Atendimentos cancelados ("+cancelled.length+")",[
+    {label:"Paciente",width:126},{label:"Data prevista",width:80},
+    {label:"Procedimento",width:130},{label:"Convênio / cobrança",width:107},
+    {label:"Médico",width:140},{label:"Cancelado em",width:87},{label:"Motivo",width:104}
+   ],cancelled.map(a=>[a.patient_name,brDate(a.service_date),a.procedure||"—",
+    payer(a),a.professional_name,brDate(a.cancelled_at),a.cancellation_reason||"—"]));
+  }else{
+   pdf.section("Atendimentos e cancelamentos",undefined,{reserve:20});
+   pdf.ensureSpace(22);
+   pdf.text("Histórico anterior: cancelamentos não integravam o snapshot desta competência.",
+    pdf.margin,pdf.y,7);
+   pdf.y-=18;
+  }
 
   // Profissionais são o eixo do relatório. Uma NF pode constar em mais de um
   // profissional, mas o recebimento é somado apenas no resumo financeiro da PJ/PF.
