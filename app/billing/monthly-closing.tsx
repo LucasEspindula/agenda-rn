@@ -160,7 +160,7 @@ export default function MonthlyClosing(){
       if(!valid)return;
       const params=new URLSearchParams({entity_id:entity,month,
        view:preview?.closed&&!showCurrent?"closed":"current"});
-      window.open("/api/reports/monthly-closing?"+params.toString(),
+      window.open("/api/reports/monthly-closing/print?"+params.toString(),
        "_blank","noopener,noreferrer");
      }}><PrintIcon/></button>
   </header>
