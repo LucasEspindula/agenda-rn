@@ -95,7 +95,7 @@ begin
      select pat->>'name' from public.app_state s
       cross join lateral jsonb_array_elements(coalesce(s.payload->'patients','[]'::jsonb)) pat
       where s.id=1 and pat->>'id'=a.patient_id limit 1
-   ))),'Paciente histórico') patient_name
+   )),'') ,'Paciente histórico') patient_name
   from public.billing_records b
    join public.attendances a on a.id=b.attendance_id
    left join public.doctors d on d.id=coalesce(b.professional_id,a.doctor_id)
