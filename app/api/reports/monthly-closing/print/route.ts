@@ -77,15 +77,16 @@ export async function GET(request:Request){
   if(ids.length){
    const inv=await db.from("invoices").select("id,created_by").in("id",ids);
    if(!inv.error){
-    const peopleIds=[...new Set((inv.data||[]).map(x=>x.created_by).filter((x):x is number=>typeof x==="number"))];
-    for(const i of inv.data||[])if(i.created_by)issuedBy.set(i.id,i.created_by);
+    const invoiceActors: Array<{id:string;created_by:number|null}>=inv.data||[];
+    const peopleIds=[...new Set(invoiceActors.map(x=>x.created_by).filter((x):x is number=>typeof x==="number"))];
+    for(const i of invoiceActors)if(i.created_by)issuedBy.set(i.id,i.created_by);
     if(peopleIds.length){
      const people=await db.from("users").select("id,name").in("id",peopleIds);
-     if(!people.error)for(const p of people.data||[])userName.set(p.id,p.name);
+     if(!people.error)for(const p of (people.data||[]) as Array<{id:number;name:string}>)userName.set(p.id,p.name);
     }
    }
    const payment=await db.from("payment_parts").select("invoice_id,method").in("invoice_id",ids);
-   if(!payment.error)for(const part of payment.data||[]){
+   if(!payment.error)for(const part of (payment.data||[]) as Array<{invoice_id:string|null;method:string}>){
     if(!part.invoice_id)continue;
     const values=methodByInvoice.get(part.invoice_id)||new Set<string>();
     values.add(part.method);methodByInvoice.set(part.invoice_id,values);
@@ -109,12 +110,13 @@ export async function GET(request:Request){
   if(view==="current"&&ids.length){
    const lines=await db.from("invoice_billing_records")
      .select("invoice_id,billing_record_id").in("invoice_id",ids).eq("is_active",true);
-   if(!lines.error&&lines.data?.length){
-    const values=[...new Set(lines.data.map(x=>x.billing_record_id))];
+   const invoiceItems: Array<{invoice_id:string;billing_record_id:string}>=lines.data||[];
+   if(!lines.error&&invoiceItems.length){
+    const values=[...new Set(invoiceItems.map(x=>x.billing_record_id))];
     const procByRecord=new Map<string,string>();
     for(const a of details)procByRecord.set(a.billing_record_id,a.procedure);
     for(const inv of ids){
-     const proc=[...new Set(lines.data.filter(x=>x.invoice_id===inv)
+     const proc=[...new Set(invoiceItems.filter(x=>x.invoice_id===inv)
        .map(x=>procByRecord.get(x.billing_record_id)).filter((x):x is string=>!!x))];
      if(proc.length)referenced.set(inv,proc.length===1?proc[0]:proc.join(" / "));
     }
