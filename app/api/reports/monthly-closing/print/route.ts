@@ -135,7 +135,7 @@ export async function GET(request:Request){
     cancelled.length+" cancelada(s) · "+replaced.length+" substituída(s)")+'</div>';
   const assocs=(id:string)=>associations.get(id)?.join(" / ")||"—";
   const invoiceRow=(inv:Inv,allocated?:number|null)=>row([
-   ["NFS-e "+inv.invoice_number,"nf"],[inv.payer||"—"],[date(inv.issue_date)],
+   ["NFS-e "+inv.invoice_number+(inv.status==="ACTIVE"?"":" · "+monthlyInvoiceStatus(inv,invoices)),"nf"],[inv.payer||"—"],[date(inv.issue_date)],
    [date(inv.paid_at)],[amount(inv.total_amount),"money"],[amount(inv.net_amount),"money"],
    [allocated===undefined||allocated===null?"Não discriminado":amount(allocated),"money doctor-value"]
   ],statusClass(inv.status));
@@ -200,7 +200,7 @@ export async function GET(request:Request){
      [6,14,15,8,8,14,9,9,10,7])+
      '<div class="footer"><span>RN Integra · NFs válidas</span><span>Relação por competência</span></div>',true);
   const occurrenceRows=(items:Inv[])=>table(validCols,items.map(i=>row([
-   ["NFS-e "+i.invoice_number,"nf"],[i.payer||"—"],
+   ["NFS-e "+i.invoice_number+" · "+monthlyInvoiceStatus(i,invoices),"nf"],[i.payer||"—"],
    [referenced.get(i.id)||"—"],[date(i.issue_date)],[date(i.paid_at)],
    [methods(i.id)],[amount(i.total_amount),"money"],[amount(i.net_amount),"money"],
    [assocs(i.id)],[userName.get(issuedBy.get(i.id)||0)||"—"]
