@@ -25,12 +25,16 @@ type Denial={id:string;billing_record_id:string;denial_kind:string;denied_on:str
 type ProfessionalAttendance={billing_record_id:string;professional_id:string;professional_name:string;
  patient_name:string;procedure:string;service_date:string;payer_name:string;insurance_name?:string;billing_method:string;payment_status:string;no_invoice?:boolean;received_amount?:number|null;invoice_item_received?:number|null};
 type ProfessionalInvoiceLink={professional_id:string;invoice_id:string;invoice_number:string};
+type MonthlyAttendance={attendance_id:string;service_date:string;status:"realized"|"cancelled";
+ patient_name:string;professional_name:string;procedure:string;billing_method:string;insurance_name:string;
+ cancelled_at?:string|null;cancellation_reason?:string|null};
 type Snapshot={
  entity:Entity;competence:string;period_start:string;period_end_exclusive:string;
  production:{attendances:number;charges:number;professionals:number;private_charges:number;
-  insurance_charges:number;pending_charges_now:number;unpriced_charges:number};
+  insurance_charges:number;pending_charges_now:number;unpriced_charges:number;cancelled_attendances?:number};
  professionals:Professional[];
  professional_attendances?:ProfessionalAttendance[];
+ attendance_overview?:MonthlyAttendance[];
  professional_invoice_rows?:ProfessionalInvoiceLink[];
  issued_invoices:{count:number;gross_total:number;net_total:number;without_net_amount:number;
   insurance_count:number;private_count:number};
@@ -203,6 +207,11 @@ export default function MonthlyClosing(){
       aria-pressed={showCurrent}>Comparar com dados atuais</button>
     </div>
    </div>}
+   {data.attendance_overview&&data.attendance_overview.some(a=>a.status==="cancelled")&&
+    <div className="monthly-attendance-count">
+     <strong>{data.attendance_overview.filter(a=>a.status==="cancelled").length}</strong>
+     <span>atendimento(s) cancelado(s) na competência — fora dos totais financeiros</span>
+    </div>}
    <div className="monthly-summary">
     <article><span>Atendimentos realizados</span><strong>{data.production.attendances}</strong>
       <small>{data.production.charges} cobranças · {data.production.pending_charges_now} sem baixa financeira</small></article>
@@ -217,6 +226,34 @@ export default function MonthlyClosing(){
     <article><span>Glosas do mês</span><strong>{cash(data.denials.denied_in_month)}</strong>
       <small>Recuperações informadas: {cash(data.denials.recovered_in_month)} (não somadas ao caixa)</small></article>
    </div>
+   <section className="monthly-panel">
+    <h3>Relação de atendimentos da competência</h3>
+    {data.attendance_overview?<>
+     <p className="monthly-disclaimer">Uma linha por atendimento, considerando a data prevista/realizada.
+      Cancelamentos não entram na produção realizada nem nos recebimentos.</p>
+     {(["realized","cancelled"] as const).map(status=>{
+      const entries=data.attendance_overview!.filter(a=>a.status===status)
+       .sort((a,b)=>a.service_date.localeCompare(b.service_date)||
+         a.patient_name.localeCompare(b.patient_name,"pt-BR"));
+      if(status==="cancelled"&&!entries.length)return null;
+      return <div className="monthly-payer-group" key={status}>
+       <h4>{status==="realized"?"Atendimentos realizados":"Atendimentos cancelados"} ({entries.length})</h4>
+       {entries.length?<div className="monthly-scroll"><table className="billing-table">
+        <thead><tr><th>Paciente</th><th>Data</th><th>Procedimento</th><th>Convênio / cobrança</th>
+         <th>Médico</th>{status==="cancelled"&&<><th>Cancelado em</th><th>Motivo</th></>}</tr></thead>
+        <tbody>{entries.map(a=><tr key={a.attendance_id}
+         className={status==="cancelled"?"monthly-attendance-cancelled":""}>
+         <td>{a.patient_name}</td><td>{date(a.service_date)}</td><td>{a.procedure||"—"}</td>
+         <td>{a.billing_method==="PARTICULAR"?"Particular":a.insurance_name||"Convênio não informado"}</td>
+         <td>{a.professional_name}</td>
+         {status==="cancelled"&&<><td>{date(a.cancelled_at)}</td><td>{a.cancellation_reason||"—"}</td></>}
+        </tr>)}</tbody>
+       </table></div>:<p>Nenhum atendimento realizado nesta competência.</p>}
+      </div>;
+     })}
+    </>:<p>Relação detalhada indisponível no fechamento histórico anterior a esta atualização.
+     Os registros já fechados não são recalculados.</p>}
+   </section>
    <section className="monthly-panel">
     <h3>Atendimentos e notas fiscais por médico</h3>
     {data.professionals.map(p=>{
