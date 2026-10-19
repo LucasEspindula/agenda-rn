@@ -23,7 +23,7 @@ type Expense={id:string;description:string;category:string;competence_date:strin
 type Denial={id:string;billing_record_id:string;denial_kind:string;denied_on:string;
  denied_amount:number;recovered_amount:number;status:string;reason:string};
 type ProfessionalAttendance={billing_record_id:string;professional_id:string;professional_name:string;
- patient_name:string;procedure:string;service_date:string;payer_name:string;billing_method:string;payment_status:string};
+ patient_name:string;procedure:string;service_date:string;payer_name:string;insurance_name?:string;billing_method:string;payment_status:string;no_invoice?:boolean;received_amount?:number|null;invoice_item_received?:number|null};
 type ProfessionalInvoiceLink={professional_id:string;invoice_id:string;invoice_number:string};
 type Snapshot={
  entity:Entity;competence:string;period_start:string;period_end_exclusive:string;
@@ -243,7 +243,7 @@ export default function MonthlyClosing(){
          <tbody>{items.sort((a,b)=>a.service_date.localeCompare(b.service_date)).map(a=>
           <tr key={a.billing_record_id}>
            <td>{a.patient_name}</td><td>{a.procedure}</td><td>{date(a.service_date)}</td>
-           <td>{a.payment_status==="PAGO"?"Pago":"Pendente"}</td>
+           <td>{a.no_invoice&&a.payment_status==="PAGO"?"S/N — recebido":a.payment_status==="PAGO"?"Pago":"Pendente"}</td>
           </tr>)}</tbody>
         </table></div>
        </div>)}
