@@ -3,6 +3,7 @@ import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import type {BillingData,Financial,Invoice,BillingRow} from './billing-types';
 import {projectFinancialRow} from './billing-projection';
 import {payerKey} from './billing-eligibility';
+import {includeArchivedCancellations} from './billing-cancelled';
 export async function loadBillingData(){
  const db=getSupabaseAdmin();
  // Fetch complete sets: truncating invoice items could wrongly classify a shared NF as private.
@@ -34,7 +35,8 @@ export async function loadBillingData(){
   const appointment=(state.appointments||[]).find((a:{id:string})=>a.id===t.appointment_id);
   return attendanceRecords.map(record=>{const item=record?itemsByRecord.get(record.id):null;return projectFinancialRow({...t,anesthetist_id:appointment?.anesthetistId||''},record,item?invoices.find(i=>i.id===item.invoice_id)||null:null,item?{received_amount:item.received_amount??null}:null,patients.find(p=>p.id===t.patient_id)?.name||'Paciente não informado');});
  }) as BillingRow[];
- const data:BillingData={rows,entities:results[0].data,links:results[1].data,doctors:results[5].data,invoices,items,expenses:results[7].data,associates:results[8].data,requests:results[9].data,users:results[10].data,payment_parts:results[11].data,attachments:results[12].data,patients:patients.map(p=>({id:p.id,name:p.name,cpf:p.cpf,address:p.address,created_by:p.created_by,created_at:p.created_at})),payers:[...new Set([...patients.map(p=>p.insurance||''),...rows.map(r=>r.insurance),...invoices.filter(i=>i.recipient_type!=='PARTICULAR').map(i=>i.payer)].map(payerKey).filter(Boolean))].sort()};
+ const projectedRows=includeArchivedCancellations(rows,state.cancelledAppointments||[],results[1].data,patients);
+ const data:BillingData={rows:projectedRows,entities:results[0].data,links:results[1].data,doctors:results[5].data,invoices,items,expenses:results[7].data,associates:results[8].data,requests:results[9].data,users:results[10].data,payment_parts:results[11].data,attachments:results[12].data,patients:patients.map(p=>({id:p.id,name:p.name,cpf:p.cpf,address:p.address,created_by:p.created_by,created_at:p.created_at})),payers:[...new Set([...patients.map(p=>p.insurance||''),...projectedRows.map(r=>r.insurance),...invoices.filter(i=>i.recipient_type!=='PARTICULAR').map(i=>i.payer)].map(payerKey).filter(Boolean))].sort()};
  return {data,state};
 }
 
