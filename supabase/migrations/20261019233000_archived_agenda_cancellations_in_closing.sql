@@ -189,7 +189,7 @@ begin
       not exists(select 1 from public.attendances a where a.appointment_id=c.item->>'id')
       and p_entity=(
        select case when count(distinct l.billing_entity_id)=1
-         then max(l.billing_entity_id) else null end
+         then max(l.billing_entity_id::text)::uuid else null end
        from public.billing_doctor_entities l where l.doctor_id=c.item->>'doctorId'
       )
      )
