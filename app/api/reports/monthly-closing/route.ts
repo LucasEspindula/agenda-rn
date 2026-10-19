@@ -10,7 +10,9 @@ type Snapshot={
  entity:{name:string;trade_name:string|null;tax_id:string|null;person_type:string};
  competence:string;
  production:{attendances:number;charges:number;professionals:number;pending_charges_now:number};
- professionals:Array<{professional_name:string;attendances:number;charges:number;private_charges:number;insurance_charges:number;pending_charges_now:number;attributed_invoice_items:number}>;
+ professionals:Array<{professional_id:string;professional_name:string;attendances:number;charges:number;private_charges:number;insurance_charges:number;pending_charges_now:number;attributed_invoice_items:number}>;
+ professional_attendances?:Array<{billing_record_id:string;professional_id:string;professional_name:string;patient_name:string;procedure:string;service_date:string;payer_name:string;billing_method:string;payment_status:string}>;
+ professional_invoice_rows?:Array<{professional_id:string;invoice_id:string;invoice_number:string}>;
  invoices:Array<{id:string;invoice_number:string;payer:string|null;issue_date:string|null;
   paid_at:string|null;recipient_type:string;total_amount:number|null;net_amount:number|null;
   status?:"ACTIVE"|"CANCELLED"|"REPLACED";
@@ -24,10 +26,11 @@ type Snapshot={
 const money=(n:number|null|undefined)=>n==null?"Não informado":brl(Number(n));
 const invoiceSequence=new Intl.Collator("pt-BR",{numeric:true,sensitivity:"base"});
 
-function grid(pdf:PdfReport,title:string,columns:PdfColumn[],rows:string[][],showWhenEmpty=false){
+function grid(pdf:PdfReport,title:string,columns:PdfColumn[],rows:string[][],showWhenEmpty=false,
+ tints:(null|"replaced"|"cancelled")[]=[]){
  if(!showWhenEmpty&&!rows.length)return;
  pdf.section(title,undefined,{reserve:52});
- pdf.gridTable(columns,rows);
+ pdf.gridTable(columns,rows,tints);
 }
 
 export async function GET(request:Request){
@@ -61,45 +64,78 @@ export async function GET(request:Request){
 
   grid(pdf,"Resumo da competência",[
    {label:"Atendimentos",width:1},{label:"Cobranças",width:1},
-   {label:"Pendentes",width:1}
+   {label:"Cobranças não pagas",width:1}
   ],[[String(snap.production.attendances),String(snap.production.charges),
      String(snap.production.pending_charges_now)]],true);
 
   grid(pdf,"Resultado de caixa — data do pagamento",[
-   {label:"Pagamento direto",width:1,align:"right"},
+   {label:"Recebimentos individuais",width:1,align:"right"},
    {label:"NFs convênio",width:1,align:"right"},
    {label:"Despesas pagas",width:1,align:"right"},
    {label:"Resultado",width:1,align:"right"}
   ],[[brl(snap.cash.direct_received),brl(snap.cash.insurance_invoice_received),
     brl(snap.expenses.paid_total),brl(balance)]],true);
 
-  grid(pdf,"Produção por profissional — data do atendimento",[
-   {label:"Profissional",width:198},{label:"Atend.",width:66},
-   {label:"Cobranças",width:77},{label:"Particular",width:75},
-   {label:"Convênio",width:75},{label:"Pendentes",width:78},
-   {label:"Itens de NF atribuídos",width:175,align:"right"}
-  ],snap.professionals.map(p=>[p.professional_name,String(p.attendances),String(p.charges),
-     String(p.private_charges),String(p.insurance_charges),String(p.pending_charges_now),
-     brl(p.attributed_invoice_items)]));
-
-  // Ordenação natural do número da NF: 2, 10, 100 (não 10, 100, 2).
-  // O retrato histórico fechado nunca é alterado; só a ordem de apresentação muda.
+  // Profissionais são o eixo do relatório. Uma NF pode constar em mais de um
+  // profissional, mas o recebimento é somado apenas no resumo financeiro da PJ/PF.
   const invoices=[...(snap.invoices||[])].sort((a,b)=>
-   invoiceSequence.compare(a.invoice_number,b.invoice_number)||
-   String(a.issue_date||"").localeCompare(String(b.issue_date||""))||
-   a.id.localeCompare(b.id));
+    invoiceSequence.compare(a.invoice_number,b.invoice_number)||
+    String(a.issue_date||"").localeCompare(String(b.issue_date||""))||
+    a.id.localeCompare(b.id));
+  const invoiceById=new Map(invoices.map(i=>[i.id,i]));
+  const assigned=new Set<string>();
+  const attendanceDetails=snap.professional_attendances||[];
+  const invoiceLinks=snap.professional_invoice_rows||[];
+  const invoiceColumns:PdfColumn[]=[
+   {label:"NF",width:57},{label:"Pagador / Tomador",width:165},
+   {label:"Emissão",width:77},{label:"Pagamento",width:77},
+   {label:"Bruto",width:105,align:"right"},{label:"Líquido",width:105,align:"right"},
+   {label:"Tipo",width:90},{label:"Situação",width:130}
+  ];
+  const invoiceRows=(items:Snapshot["invoices"])=>items.map(i=>[
+   i.invoice_number,i.payer||"—",brDate(i.issue_date),brDate(i.paid_at),
+   money(i.total_amount),money(i.net_amount),i.recipient_type,
+   monthlyInvoiceStatus(i,invoices)
+  ]);
+  const invoiceTints=(items:Snapshot["invoices"]):("replaced"|"cancelled"|null)[]=>
+   items.map(i=>i.status==="REPLACED"?"replaced":i.status==="CANCELLED"?"cancelled":null);
+  for(const professional of snap.professionals){
+   const detail=attendanceDetails.filter(a=>a.professional_id===professional.professional_id);
+   const linkedIds=new Set(invoiceLinks.filter(x=>x.professional_id===professional.professional_id)
+     .map(x=>x.invoice_id));
+   const doctorInvoices=invoices.filter(i=>linkedIds.has(i.id));
+   doctorInvoices.forEach(i=>assigned.add(i.id));
+   pdf.section(professional.professional_name,
+     professional.attendances+" atendimento(s)  ·  "+professional.charges+" cobrança(s)  ·  "+
+     professional.private_charges+" particular(es)  ·  "+professional.insurance_charges+" convênio(s)",
+     {reserve:45});
+   if(detail.length){
+    const byPayer=new Map<string,typeof detail>();
+    for(const attendance of detail){
+     const label=attendance.billing_method==="PARTICULAR"?"Particular":
+       attendance.payer_name||"Convênio não informado";
+     const rows=byPayer.get(label)||[];rows.push(attendance);byPayer.set(label,rows);
+    }
+    for(const [payer,rows] of [...byPayer].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR"))){
+     rows.sort((a,b)=>a.service_date.localeCompare(b.service_date)||
+      a.patient_name.localeCompare(b.patient_name,"pt-BR"));
+     grid(pdf,"Atendimentos — "+payer,[
+      {label:"Paciente",width:230},{label:"Procedimento",width:235},
+      {label:"Atendimento",width:115},{label:"Pagamento",width:160}
+     ],rows.map(a=>[a.patient_name,a.procedure||"—",brDate(a.service_date),
+        a.payment_status==="PAGO"?"Pago":"Pendente"]));
+    }
+   }
+   grid(pdf,"Notas fiscais — "+professional.professional_name,
+    invoiceColumns,invoiceRows(doctorInvoices),false,invoiceTints(doctorInvoices));
+  }
+  // Notas sem vínculo com cobrança/profissional continuam visíveis, sem
+  // atribuição artificial e sem participação adicional nos totais.
+  const unassigned=invoices.filter(i=>!assigned.has(i.id));
+  grid(pdf,"Notas fiscais sem vínculo individual",invoiceColumns,
+   invoiceRows(unassigned),false,invoiceTints(unassigned));
 
-  grid(pdf,"Notas fiscais",[
-   {label:"NF",width:56},{label:"Pagador / Tomador",width:162},
-   {label:"Emissão",width:78},{label:"Pagamento",width:78},
-   {label:"Bruto",width:104,align:"right"},
-   {label:"Líquido",width:104,align:"right"},
-   {label:"Tipo",width:93},{label:"Status",width:105}
-  ],invoices.map(i=>[i.invoice_number,i.payer||"—",brDate(i.issue_date),
-    brDate(i.paid_at),money(i.total_amount),money(i.net_amount),i.recipient_type,
-    monthlyInvoiceStatus(i,invoices)]));
-
-  grid(pdf,"Pagamentos diretos",[
+  grid(pdf,"Recebimentos individuais",[
    {label:"Profissional",width:290},{label:"Data",width:130},
    {label:"Cobrança",width:160},{label:"Valor",width:194,align:"right"}
   ],snap.direct_payments.map(p=>[p.professional_name,brDate(p.paid_at),
