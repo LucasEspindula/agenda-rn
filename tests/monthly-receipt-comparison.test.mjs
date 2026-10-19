@@ -42,7 +42,7 @@ test("valores faltantes não são inventados, mas o convênio permanece na compa
 });
 test("impressão mensal usa colunas verticais no gráfico abaixo dos convênios",()=>{
  const source=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
- assert.match(source,/monthlyReceiptComparison\(details\)/);
+ assert.match(source,/monthlyReceiptComparison\(\[\.\.\.details,\.\.\.extraPaid\]\)/);
  assert.match(source,/receiptChartSvg\(comparison\.groups\)/);
  assert.match(source,/viewBox="0 0 /);
  assert.match(source,/receipt-plot/);

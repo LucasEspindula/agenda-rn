@@ -30,9 +30,10 @@ test("tela apresenta realizados e cancelados sem duplicar cobrança ou misturar 
 });
 
 test("impressão mensal preserva gráfico e adiciona listagem clínica separada",()=>{
- assert.match(print,/const fifth=page\(heading\("Atendimentos da competência"/);
- assert.match(print,/first\+second\+third\+fourth\+fifth/);
+ assert.match(print,/const attendancePage=page\(heading\("Relatório de Fechamento Mensal"/);
+ assert.match(print,/attendancePage\+partnerInvoicePage\+validInvoicePage\+fiscalEventsPage\+insurancePage/);
  assert.match(print,/receiptChartSvg\(comparison\.groups\)/);
+ assert.match(print,/<h2>Atendimentos da competência<\/h2>/);
  assert.match(print,/ATENDIMENTOS REALIZADOS/);
  assert.match(print,/ATENDIMENTOS CANCELADOS/);
  assert.match(print,/cancellations\.length\?/);
@@ -46,4 +47,24 @@ test("PDF alternativo e fechamentos antigos respeitam a origem do snapshot",()=>
  assert.match(pdf,/if\(cancelled\.length\)/);
  assert.match(print,/const legacyOverview=/);
  assert.match(ui,/registros já fechados não são recalculados/);
+});
+
+test("impressão abre com atendimentos e força nova página antes da divisão das NFs",()=>{
+ const first=print.slice(print.indexOf('const attendancePage=page('),print.indexOf('const nonce='));
+ const fiscal=print.slice(print.indexOf('const partnerInvoicePage=page('),print.indexOf('const validCols='));
+ assert.match(first,/heading\("Relatório de Fechamento Mensal"/);
+ assert.match(first,/<h2>Atendimentos da competência<\/h2>/);
+ assert.match(first,/ATENDIMENTOS REALIZADOS/);
+ assert.match(first,/ATENDIMENTOS CANCELADOS/);
+ assert.match(first,/PAGOS SEM REALIZAÇÃO CONFIRMADA/);
+ assert.match(first, /<\/span><\/div>'\);/);
+ assert.doesNotMatch(first, /<\/span><\/div>',true\);/);
+ assert.match(fiscal,/heading\("Divisão das Notas Fiscais por Sócio \/ Médico"/);
+ assert.match(fiscal,/summary\+allocation\+doctorTables/);
+ assert.match(fiscal,/<\/span><\/div>",true\);/);
+ assert.match(print,/attendancePage\+partnerInvoicePage\+validInvoicePage\+fiscalEventsPage\+insurancePage/);
+ assert.match(print,/Relatório de Fechamento Mensal<\/title>/);
+ assert.match(print,/\.page-break\{break-before:page/);
+ assert.match(print,/receiptChartSvg\(comparison\.groups\)/);
+ assert.doesNotMatch(print,/Relatório mensal de Notas Fiscais/);
 });
