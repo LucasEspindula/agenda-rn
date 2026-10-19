@@ -21,7 +21,7 @@ type Doctor={professional_id:string;professional_name:string;attendances:number;
  charges:number;private_charges:number;insurance_charges:number;attributed_invoice_items:number};
 type Attendance={attendance_id:string;billing_record_id:string;professional_id:string;
  professional_name:string;patient_name:string;procedure:string;service_date:string;
- payer_name:string;billing_method:string;payment_status:string;no_invoice?:boolean;
+ payer_name:string;insurance_name?:string;billing_method:string;payment_status:string;no_invoice?:boolean;
  received_amount?:number|null;paid_at?:string|null;invoice_item_received?:number|null};
 type Link={professional_id:string;invoice_id:string;attributed_amount?:number|null};
 type Snapshot={entity:{name:string;trade_name:string|null;tax_id:string|null};
@@ -218,7 +218,7 @@ export async function GET(request:Request){
   const insurance=details.filter(a=>a.billing_method==="CONVENIO");
   const groups=new Map<string,Attendance[]>();
   for(const a of insurance){
-   const key=a.payer_name?.trim()||"Convênio não informado";
+   const key=a.insurance_name?.trim()||a.payer_name?.trim()||"Convênio não informado";
    const list=groups.get(key)||[];list.push(a);groups.set(key,list);
   }
   const insuranceBlocks=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR"))
