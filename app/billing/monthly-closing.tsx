@@ -299,7 +299,16 @@ export default function MonthlyClosing(){
   </>}
   <section className="monthly-panel monthly-history no-print">
    <h3>Histórico de fechamentos desta entidade</h3>
-   {preview?.history?.length?<p>Esta competência tem {preview.history.length} registro(s) de bloqueio e desbloqueio, preservados para auditoria.</p>:null}
+   {preview?.history?.length?
+    <details className="monthly-revision-log">
+     <summary>Histórico de bloqueios e desbloqueios da competência ({preview.history.length})</summary>
+     <ul>{preview.history.map(e=><li key={e.id}>
+      <strong>{e.event_type==="CLOSED"?"Mês bloqueado":"Mês desbloqueado"}</strong>
+      {" · "+new Date(e.date).toLocaleString("pt-BR")}
+      {" · Usuário #"+e.actor_id}
+      {e.notes?" · "+e.notes:""}
+     </li>)}</ul>
+    </details>:null}
    {!priorHistory.length?<p>Nenhuma competência encerrada para esta PJ/PF.</p>:
     <div className="monthly-history-list">
      {priorHistory.map(h=><button type="button" className="billing-secondary" key={h.id}
