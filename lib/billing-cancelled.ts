@@ -14,7 +14,6 @@ export function includeArchivedCancellations(
  links:readonly Link[],
  patients:readonly {id:string;name:string}[]
 ):BillingRow[]{
- const knownIds=new Set(archived.map(a=>a.id).filter(Boolean));
  const activeRows=rows.map(row=>{
   const item=archived.find(a=>a.id&&a.id===row.appointment_id);
   return item?{...row,status_atendimento:"cancelled",
