@@ -4,7 +4,7 @@ import {getSupabaseAdmin} from "@/lib/supabase-admin";
 import {monthlyInvoiceStatus} from "@/lib/monthly-invoice-status";
 import {monthlyReceiptComparison} from "@/lib/monthly-receipt-comparison";
 
-const CSS="\n:root{--ink:#172126;--muted:#66747b;--line:#dfe5e8;--brand:#0b7f79;--red:#b42318;--amber:#8a5b00;--warnbg:#fff8e8}\n*{box-sizing:border-box}body{margin:0;background:#edf1f3;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}\n.page{width:1480px;margin:22px auto;background:#fff;padding:28px 30px 34px;box-shadow:0 8px 24px rgba(0,0,0,.07)}\n.page-break{break-before:page;page-break-before:always}\n.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #d8e1e5;padding-bottom:14px}\n.brand{font-size:12px;font-weight:850;color:var(--brand);letter-spacing:.04em}\nh1{font-size:24px;margin:4px 0 3px}.company-name{font-size:14px;font-weight:750}\n.meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.6}\n.period{display:inline-block;background:#e9f6f4;color:var(--brand);font-weight:850;padding:5px 9px;border-radius:999px}\n.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 10px}\n.card{border:1px solid var(--line);border-radius:9px;padding:10px 11px}\n.card small{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.card strong{font-size:17px;display:block;margin-top:2px}.card span{font-size:9px;color:var(--muted)}\n.dist-title{font-size:12px;font-weight:900;padding:9px 11px;background:#f4f7f8;border:1px solid var(--line);border-radius:9px 9px 0 0}\n.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;overflow:hidden}\n.dist-card{padding:11px 14px;border-right:1px solid var(--line)}.dist-card:last-child{border-right:0}\n.dist-card b{display:block;font-size:12px}.dist-card strong{display:block;font-size:16px;color:#244d68;margin-top:2px}.dist-card small{font-size:9px;color:var(--muted)}\n.doctor-section{margin-top:22px}.doctor-head{display:flex;justify-content:space-between;align-items:end;padding:8px 10px;background:#f7fafb;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0}\n.doctor-name{font-size:13px;font-weight:900}.doctor-sub{font-size:9px;color:var(--muted);margin-top:2px}\n.doctor-total{text-align:right}.doctor-total small{display:block;font-size:8px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.doctor-total strong{font-size:15px;color:var(--brand);display:block}.doctor-total span{font-size:8px;color:var(--muted)}\ntable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line)}\nth{background:#f7f9fa;color:#5f6e75;font-size:8px;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);border-right:1px solid #e7ecee}\ntd{font-size:8.8px;padding:5px 6px;border-bottom:1px solid #edf1f2;border-right:1px solid #f0f3f4;vertical-align:top;line-height:1.27;overflow-wrap:anywhere}\ntbody tr:nth-child(even){background:#fcfdfd}.nf{font-weight:900;color:#174d64}\n.money{text-align:right;white-space:nowrap}.strong{font-weight:850}\n.doctor-value{background:#f1faf8;color:#0a625e;font-weight:850}.subtotal td{background:#f5f8f9;font-weight:900}\n.shared{display:inline-block;font-size:7px;background:#fff3d6;color:#805900;padding:2px 4px;border-radius:999px;margin-left:3px}\n.section-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 7px}\n.section-head h2{font-size:14px;margin:0}.section-head small{font-size:9px;color:var(--muted)}\n.partner{font-weight:800;color:#244d68}.missing{color:#8b969b;font-style:italic}\n.total-row td{background:#f1f6f7;font-weight:900;border-top:2px solid #cbd8dc}\n.status-title{margin-top:18px;padding:8px 10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-size:12px;font-weight:900}\n.cancel{background:#fff4f2;color:var(--red)}.replace{background:#fff8e8;color:var(--amber)}\n.soft-cancel{background:#fff9f8}.soft-replace{background:#fffaf3}\n.footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid var(--line);font-size:8px;color:#8b959a}\n.sn{font-weight:900;color:#9c6e19}.print-toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:#10384b;color:white;font-size:12px}\n.print-toolbar button{padding:9px 16px;border:0;border-radius:6px;background:#e1f7f0;color:#0b5d59;font:inherit;font-weight:800;cursor:pointer}\n.insurance-section{margin-top:18px}.insurance-title{padding:9px 12px;background:#f4f7f8;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-weight:900;font-size:12px;color:#244d68}\n.empty{color:var(--muted);font-size:11px;padding:12px}\n.receipt-chart{margin-top:24px;padding-top:14px;border-top:2px solid var(--line)}\n.receipt-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px;break-after:avoid}\n.receipt-chart-head h2{font-size:15px;margin:0}\n.receipt-chart-head strong{font-size:14px;color:var(--brand)}\n.receipt-chart-note{font-size:10px;color:var(--muted);margin-bottom:15px}\n.receipt-row{display:grid;grid-template-columns:minmax(160px,235px) minmax(100px,1fr) 135px;gap:13px;align-items:center;margin:9px 0;break-inside:avoid;page-break-inside:avoid}\n.receipt-label{font-size:11px;font-weight:800;overflow-wrap:anywhere}\n.receipt-track{height:20px;border-radius:6px;background:#edf3f4;overflow:hidden}\n.receipt-bar{display:block;height:100%;background:#0b7f79;border-radius:6px}\n.receipt-row.private .receipt-bar{background:#244d68}\n.receipt-money{text-align:right;font-size:11px;font-weight:850;font-variant-numeric:tabular-nums}\n.receipt-warning{font-size:9px;color:var(--amber);margin:11px 0 0}\n@media(max-width:1500px){.page{width:calc(100% - 24px);padding:20px;overflow-x:auto}}\n@media print{\n @page{size:A4 landscape;margin:7mm}\n body{background:#fff}.print-toolbar{display:none!important}\n .page{width:auto;margin:0;box-shadow:none;padding:0;overflow:visible}\n .page-break{break-before:page!important;page-break-before:always!important}\n thead{display:table-header-group}table{page-break-inside:auto}\n tr{break-inside:avoid;page-break-inside:avoid}\n .doctor-head{break-after:avoid;page-break-after:avoid}\n th,td{padding:3px 3.5px;font-size:6.8pt}\n}\n";
+const CSS="\n:root{--ink:#172126;--muted:#66747b;--line:#dfe5e8;--brand:#0b7f79;--red:#b42318;--amber:#8a5b00;--warnbg:#fff8e8}\n*{box-sizing:border-box}body{margin:0;background:#edf1f3;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}\n.page{width:1480px;margin:22px auto;background:#fff;padding:28px 30px 34px;box-shadow:0 8px 24px rgba(0,0,0,.07)}\n.page-break{break-before:page;page-break-before:always}\n.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #d8e1e5;padding-bottom:14px}\n.brand{font-size:12px;font-weight:850;color:var(--brand);letter-spacing:.04em}\nh1{font-size:24px;margin:4px 0 3px}.company-name{font-size:14px;font-weight:750}\n.meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.6}\n.period{display:inline-block;background:#e9f6f4;color:var(--brand);font-weight:850;padding:5px 9px;border-radius:999px}\n.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 10px}\n.card{border:1px solid var(--line);border-radius:9px;padding:10px 11px}\n.card small{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.card strong{font-size:17px;display:block;margin-top:2px}.card span{font-size:9px;color:var(--muted)}\n.dist-title{font-size:12px;font-weight:900;padding:9px 11px;background:#f4f7f8;border:1px solid var(--line);border-radius:9px 9px 0 0}\n.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;overflow:hidden}\n.dist-card{padding:11px 14px;border-right:1px solid var(--line)}.dist-card:last-child{border-right:0}\n.dist-card b{display:block;font-size:12px}.dist-card strong{display:block;font-size:16px;color:#244d68;margin-top:2px}.dist-card small{font-size:9px;color:var(--muted)}\n.doctor-section{margin-top:22px}.doctor-head{display:flex;justify-content:space-between;align-items:end;padding:8px 10px;background:#f7fafb;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0}\n.doctor-name{font-size:13px;font-weight:900}.doctor-sub{font-size:9px;color:var(--muted);margin-top:2px}\n.doctor-total{text-align:right}.doctor-total small{display:block;font-size:8px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.doctor-total strong{font-size:15px;color:var(--brand);display:block}.doctor-total span{font-size:8px;color:var(--muted)}\ntable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line)}\nth{background:#f7f9fa;color:#5f6e75;font-size:8px;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);border-right:1px solid #e7ecee}\ntd{font-size:8.8px;padding:5px 6px;border-bottom:1px solid #edf1f2;border-right:1px solid #f0f3f4;vertical-align:top;line-height:1.27;overflow-wrap:anywhere}\ntbody tr:nth-child(even){background:#fcfdfd}.nf{font-weight:900;color:#174d64}\n.money{text-align:right;white-space:nowrap}.strong{font-weight:850}\n.doctor-value{background:#f1faf8;color:#0a625e;font-weight:850}.subtotal td{background:#f5f8f9;font-weight:900}\n.shared{display:inline-block;font-size:7px;background:#fff3d6;color:#805900;padding:2px 4px;border-radius:999px;margin-left:3px}\n.section-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 7px}\n.section-head h2{font-size:14px;margin:0}.section-head small{font-size:9px;color:var(--muted)}\n.partner{font-weight:800;color:#244d68}.missing{color:#8b969b;font-style:italic}\n.total-row td{background:#f1f6f7;font-weight:900;border-top:2px solid #cbd8dc}\n.status-title{margin-top:18px;padding:8px 10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-size:12px;font-weight:900}\n.cancel{background:#fff4f2;color:var(--red)}.replace{background:#fff8e8;color:var(--amber)}\n.soft-cancel{background:#fff9f8}.soft-replace{background:#fffaf3}\n.footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid var(--line);font-size:8px;color:#8b959a}\n.sn{font-weight:900;color:#9c6e19}.print-toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:#10384b;color:white;font-size:12px}\n.print-toolbar button{padding:9px 16px;border:0;border-radius:6px;background:#e1f7f0;color:#0b5d59;font:inherit;font-weight:800;cursor:pointer}\n.insurance-section{margin-top:18px}.insurance-title{padding:9px 12px;background:#f4f7f8;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-weight:900;font-size:12px;color:#244d68}\n.empty{color:var(--muted);font-size:11px;padding:12px}\n.receipt-chart{margin-top:24px;padding-top:14px;border-top:2px solid var(--line)}\n.receipt-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px;break-after:avoid}\n.receipt-chart-head h2{font-size:15px;margin:0}\n.receipt-chart-head strong{font-size:14px;color:var(--brand)}\n.receipt-chart-note{font-size:10px;color:var(--muted);margin-bottom:12px}\n.receipt-plot{display:block;width:100%;max-width:1150px;height:auto;margin:0 auto 12px;break-inside:avoid;page-break-inside:avoid}\n.receipt-warning{font-size:9px;color:var(--amber);margin:11px 0 0}\n@media(max-width:1500px){.page{width:calc(100% - 24px);padding:20px;overflow-x:auto}}\n@media print{\n @page{size:A4 landscape;margin:7mm}\n body{background:#fff}.print-toolbar{display:none!important}\n .page{width:auto;margin:0;box-shadow:none;padding:0;overflow:visible}\n .page-break{break-before:page!important;page-break-before:always!important}\n thead{display:table-header-group}table{page-break-inside:auto}\n tr{break-inside:avoid;page-break-inside:avoid}\n .doctor-head{break-after:avoid;page-break-after:avoid}\n th,td{padding:3px 3.5px;font-size:6.8pt}\n}\n";
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const MONTH=/^\d{4}-(0[1-9]|1[0-2])$/;
@@ -45,6 +45,72 @@ const period=(month:string)=>{const [y,m]=month.split("-").map(Number);
  return new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric",timeZone:"UTC"})
  .format(new Date(Date.UTC(y,m-1,1))).toUpperCase();};
 const statusClass=(status:Inv["status"])=>status==="CANCELLED"?"soft-cancel":status==="REPLACED"?"soft-replace":"";
+
+
+type ReceiptBar={label:string;receivedCents:number};
+// Gráfico SVG vetorial, sem dependência de Canvas: legível ao imprimir ou salvar em PDF.
+// Quando existem muitos convênios, distribui as colunas em painéis com a MESMA escala.
+function receiptChartSvg(groups:ReadonlyArray<ReceiptBar>):string{
+ const max=Math.max(100,...groups.map(item=>item.receivedCents));
+ const rough=max/4,scale=Math.pow(10,Math.floor(Math.log10(rough)));
+ const unit=[1,2,2.5,5,10].find(value=>value*scale>=rough)||10;
+ const tick=Math.round(unit*scale),topValue=tick*4;
+ const width=900,left=112,right=24,top=55,bottom=255;
+ const axisMoney=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",
+  notation:"compact",maximumFractionDigits:1});
+ const wrapName=(name:string,limit:number):string[]=>{
+  const parts:string[]=[];
+  let current="";
+  for(const word of name.trim().split(/\s+/)){
+   if(!word)continue;
+   if((current?current.length+1:0)+word.length<=limit){
+    current=current?current+" "+word:word;continue;
+   }
+   if(current){parts.push(current);current=""}
+   if(word.length>limit){
+    for(let start=0;start<word.length;start+=limit)parts.push(word.slice(start,start+limit));
+   }else current=word;
+  }
+  if(current)parts.push(current);
+  return parts.length?parts:["—"];
+ };
+ const panels:string[]=[];
+ for(let offset=0;offset<groups.length;offset+=8){
+  const items=groups.slice(offset,offset+8);
+  const slot=(width-left-right)/items.length;
+  const names=items.map(item=>wrapName(item.label,Math.max(11,Math.min(20,Math.floor(slot/8)))));
+  const height=bottom+35+Math.max(1,...names.map(lines=>lines.length))*17+10;
+  const ticks=[0,1,2,3,4].map(n=>{
+   const y=bottom-n*(bottom-top)/4;
+   return '<line x1="'+left+'" y1="'+y+'" x2="'+(width-right)+'" y2="'+y+
+    '" stroke="'+(n===0?'#a9b7be':'#e6ecef')+'" stroke-width="'+(n===0?'1.5':'1')+'"/>'+
+    '<text x="'+(left-13)+'" y="'+(y+4)+'" text-anchor="end" fill="#66747b" font-size="11">'+
+    esc(axisMoney.format(n*tick/100))+'</text>';
+  }).join("");
+  const bars=items.map((item,i)=>{
+   const x=left+slot*(i+.5),barWidth=Math.min(78,slot*.62);
+   const barHeight=item.receivedCents/topValue*(bottom-top);
+   const y=bottom-barHeight;
+   const name=names[i].map((line,lineIndex)=>'<tspan x="'+x+'" dy="'+
+    (lineIndex?17:0)+'">'+esc(line)+'</tspan>').join("");
+   return '<g><title>'+esc(item.label+" — "+amount(item.receivedCents/100))+'</title>'+
+    '<rect x="'+(x-barWidth/2)+'" y="'+y+'" width="'+barWidth+'" height="'+barHeight+
+    '" fill="'+(offset+i===0?'#244d68':'#17857f')+'" rx="2"/>'+
+    '<text x="'+x+'" y="'+Math.max(27,y-10)+'" text-anchor="middle" font-size="12" font-weight="700" fill="#172126">'+
+    esc(amount(item.receivedCents/100))+'</text>'+
+    '<text x="'+x+'" y="'+(bottom+24)+'" text-anchor="middle" font-size="12" font-weight="650" fill="#172126">'+
+    name+'</text></g>';
+  }).join("");
+  panels.push('<svg class="receipt-plot" xmlns="http://www.w3.org/2000/svg" '+
+   'viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Recebimentos por origem, gráfico de colunas">'+
+   '<title>Recebimentos por origem</title>'+
+   '<text transform="translate(21 '+((top+bottom)/2)+') rotate(-90)" text-anchor="middle" '+
+   'font-size="12" fill="#66747b">Valor recebido (R$)</text>'+
+   ticks+'<line x1="'+left+'" y1="'+top+'" x2="'+left+'" y2="'+bottom+
+   '" stroke="#a9b7be" stroke-width="1.5"/>'+bars+'</svg>');
+ }
+ return panels.join("");
+}
 
 export async function GET(request:Request){
  if(process.env.RN_MONTHLY_CLOSING_ENABLED!=="true")
@@ -236,21 +302,14 @@ export async function GET(request:Request){
   // Valores por atendimento realizado nesta competência, sem ratear o total de NFs.
   // A seção permanece na mesma página lógica de "Atendimentos por convênio".
   const comparison=monthlyReceiptComparison(details);
-  const greatest=Math.max(1,...comparison.groups.map(item=>item.receivedCents));
-  const receiptRows=comparison.groups.map((item,index)=>{
-   const percentage=(item.receivedCents/greatest*100).toFixed(2);
-   return '<div class="receipt-row'+(index===0?' private':'')+'"><span class="receipt-label">'+
-    esc(item.label)+'</span><div class="receipt-track"><span class="receipt-bar" style="width:'+
-    percentage+'%"></span></div><span class="receipt-money">'+
-    esc(amount(item.receivedCents/100))+'</span></div>';
-  }).join("");
+  const receiptColumns=receiptChartSvg(comparison.groups);
   const receiptChart='<div class="receipt-chart"><div class="receipt-chart-head">'+
    '<h2>Recebimentos por origem</h2><strong>Total: '+
    esc(amount(comparison.totalCents/100))+'</strong></div>'+
    '<div class="receipt-chart-note">Particular e cada convênio separadamente · '+
    'Somente valores pagos e individualizados dos atendimentos desta competência '+
    '(data do atendimento, não necessariamente do depósito).</div>'+
-   receiptRows+
+   receiptColumns+
    (comparison.missingPaidAmounts?
      '<p class="receipt-warning">'+comparison.missingPaidAmounts+
      ' cobrança(s) paga(s) sem valor individualizado foram excluídas dos totais.</p>':"")+
