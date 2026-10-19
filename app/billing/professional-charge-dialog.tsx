@@ -10,7 +10,7 @@ import MoneyInput from "@/components/money-input";
 import {confirmFiscalPayment} from "@/components/confirm-fiscal-payment";
 type Draft={professional_id:string;professional_role:string;billing_entity_id:string;billing_method:string;
   commercial_modality_code:string;submission_channel_code:string;effective_payer_name_snapshot:string;
-  patient_insurance_snapshot:string;payment_status:string;received_amount:string;paid_at:string;invoice_number:string;notes:string};
+  patient_insurance_snapshot:string;payment_status:string;received_amount:string;paid_at:string;invoice_number:string;notes:string;no_invoice:boolean};
 export default function ProfessionalChargeDialog({source,edit,data,onClose,onSaved}:{
  source:BillingRow;edit:boolean;data:BillingData;onClose:()=>void;onSaved:()=>void;
 }){
@@ -28,7 +28,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
   patient_insurance_snapshot:existing?.patient_insurance_snapshot||source.insurance,
   payment_status:existing?.payment_status||"PENDENTE",
   received_amount:existing?.received_amount==null?"":String(existing.received_amount),
-  paid_at:existing?.paid_at||"",invoice_number:existing?.invoice_number||"",notes:existing?.notes||""
+  paid_at:existing?.paid_at||"",invoice_number:existing?.invoice_number||"",notes:existing?.notes||"",no_invoice:!!existing?.no_invoice
  });
  const [parts,setParts]=useState<PaymentPart[]>(()=>(data.payment_parts||[]).filter(p=>p.billing_record_id===existing?.id));
  const [error,setError]=useState(""),[busy,setBusy]=useState(false);
@@ -47,7 +47,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
   let amount:number|null=null;
   try{
    amount=draft.received_amount.trim()?parseBRL(draft.received_amount):null;
-   const needsFiscal=direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&
+   const needsFiscal=direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.no_invoice&&!draft.invoice_number.trim()&&
      !(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED");
    if(direct&&paid&&(amount==null||amount<0||!draft.paid_at||(!needsFiscal&&!validPaymentParts(parts,amount)))){
     setError("Informe valor, data e formas de pagamento que totalizem o valor recebido.");return;
@@ -55,7 +55,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
    setBusy(true);
    const activeRequest=(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED");
    let fiscal:Awaited<ReturnType<typeof confirmFiscalPayment>>=null;
-   if(direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&!activeRequest){
+   if(direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.no_invoice&&!draft.invoice_number.trim()&&!activeRequest){
      const patient=data.patients?.find(p=>p.id===source.patient_id) || {id:source.patient_id||"",name:source.patient};
      fiscal=await confirmFiscalPayment({patient,amount,paidAt:draft.paid_at});
      if(!fiscal)return;
@@ -63,7 +63,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
    const body={kind:"professional_charge",data:{...draft,id:existing?.id||undefined,attendance_id:source.attendance_id,
     updated_at:existing?.updated_at||undefined,payment_status:direct?draft.payment_status:"PENDENTE",
     received_amount:direct?amount:null,paid_at:direct&&draft.paid_at?draft.paid_at:null,
-    fiscal:fiscal||undefined,payment_parts:direct&&paid?(fiscal?.payment_parts||parts):[]}};
+    no_invoice:!!(fiscal?.no_invoice||draft.no_invoice),fiscal:fiscal?.no_invoice?undefined:(fiscal||undefined),payment_parts:direct&&paid?(fiscal?.payment_parts||parts):[]}};
    const response=await fetch("/api/billing",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
    const result=await response.json();if(!response.ok)throw Error(result.error||"Erro ao salvar cobrança.");
    onSaved();
@@ -124,7 +124,12 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
    </div>
    {direct&&paid&&!(draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&!(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED"))&&<PaymentParts value={parts} onChange={setParts} amount={safeAmount()}/>}
    {direct&&draft.billing_method==="CONVENIO"&&<p className="billing-historical-note">Convênio com recebimento direto: a quitação ficará pendente até configurarmos o fluxo fiscal do repasse. Não marque como pago nesta tela.</p>}
-   {direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&
+   {direct&&paid&&draft.billing_method==="PARTICULAR"&&
+    <label className="fiscal-radio"><input type="checkbox"
+      checked={draft.no_invoice} onChange={e=>setDraft(d=>({...d,no_invoice:e.target.checked}))}/>
+     Sem Nota Fiscal (S/N)
+    </label>}
+   {direct&&paid&&draft.billing_method==="PARTICULAR"&&!draft.no_invoice&&!draft.invoice_number.trim()&&
     <p className="billing-historical-note">Ao confirmar o pagamento particular, será solicitada a NF automaticamente, vinculada a esta cobrança e a esta entidade recebedora. Os dados do tomador serão confirmados antes de salvar.</p>}
    {!entities.length&&<p role="alert" className="billing-error">Cadastre o vínculo do profissional com uma entidade recebedora ativa.</p>}
    <label>Observações<textarea value={draft.notes} onChange={e=>set("notes",e.target.value)}/></label>
