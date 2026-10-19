@@ -156,7 +156,7 @@ begin
        where b.attendance_id=a.id and b.billing_entity_id=p_entity))
     order by a.id limit 1
    ),'cancelled:'||(c.item->>'id')) attendance_id,
-   (c.item->>'date')::date service_date,
+   ((c.item->>'date'))::date service_date,
    'cancelled'::text status,
    coalesce(c.item->>'procedure','—') procedure,
    (c.item->>'cancelledAt')::timestamptz cancelled_at,
@@ -176,7 +176,7 @@ begin
   cross join lateral jsonb_array_elements(coalesce(s.payload->'cancelledAppointments','[]'::jsonb)) c(item)
   left join public.doctors d on d.id=c.item->>'doctorId'
   where s.id=1 and c.item->>'id' is not null
-    and c.item->>'date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}
+    and (c.item->>'date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}
   'cancelled_attendances',
   (select count(*) from jsonb_array_elements(attendance_overview) entry
    where entry->>'status'='cancelled')
@@ -365,8 +365,8 @@ $function$
 ;
 
 
-    and c.item->>'date'>=to_char(first_day,'YYYY-MM-DD')
-    and c.item->>'date'<to_char(last_day,'YYYY-MM-DD')
+    and (c.item->>'date')>=to_char(first_day,'YYYY-MM-DD')
+    and (c.item->>'date')<to_char(last_day,'YYYY-MM-DD')
     and (
      exists (
       select 1 from public.attendances a where a.appointment_id=c.item->>'id'
