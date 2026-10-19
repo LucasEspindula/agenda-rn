@@ -22,11 +22,16 @@ type Expense={id:string;description:string;category:string;competence_date:strin
  amount:number;status:string;supplier:string};
 type Denial={id:string;billing_record_id:string;denial_kind:string;denied_on:string;
  denied_amount:number;recovered_amount:number;status:string;reason:string};
+type ProfessionalAttendance={billing_record_id:string;professional_id:string;professional_name:string;
+ patient_name:string;procedure:string;service_date:string;payer_name:string;billing_method:string;payment_status:string};
+type ProfessionalInvoiceLink={professional_id:string;invoice_id:string;invoice_number:string};
 type Snapshot={
  entity:Entity;competence:string;period_start:string;period_end_exclusive:string;
  production:{attendances:number;charges:number;professionals:number;private_charges:number;
   insurance_charges:number;pending_charges_now:number;unpriced_charges:number};
  professionals:Professional[];
+ professional_attendances?:ProfessionalAttendance[];
+ professional_invoice_rows?:ProfessionalInvoiceLink[];
  issued_invoices:{count:number;gross_total:number;net_total:number;without_net_amount:number;
   insurance_count:number;private_count:number};
  invoices:Invoice[];
@@ -200,7 +205,7 @@ export default function MonthlyClosing(){
    </div>}
    <div className="monthly-summary">
     <article><span>Atendimentos realizados</span><strong>{data.production.attendances}</strong>
-      <small>{data.production.charges} cobranças</small></article>
+      <small>{data.production.charges} cobranças · {data.production.pending_charges_now} sem baixa financeira</small></article>
     <article><span>NFs emitidas (líquido)</span><strong>{cash(data.issued_invoices.net_total)}</strong>
      <small>{data.issued_invoices.count} documentos por data de emissão</small></article>
     <article><span>Recebimentos no mês</span><strong>{cash(totalCash)}</strong>
@@ -213,47 +218,85 @@ export default function MonthlyClosing(){
       <small>Recuperações informadas: {cash(data.denials.recovered_in_month)} (não somadas ao caixa)</small></article>
    </div>
    <section className="monthly-panel">
-    <h3>Produção por profissional — data do atendimento</h3>
-    <p className="monthly-explanation">Os valores por profissional são itens identificados em NFs e não devem ser somados novamente aos recebimentos da entidade.</p>
-    <div className="monthly-scroll"><table className="billing-table">
-     <thead><tr><th>Profissional</th><th>Atendimentos</th><th>Cobranças</th>
-       <th>Particular</th><th>Convênio</th><th>Pendentes hoje</th><th>Itens de NF atribuídos</th></tr></thead>
-     <tbody>{data.professionals.map(p=><tr key={p.professional_id}>
-      <td>{p.professional_name}</td><td>{p.attendances}</td><td>{p.charges}</td>
-      <td>{p.private_charges}</td><td>{p.insurance_charges}</td><td>{p.pending_charges_now}</td>
-      <td>{cash(p.attributed_invoice_items)}</td></tr>)}</tbody>
-    </table></div>
-    {!data.professionals.length&&<p>Sem produção registrada para esta competência.</p>}
+    <h3>Atendimentos e notas fiscais por médico</h3>
+    {data.professionals.map(p=>{
+     const details=(data.professional_attendances||[]).filter(a=>a.professional_id===p.professional_id);
+     const related=new Set((data.professional_invoice_rows||[])
+       .filter(l=>l.professional_id===p.professional_id).map(l=>l.invoice_id));
+     const invoices=[...data.invoices].filter(i=>related.has(i.id))
+       .sort((a,b)=>a.invoice_number.localeCompare(b.invoice_number,"pt-BR",{numeric:true}));
+     const byPayer=new Map<string,ProfessionalAttendance[]>();
+     for(const a of details){
+      const payer=a.billing_method==="PARTICULAR"?"Particular":a.payer_name||"Não informado";
+      const group=byPayer.get(payer)||[];group.push(a);byPayer.set(payer,group);
+     }
+     return <div className="monthly-doctor-block" key={p.professional_id}>
+      <h4>{p.professional_name}</h4>
+      <p className="monthly-doctor-summary">{p.attendances} atendimento(s) · {p.charges} cobrança(s)
+       · {p.private_charges} particular(es) · {p.insurance_charges} convênio(s)
+       · {p.pending_charges_now} sem baixa financeira</p>
+      {[...byPayer.entries()].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR")).map(([payer,items])=>
+       <div key={payer} className="monthly-payer-group">
+        <h5>Atendimentos — {payer}</h5>
+        <div className="monthly-scroll"><table className="billing-table">
+         <thead><tr><th>Paciente</th><th>Procedimento</th><th>Data</th><th>Pagamento</th></tr></thead>
+         <tbody>{items.sort((a,b)=>a.service_date.localeCompare(b.service_date)).map(a=>
+          <tr key={a.billing_record_id}>
+           <td>{a.patient_name}</td><td>{a.procedure}</td><td>{date(a.service_date)}</td>
+           <td>{a.payment_status==="PAGO"?"Pago":"Pendente"}</td>
+          </tr>)}</tbody>
+        </table></div>
+       </div>)}
+      {invoices.length>0&&<div className="monthly-payer-group">
+       <h5>Notas fiscais — {p.professional_name}</h5>
+       <div className="monthly-scroll"><table className="billing-table">
+        <thead><tr><th>NF</th><th>Pagador / Tomador</th><th>Emissão</th><th>Pagamento</th>
+         <th>Bruto</th><th>Líquido</th><th>Tipo</th><th>Status</th></tr></thead>
+        <tbody>{invoices.map(i=><tr key={i.id}
+         className={i.status==="REPLACED"?"monthly-nf-replaced":
+            i.status==="CANCELLED"?"monthly-nf-cancelled":""}>
+         <td>{i.invoice_number}</td><td>{i.payer||"—"}</td><td>{date(i.issue_date)}</td>
+         <td>{date(i.paid_at)}</td>
+         <td>{i.total_amount==null?"Não informado":cash(i.total_amount)}</td>
+         <td>{i.net_amount==null?"Não informado":cash(i.net_amount)}</td>
+         <td>{i.recipient_type}</td><td>{monthlyInvoiceStatus(i,data.invoices)}</td>
+        </tr>)}</tbody></table></div>
+      </div>}
+     </div>;
+    })}
+    {data.invoices.filter(i=>!(data.professional_invoice_rows||[])
+      .some(l=>l.invoice_id===i.id)).length>0&&
+     <div className="monthly-doctor-block">
+      <h4>Notas fiscais sem vínculo individual identificado</h4>
+      <div className="monthly-scroll"><table className="billing-table">
+       <thead><tr><th>NF</th><th>Pagador / Tomador</th><th>Emissão</th><th>Pagamento</th>
+        <th>Bruto</th><th>Líquido</th><th>Tipo</th><th>Status</th></tr></thead>
+       <tbody>{data.invoices.filter(i=>!(data.professional_invoice_rows||[]).some(l=>l.invoice_id===i.id))
+        .sort((a,b)=>a.invoice_number.localeCompare(b.invoice_number,"pt-BR",{numeric:true}))
+        .map(i=><tr key={i.id}
+         className={i.status==="REPLACED"?"monthly-nf-replaced":
+            i.status==="CANCELLED"?"monthly-nf-cancelled":""}>
+         <td>{i.invoice_number}</td><td>{i.payer||"—"}</td><td>{date(i.issue_date)}</td>
+         <td>{date(i.paid_at)}</td><td>{i.total_amount==null?"Não informado":cash(i.total_amount)}</td>
+         <td>{i.net_amount==null?"Não informado":cash(i.net_amount)}</td>
+         <td>{i.recipient_type}</td><td>{monthlyInvoiceStatus(i,data.invoices)}</td>
+        </tr>)}</tbody></table></div>
+     </div>}
+    {!data.professionals.length&&!data.invoices.length&&<p>Sem atendimentos ou NFs nesta competência.</p>}
    </section>
    <section className="monthly-panel">
     <h3>Entradas financeiras — data do pagamento</h3>
     <div className="monthly-pair">
-     <p><strong>Pagamento direto:</strong> {cash(data.cash.direct_received)}</p>
+     <p><strong>Recebimentos individuais:</strong> {cash(data.cash.direct_received)}</p>
      <p><strong>NFs de convênio recebidas:</strong> {cash(data.cash.insurance_invoice_received)}</p>
     </div>
-    <details><summary>Consultar pagamentos diretos ({data.direct_payments.length})</summary>
+    <details><summary>Consultar recebimentos individuais ({data.direct_payments.length})</summary>
      <div className="monthly-scroll"><table className="billing-table">
       <thead><tr><th>Profissional</th><th>Pagamento</th><th>Forma de cobrança</th><th>Valor recebido</th></tr></thead>
       <tbody>{data.direct_payments.map(p=><tr key={p.id}>
        <td>{p.professional_name}</td><td>{date(p.paid_at)}</td><td>{p.billing_method}</td>
        <td>{cash(p.received_amount)}</td></tr>)}</tbody></table></div>
     </details>
-   </section>
-   <section className="monthly-panel">
-    <h3>Relação de NFs — emissão, pagamento ou cancelamento no mês</h3>
-    <p className="monthly-explanation">A relação inclui NFs ativas, canceladas e substituídas. Somente as ativas entram nos totais financeiros.</p>
-    <div className="monthly-scroll"><table className="billing-table">
-     <thead><tr><th>NF</th><th>Pagador / tomador</th><th>Emissão</th><th>Pagamento</th>
-       <th>Bruto</th><th>Líquido</th><th>Tipo</th><th>Status</th></tr></thead>
-     <tbody>{[...data.invoices].sort((a,b)=>a.invoice_number.localeCompare(b.invoice_number,"pt-BR",{numeric:true})||
-       String(a.issue_date||"").localeCompare(String(b.issue_date||""))).map(i=><tr key={i.id}>
-      <td>{i.invoice_number}</td><td>{i.payer||"—"}</td><td>{date(i.issue_date)}</td><td>{date(i.paid_at)}</td>
-      <td>{i.total_amount==null?"Não informado":cash(i.total_amount)}</td>
-      <td>{i.net_amount==null?"Não informado":cash(i.net_amount)}</td>
-      <td>{i.recipient_type}</td>
-      <td>{monthlyInvoiceStatus(i,data.invoices)}</td>
-     </tr>)}</tbody></table></div>
-    {!data.invoices.length&&<p>Nenhuma NF emitida ou recebida nesta competência.</p>}
    </section>
    <section className="monthly-panel">
     <h3>Despesas — competência e pagamento separados</h3>
