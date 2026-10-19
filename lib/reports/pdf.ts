@@ -48,7 +48,7 @@ export class PdfReport{
   };
   const wrapGrid=(value:string,width:number,fontSize:number,bold:boolean):string[]=>{
    const face=bold?this.bold:this.font;
-   const words=(value.trim()||'—').split(/\\s+/);
+   const words=(value.trim()||'—').split(/\s+/);
    const lines:string[]=[];
    let current='';
    for(const word of words){
