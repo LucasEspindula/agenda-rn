@@ -40,10 +40,17 @@ test("valores faltantes não são inventados, mas o convênio permanece na compa
  assert.equal(result.groups.length,4);
  assert.equal(result.groups.find(g=>g.label==="Sem repasse")?.receivedCents,0);
 });
-test("impressão mensal posiciona gráfico depois dos atendimentos por convênio sem página nova",()=>{
+test("impressão mensal usa colunas verticais no gráfico abaixo dos convênios",()=>{
  const source=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
  assert.match(source,/monthlyReceiptComparison\(details\)/);
- assert.match(source,/insuranceBlocks\|\|/);
- assert.match(source,/\breceiptChart\+/);
- assert.match(source,/\.receipt-row\{[^}]*break-inside:avoid/);
+ assert.match(source,/receiptChartSvg\(comparison\.groups\)/);
+ assert.match(source,/viewBox="0 0 /);
+ assert.match(source,/receipt-plot/);
+ assert.match(source,/Valor recebido \(R\$\)/);
+ assert.match(source,/esc\(amount\(item\.receivedCents\/100\)\)/);
+ assert.match(source,/esc\(line\)/);
+ assert.doesNotMatch(source,/receiptRows|class="receipt-track"|\.receipt-row\{/);
+ assert.ok(source.indexOf("insuranceBlocks||") < source.indexOf("   receiptChart+"),
+  "o gráfico deve ficar depois dos atendimentos por convênio");
+ assert.match(source,/\.receipt-plot\{[^}]*break-inside:avoid/);
 });
