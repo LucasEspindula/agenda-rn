@@ -23,7 +23,7 @@ export class PdfReport{
  private wrap(value:string,width:number,size=7):string[]{const words=String(value||'—').split(/\s+/),lines:string[]=[];let current='';for(const word of words){const next=current?current+' '+word:word;if(this.font.widthOfTextAtSize(next,size)<=width)current=next;else{if(current)lines.push(current);current=word}}if(current)lines.push(current);return lines.length?lines:['—']}
  table(columns:PdfColumn[],rows:readonly string[][]):void{const x=this.margin,total=pdfColumnsWidth(columns);if(total>this.contentWidth)throw new RangeError('A largura da tabela excede a área útil do PDF.');const head=()=>{this.ensureSpace(20);let left=x;this.page.drawRectangle({x,y:this.y-12,width:total,height:14,color:rgb(.94,.97,.97)});for(const col of columns){this.text(col.label.toUpperCase(),left+3,this.y-8,6,true,muted);left+=col.width}this.y-=16};head();for(const row of rows){const cells=row.map((value,index)=>this.wrap(value,columns[index].width-6)),height=Math.max(15,...cells.map(cell=>cell.length*9+6));if(this.y-height<this.margin+12){this.addPage();head()}let left=x;cells.forEach((cell,index)=>{cell.forEach((value,lineIndex)=>{const textWidth=this.font.widthOfTextAtSize(value,7),px=columns[index].align==='right'?left+columns[index].width-3-textWidth:left+3;this.text(value,px,this.y-9-lineIndex*9,7)});left+=columns[index].width});this.y-=height;this.line(this.y)}this.y-=12}
  // Grid de largura integral para relatórios financeiros. Mantém os relatórios legados intactos.
- gridTable(columns:PdfColumn[],rows:readonly string[][]):void{
+ gridTable(columns:PdfColumn[],rows:readonly string[][],rowTints:readonly ("replaced"|"cancelled"|null)[]=[]):void{
   if(!columns.length)return;
   const sum=pdfColumnsWidth(columns);
   if(!Number.isFinite(sum)||sum<=0||columns.some(c=>c.width<=0))
@@ -97,7 +97,7 @@ export class PdfReport{
    this.y=top-headerHeight;
   };
   drawHeader();
-  for(const values of rows){
+  for(const [rowIndex,values] of rows.entries()){
    const cells=layout(values,bodySize,false);
    const height=rowHeight(cells,bodySize);
    if(this.y-height<this.margin+6){
@@ -105,6 +105,12 @@ export class PdfReport{
     drawHeader();
    }
    const top=this.y;
+   const tint=rowTints[rowIndex];
+   if(tint){
+    const fill=tint==="replaced"?rgb(.997,.983,.950):rgb(.997,.968,.968);
+    this.page.drawRectangle({x:tableLeft,y:top-height,width:this.contentWidth,
+      height,color:fill});
+   }
    paint(cells,bodySize,false,top);
    drawRules(top,top-height);
    this.y=top-height;
