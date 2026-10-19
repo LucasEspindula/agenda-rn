@@ -30,9 +30,10 @@ test("tela apresenta realizados e cancelados sem duplicar cobrança ou misturar 
 });
 
 test("impressão mensal preserva gráfico e adiciona listagem clínica separada",()=>{
- assert.match(print,/const fifth=page\(heading\("Atendimentos da competência"/);
- assert.match(print,/first\+second\+third\+fourth\+fifth/);
+ assert.match(print,/const attendancePage=page\(heading\("Relatório de Fechamento Mensal"/);
+ assert.match(print,/attendancePage\+partnerInvoicePage\+validInvoicePage\+fiscalEventsPage\+insurancePage/);
  assert.match(print,/receiptChartSvg\(comparison\.groups\)/);
+ assert.match(print,/<h2>Atendimentos da competência<\/h2>/);
  assert.match(print,/ATENDIMENTOS REALIZADOS/);
  assert.match(print,/ATENDIMENTOS CANCELADOS/);
  assert.match(print,/cancellations\.length\?/);
