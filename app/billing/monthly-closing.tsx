@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState} from "react";
 import AppDialog from "@/components/app-dialog";
+import {PrintIcon} from "@/components/billing-icons";
 import {formatBRL} from "@/lib/money";
 import {monthlyCash,canCloseMonthlySnapshot} from "@/lib/monthly-closing-math";
 import {formatDateBR} from "@/lib/date-format";
@@ -35,7 +36,8 @@ type Snapshot={
  notices:string[];
 };
 type Closing={id:string;snapshot:Snapshot;closed_at:string;closed_by:number;notes:string|null;changed_since_close:boolean};
-type Preview={current:Snapshot;closed:boolean;closing:Closing|null};
+type ClosingEvent={version:number;id:string;date:string;actor_id:number;notes:string|null;event_type:"CLOSED"|"UNLOCKED"};
+type Preview={current:Snapshot;closed:boolean;unlocked?:boolean;history?:ClosingEvent[];closing:Closing|null};
 const date=(v:string|null|undefined)=>v?formatDateBR(v.slice(0,10)):"—";
 const cash=(n:number|null|undefined)=>formatBRL(n??0);
 const previousMonth=()=>{
@@ -56,6 +58,10 @@ export default function MonthlyClosing(){
  const [error,setError]=useState("");
  const [notice,setNotice]=useState("");
  const [showCloseDialog,setShowCloseDialog]=useState(false);
+ const [showUnlockDialog,setShowUnlockDialog]=useState(false);
+ const [unlockPassword,setUnlockPassword]=useState("");
+ const [unlockReason,setUnlockReason]=useState("");
+ const [unlockError,setUnlockError]=useState("");
  const [notes,setNotes]=useState("");
  const [loadedKey,setLoadedKey]=useState("");
  const reloadOptions=useCallback(async()=>{
@@ -101,6 +107,24 @@ export default function MonthlyClosing(){
   if(data.pending_now.unpaid_invoice_count>0)w.push("Existem NFs emitidas nesta competência ainda não pagas.");
   return w;
  },[data]);
+ async function unlockMonth(){
+  if(busy||!preview?.closed||!valid)return;
+  setBusy(true);setUnlockError("");
+  try{
+   const response=await fetch("/api/billing/closing",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({action:"UNLOCK",entity_id:entity,month,
+      password:unlockPassword,reason:unlockReason})
+   });
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error||"Não foi possível desbloquear.");
+   setUnlockPassword("");setUnlockReason("");setShowUnlockDialog(false);
+   await Promise.all([reloadOptions(),loadPreview(entity,month)]);
+   setNotice("Competência desbloqueada pelo Gerente Geral. O histórico anterior permanece salvo.");
+  }catch(cause){setUnlockPassword("");
+   setUnlockError(cause instanceof Error?cause.message:"Não foi possível validar a senha.");
+  }finally{setBusy(false);}
+ }
  async function closeMonth(){
   if(busy||!canClose)return;
   setBusy(true);setError("");
@@ -112,7 +136,7 @@ export default function MonthlyClosing(){
    if(!response.ok)throw Error(result.error||"Não foi possível encerrar a competência.");
    await Promise.all([reloadOptions(),loadPreview(entity,month)]);
    setShowCloseDialog(false);setNotes("");
-   setNotice("Competência fechada. O retrato histórico é imutável.");
+   setNotice("Competência bloqueada. Só a senha do Gerente Geral permite desbloqueá-la.");
   }catch(cause){setError(cause instanceof Error?cause.message:"Erro ao fechar competência.");}
   finally{setBusy(false);}
  }
@@ -121,8 +145,16 @@ export default function MonthlyClosing(){
    <div><h1>Fechamento mensal por PJ/PF</h1>
     <p>Selecione a entidade recebedora e a competência. Produção, NFs, caixa e glosas usam datas diferentes e não duplicam recebimentos.</p>
    </div>
-   <button type="button" className="billing-secondary" disabled={!valid}
-     onClick={()=>window.print()}>Imprimir / Salvar em PDF</button>
+   <button type="button" className="billing-icon-action" disabled={!valid}
+     aria-label="Imprimir / gerar PDF do fechamento"
+     title="Imprimir / gerar PDF em nova guia"
+     onClick={()=>{
+      if(!valid)return;
+      const params=new URLSearchParams({entity_id:entity,month,
+       view:preview?.closed&&!showCurrent?"closed":"current"});
+      window.open("/api/reports/monthly-closing?"+params.toString(),
+       "_blank","noopener,noreferrer");
+     }}><PrintIcon/></button>
   </header>
   <div className="monthly-filters no-print">
    <label>Entidade recebedora
@@ -152,10 +184,10 @@ export default function MonthlyClosing(){
     </div>
    </div>
    {preview?.closed&&<div className="monthly-history-alert no-print">
-    <strong>Competência já fechada.</strong>
+    <strong>Competência bloqueada.</strong>
     {preview.closing?.changed_since_close?
-      " Os dados atuais diferem do retrato fechado. O fechamento original será preservado.":
-      " O retrato está consistente com os dados atuais."}
+      " Existem lançamentos posteriores que diferem do fechamento. O histórico está preservado.":
+      " O fechamento está protegido; operações financeiras retroativas continuam permitidas."}
     <div className="monthly-view-actions">
      <button type="button" className="billing-secondary" onClick={()=>setShowCurrent(false)}
       aria-pressed={!showCurrent}>Ver fechamento original</button>
@@ -252,9 +284,14 @@ export default function MonthlyClosing(){
      Glosas recuperadas não representam nova entrada de caixa. Este fechamento é uma fotografia financeira da competência, não um demonstrativo contábil/fiscal oficial.
    </p>
    <div className="monthly-closing-actions no-print">
-    <button type="button" className="billing-primary" disabled={!canClose||busy}
-     onClick={()=>setShowCloseDialog(true)}>Fechar competência</button>
-    {preview?.closed?<span>Fechamento concluído — não pode ser substituído.</span>:
+    {preview?.closed?
+      <button type="button" className="billing-secondary" disabled={busy}
+       onClick={()=>{setUnlockError("");setUnlockPassword("");setUnlockReason("");setShowUnlockDialog(true);}}>
+       Desbloquear mês com senha do Gerente Geral
+      </button>:
+      <button type="button" className="billing-primary" disabled={!canClose||busy}
+       onClick={()=>setShowCloseDialog(true)}>{preview?.unlocked?"Bloquear mês novamente":"Fechar e bloquear mês"}</button>}
+    {preview?.closed?<span>Competência bloqueada para alterações no fechamento.</span>:
      month>=nowMonth?<span>Competência atual ou futura: disponível somente para prévia.</span>:
       data.issued_invoices.without_net_amount>0||data.cash.insurance_paid_invoices_without_net>0?
        <span>Corrija as NFs sem valor líquido antes de fechar.</span>:null}
@@ -262,6 +299,7 @@ export default function MonthlyClosing(){
   </>}
   <section className="monthly-panel monthly-history no-print">
    <h3>Histórico de fechamentos desta entidade</h3>
+   {preview?.history?.length?<p>Esta competência tem {preview.history.length} registro(s) de bloqueio e desbloqueio, preservados para auditoria.</p>:null}
    {!priorHistory.length?<p>Nenhuma competência encerrada para esta PJ/PF.</p>:
     <div className="monthly-history-list">
      {priorHistory.map(h=><button type="button" className="billing-secondary" key={h.id}
@@ -270,18 +308,47 @@ export default function MonthlyClosing(){
      </button>)}
     </div>}
   </section>
+  {showUnlockDialog&&valid&&preview?.closed&&<AppDialog
+    label="Desbloquear competência com senha do Gerente Geral" busy={busy}
+    onClose={()=>{setShowUnlockDialog(false);setUnlockPassword("");setUnlockError("");}}>
+    <h2>Desbloquear {month}</h2>
+    <p><strong>{selectedEntity?.trade_name||selectedEntity?.name}</strong></p>
+    <p>Desbloquear permite revisar e bloquear novamente o fechamento. As versões anteriores continuam registradas.
+       Isso não altera nem impede pagamentos e glosas retroativos.</p>
+    <form onSubmit={event=>{event.preventDefault();void unlockMonth();}}>
+     <label>Senha atual do Gerente Geral
+      <input type="password" autoComplete="current-password" required minLength={8} maxLength={128}
+       value={unlockPassword} onChange={e=>setUnlockPassword(e.target.value)}/>
+     </label>
+     <label>Motivo do desbloqueio
+      <textarea required minLength={5} maxLength={2000}
+       value={unlockReason} onChange={e=>setUnlockReason(e.target.value)}
+       placeholder="Ex.: conferir lançamentos retroativos"/>
+     </label>
+     {unlockError&&<p role="alert" className="billing-error">{unlockError}</p>}
+     <div className="billing-modal-actions">
+      <button type="button" className="billing-secondary" disabled={busy}
+       onClick={()=>{setShowUnlockDialog(false);setUnlockPassword("");setUnlockError("");}}>Cancelar</button>
+      <button type="submit" className="billing-primary"
+       disabled={busy||unlockPassword.length<8||unlockReason.trim().length<5}>
+       {busy?"Validando senha…":"Validar senha e desbloquear"}
+      </button>
+     </div>
+    </form>
+   </AppDialog>}
   {showCloseDialog&&valid&&<AppDialog label="Confirmar fechamento mensal" busy={busy}
    onClose={()=>setShowCloseDialog(false)}>
-   <h2>Confirmar fechamento de {month}</h2>
+   <h2>Confirmar bloqueio de {month}</h2>
    <p><strong>{selectedEntity?.trade_name||selectedEntity?.name}</strong></p>
-   <p>Esta operação cria um retrato histórico imutável. Atualizações financeiras posteriores serão identificadas como divergências, sem reescrever este fechamento.</p>
+   <p>O fechamento ficará bloqueado. Para desbloqueá-lo será necessária a senha do Gerente Geral.
+     O histórico anterior continuará preservado. Pagamentos, NFs e glosas retroativos não são bloqueados.</p>
    <label>Observações (opcional)
     <textarea value={notes} maxLength={2000} onChange={e=>setNotes(e.target.value)}/>
    </label>
    <div className="billing-modal-actions">
     <button type="button" className="billing-secondary" disabled={busy} onClick={()=>setShowCloseDialog(false)}>Cancelar</button>
     <button type="button" className="billing-primary" disabled={busy} onClick={()=>void closeMonth()}>
-     {busy?"Fechando…":"Confirmar fechamento"}</button>
+     {busy?"Bloqueando…":"Confirmar bloqueio"}</button>
    </div>
   </AppDialog>}
  </section>;
