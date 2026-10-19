@@ -14,7 +14,7 @@ test("compara Particular com uma barra para cada convênio, somente pagamentos c
   {billing_method:"CONVENIO",payer_name:"Convênio legado",payment_status:"PAGO",received_amount:20},
  ]);
  assert.deepEqual(result.groups.map(g=>[g.label,g.receivedCents]),[
-  ["Particular",10000],["Unimed",15000],["IPE",8000]
+  ["Particular",10000],["Unimed",15000],["IPE",8000],["Convênio legado",2000]
  ]);
  assert.equal(result.totalCents,33000);
 });
