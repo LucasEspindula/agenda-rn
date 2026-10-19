@@ -11,8 +11,9 @@ type Entity={id:string;name:string;trade_name:string|null;tax_id:string;person_t
 type History={id:string;billing_entity_id:string;competence_month:string;closed_at:string;closed_by:number;notes:string|null};
 type Professional={professional_id:string;professional_name:string;charges:number;attendances:number;
  private_charges:number;insurance_charges:number;pending_charges_now:number;attributed_invoice_items:number};
-type Invoice={id:string;invoice_number:string;payer:string;issue_date:string;paid_at:string|null;
- recipient_type:string;total_amount:number|null;net_amount:number|null};
+type Invoice={id:string;invoice_number:string;payer:string|null;issue_date:string|null;paid_at:string|null;
+ recipient_type:string;total_amount:number|null;net_amount:number|null;
+ status?:"ACTIVE"|"CANCELLED"|"REPLACED"};
 type DirectPayment={id:string;attendance_id:string;professional_id:string;professional_name:string;
  paid_at:string;received_amount:number|null;billing_method:string};
 type Expense={id:string;description:string;category:string;competence_date:string;paid_at:string|null;
@@ -237,15 +238,19 @@ export default function MonthlyClosing(){
     </details>
    </section>
    <section className="monthly-panel">
-    <h3>Relação de NFs — emissão ou recebimento no mês</h3>
-    <p className="monthly-explanation">O total emitido considera a data de emissão; o caixa considera a data do recebimento. Uma NF com vários pacientes aparece somente uma vez.</p>
+    <h3>Relação de NFs — emissão, pagamento ou cancelamento no mês</h3>
+    <p className="monthly-explanation">A relação inclui NFs ativas, canceladas e substituídas. Somente as ativas entram nos totais financeiros.</p>
     <div className="monthly-scroll"><table className="billing-table">
      <thead><tr><th>NF</th><th>Pagador / tomador</th><th>Emissão</th><th>Pagamento</th>
-       <th>Bruto</th><th>Líquido</th><th>Tipo</th></tr></thead>
-     <tbody>{data.invoices.map(i=><tr key={i.id}>
-      <td>{i.invoice_number}</td><td>{i.payer}</td><td>{date(i.issue_date)}</td><td>{date(i.paid_at)}</td>
-      <td>{cash(i.total_amount)}</td><td>{i.net_amount==null?"Não informado":cash(i.net_amount)}</td>
-      <td>{i.recipient_type}</td></tr>)}</tbody></table></div>
+       <th>Bruto</th><th>Líquido</th><th>Tipo</th><th>Status</th></tr></thead>
+     <tbody>{[...data.invoices].sort((a,b)=>a.invoice_number.localeCompare(b.invoice_number,"pt-BR",{numeric:true})||
+       String(a.issue_date||"").localeCompare(String(b.issue_date||""))).map(i=><tr key={i.id}>
+      <td>{i.invoice_number}</td><td>{i.payer||"—"}</td><td>{date(i.issue_date)}</td><td>{date(i.paid_at)}</td>
+      <td>{i.total_amount==null?"Não informado":cash(i.total_amount)}</td>
+      <td>{i.net_amount==null?"Não informado":cash(i.net_amount)}</td>
+      <td>{i.recipient_type}</td>
+      <td>{i.status==="CANCELLED"?"Cancelada":i.status==="REPLACED"?"Substituída":"Ativa"}</td>
+     </tr>)}</tbody></table></div>
     {!data.invoices.length&&<p>Nenhuma NF emitida ou recebida nesta competência.</p>}
    </section>
    <section className="monthly-panel">
