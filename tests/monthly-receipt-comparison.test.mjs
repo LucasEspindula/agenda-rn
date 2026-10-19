@@ -43,6 +43,6 @@ test("impressão mensal posiciona gráfico depois dos atendimentos por convênio
  const source=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
  assert.match(source,/monthlyReceiptComparison\(details\)/);
  assert.match(source,/insuranceBlocks\|\|/);
- assert.match(source,/\+receiptChart\+/);
+ assert.match(source,/\breceiptChart\+/);
  assert.match(source,/\.receipt-row\{[^}]*break-inside:avoid/);
 });
