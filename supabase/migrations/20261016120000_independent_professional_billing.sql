@@ -125,6 +125,9 @@ set professional_id = coalesce(b.professional_id,a.doctor_id),
     )
 from public.attendances a
 where a.id=b.attendance_id;
+  -- Fire deferred fiscal integrity checks now, before changing trigger state.
+  -- ALTER TABLE ENABLE TRIGGER refuses a table with pending trigger events.
+  set constraints all immediate;
   if exists(select 1 from pg_trigger where tgrelid='public.billing_records'::regclass and tgname='financial_log_change' and not tgisinternal) then
     alter table public.billing_records enable trigger financial_log_change;
   end if;
