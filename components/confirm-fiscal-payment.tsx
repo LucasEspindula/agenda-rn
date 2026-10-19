@@ -8,11 +8,11 @@ import {formatBRL} from '@/lib/money';
 import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
 export type FiscalRecipient={taker_kind:'PATIENT'|'OTHER';taker_name:string;taker_tax_id:string;taker_address:string;notes:string;payment_parts?:PaymentPart[];no_invoice?:boolean};
 export type FiscalPatient={id:string;name:string;cpf?:string;address?:string};
-type Context={patient:FiscalPatient;amount:number|null;paidAt:string};
+type Context={patient:FiscalPatient;amount:number|null;paidAt:string;noInvoice?:boolean};
 export function patientRecipient(patient:FiscalPatient):FiscalRecipient{return {taker_kind:'PATIENT',taker_name:patient.name,taker_tax_id:patient.cpf||'',taker_address:patient.address||'',notes:''};}
 function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipient|null)=>void}){
  const [parts,setParts]=useState<PaymentPart[]>([]);
- const [noInvoice,setNoInvoice]=useState(false);
+ const [noInvoice,setNoInvoice]=useState(!!context.noInvoice);
  const [value,setValue]=useState<FiscalRecipient>(()=>patientRecipient(context.patient));const [error,setError]=useState('');
  const set=(key:keyof FiscalRecipient,text:string)=>setValue(v=>({...v,[key]:text}));
  return <AppDialog label="Confirmar pagamento e solicitar NF" onClose={()=>done(null)}><form className="fiscal-confirmation" onSubmit={e=>{e.preventDefault();if(!noInvoice&&(!value.taker_name.trim()||!validCPF(value.taker_tax_id))){setError('Informe o nome e um CPF válido do tomador.');return;}if(!noInvoice&&value.taker_kind==='PATIENT'&&context.patient.cpf&&normalizeCPF(context.patient.cpf)!==normalizeCPF(value.taker_tax_id)){setError('CPF diferente do cadastro. Corrija o paciente ou selecione Outra pessoa.');return;}if(!validPaymentParts(parts,context.amount??0)){setError('As formas de pagamento devem somar o valor recebido.');return;}done({...value,payment_parts:parts,no_invoice:noInvoice,taker_name:value.taker_name.trim(),taker_tax_id:noInvoice?'':normalizeCPF(value.taker_tax_id)});}}>
