@@ -419,8 +419,7 @@ begin
       'Valores não identificados são destacados e não estimados.')
  );
 end;
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION public.finish_private_payment(p_actor bigint, p_id uuid, p_data jsonb)
  RETURNS void
@@ -476,5 +475,4 @@ begin
  end if;
  insert into public.invoice_requests(attendance_id,billing_record_id,billing_entity_id,taker_kind,taker_name,taker_tax_id,taker_address,notes,received_amount_snapshot,paid_at_snapshot,patient_id,patient_name_snapshot,doctor_id,doctor_name_snapshot,attendance_date_snapshot,procedure_snapshot,entity_name_snapshot,entity_tax_id_snapshot)
  select a.id,b.id,b.billing_entity_id,f->>'taker_kind',trim(f->>'taker_name'),cpf,nullif(trim(f->>'taker_address'),''),nullif(trim(f->>'notes'),''),b.received_amount,b.paid_at,a.patient_id,patient->>'name',a.doctor_id,d.name,a.date,a.procedure,e.name,e.tax_id from public.billing_entities e cross join public.doctors d where e.id=b.billing_entity_id and d.id=a.doctor_id;
-end;$function$
-
+end;$function$;
