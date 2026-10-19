@@ -694,6 +694,9 @@ function paintNativeFinance(){
  const fiscalPending=(f.data?.requests||[]).some(r=>r.attendance_id===f.id&&r.status==='PENDING');
  if(fiscalPending&&nativeMethod()==='PARTICULAR')root.insertAdjacentHTML('beforeend',
   '<p class="native-finance-hint">A solicitação da NF já está pendente. Para emitir a nota, acesse Faturamento → Notas Fiscais → Solicitações. Desvincular/desfazer uma NF não cancela essa solicitação. Para mudar valor, data ou tomador, reverta o pagamento de forma auditada antes de confirmar novamente.</p>');
+ if(f.row?.record?.payment_status==='PAGO'&&f.row?.status_atendimento!=='realized')
+  root.insertAdjacentHTML('beforeend',
+  '<p class="native-finance-hint">Pagamento registrado, porém o atendimento ainda não está marcado como Realizado na Agenda. O recebimento entra no caixa, mas a produção realizada só será contabilizada após a confirmação clínica.</p>');
  if($("nativeEntity"))$("nativeEntity").value=f.draft.billing_entity_id||'';
  $("nativeAmount").value=f.draft.received_amount??'';$("nativeStatus").value=f.draft.payment_status||'PENDENTE';$("nativePaidAt").value=f.draft.paid_at||'';
  $("nativeAmount").oninput=e=>{e.target.setCustomValidity('');captureNativeFinance()};
