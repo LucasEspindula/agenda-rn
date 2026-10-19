@@ -251,3 +251,8 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
  .rn-hub .billing-subnav .billing-subnav-fixed{gap:0;padding-left:5px}
  .rn-hub .billing-subnav .billing-subnav-fixed>a{font-size:11px;padding:8px 6px}
 }
+
+/* Evidência de autorização: operador e gerente visíveis, sem exibir credenciais. */
+.billing-log-approval{margin:11px 0 9px;padding:10px 13px;border:1px solid #dfe8ed;
+ border-radius:8px;background:#f5f8fa;color:#456174;font-size:12px;line-height:1.55}
+.billing-log-approval strong{color:#184357;font-weight:700}
