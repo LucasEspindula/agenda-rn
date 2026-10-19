@@ -380,7 +380,7 @@ export async function GET(request:Request){
    (!snap.attendance_overview?'<p class="attendance-note">Fechamento anterior à inclusão '+
     'do histórico de cancelamentos. A posição atual não foi usada para alterar o histórico.</p>':"")+
    '<div class="footer"><span>RN Integra · Relação de atendimentos</span><span>'+
-   esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+'</span></div>',true);
+   esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+'</span></div>');
   const nonce=randomBytes(16).toString("base64");
   const js="const b=document.getElementById('print');if(b)b.addEventListener('click',()=>window.print());"+
    "window.addEventListener('load',()=>setTimeout(()=>window.print(),350));";
