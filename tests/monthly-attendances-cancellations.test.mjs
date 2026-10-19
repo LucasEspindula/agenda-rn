@@ -48,3 +48,23 @@ test("PDF alternativo e fechamentos antigos respeitam a origem do snapshot",()=>
  assert.match(print,/const legacyOverview=/);
  assert.match(ui,/registros já fechados não são recalculados/);
 });
+
+test("impressão abre com atendimentos e força nova página antes da divisão das NFs",()=>{
+ const first=print.slice(print.indexOf('const attendancePage=page('),print.indexOf('const nonce='));
+ const fiscal=print.slice(print.indexOf('const partnerInvoicePage=page('),print.indexOf('const validCols='));
+ assert.match(first,/heading\("Relatório de Fechamento Mensal"/);
+ assert.match(first,/<h2>Atendimentos da competência<\/h2>/);
+ assert.match(first,/ATENDIMENTOS REALIZADOS/);
+ assert.match(first,/ATENDIMENTOS CANCELADOS/);
+ assert.match(first,/PAGOS SEM REALIZAÇÃO CONFIRMADA/);
+ assert.match(first, /<\/span><\/div>'\);/);
+ assert.doesNotMatch(first, /<\/span><\/div>',true\);/);
+ assert.match(fiscal,/heading\("Divisão das Notas Fiscais por Sócio \/ Médico"/);
+ assert.match(fiscal,/summary\+allocation\+doctorTables/);
+ assert.match(fiscal,/<\/span><\/div>",true\);/);
+ assert.match(print,/attendancePage\+partnerInvoicePage\+validInvoicePage\+fiscalEventsPage\+insurancePage/);
+ assert.match(print,/Relatório de Fechamento Mensal<\/title>/);
+ assert.match(print,/\.page-break\{break-before:page/);
+ assert.match(print,/receiptChartSvg\(comparison\.groups\)/);
+ assert.doesNotMatch(print,/Relatório mensal de Notas Fiscais/);
+});
