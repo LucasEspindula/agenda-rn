@@ -1,0 +1,40 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const read=path=>readFileSync(path,"utf8");
+const sql=read("supabase/migrations/20261019235000_cash_paid_nonrealized_and_invoice_request_idempotence.sql");
+const closing=read("app/billing/monthly-closing.tsx");
+const html=read("app/api/reports/monthly-closing/print/route.ts");
+const pdf=read("app/api/reports/monthly-closing/route.ts");
+const agenda=read("public/legacy-app.js");
+test("receita em caixa não depende de status realizado, mas a produção continua dependendo",()=>{
+ assert.match(sql,/where b\.billing_entity_id=p_entity and a\.status='realized'/);
+ const cash=sql.slice(sql.indexOf("-- Fluxo de caixa:"),sql.indexOf("-- Despesas por COMPETÊNCIA"));
+ assert.doesNotMatch(cash,/and a\.status='realized'/);
+ assert.equal((cash.match(/a\.status<>'cancelled'/g)||[]).length,2);
+ assert.match(cash,/b\.settlement_mode='DIRECT' and b\.payment_status='PAGO'/);
+ assert.match(cash,/b\.paid_at>=first_day and b\.paid_at<last_day/);
+ assert.match(sql,/'paid_unrealized',paid_unrealized/);
+ assert.match(sql,/a\.status not in \('realized','cancelled'\)/);
+});
+test("solicitação fiscal é idempotente e dados divergentes exigem reversão auditada",()=>{
+ assert.equal((sql.match(/CREATE OR REPLACE FUNCTION/g)||[]).length,2);
+ assert.match(sql,/select \* into r from public\.invoice_requests\s+where billing_record_id=p_id and status in \('PENDING','ISSUED'\) for update/);
+ assert.match(sql,/r\.status='PENDING' and r\.billing_entity_id=b\.billing_entity_id/);
+ assert.match(sql,/r\.received_amount_snapshot is not distinct from b\.received_amount/);
+ assert.match(sql,/r\.paid_at_snapshot is not distinct from b\.paid_at/);
+ assert.match(sql,/then return; end if;/);
+ assert.match(sql,/reverta o pagamento de forma auditada/);
+ assert.doesNotMatch(sql,/(?:delete from|truncate) public\.invoice_requests/i);
+});
+test("tela, impressão e PDF distinguem recebido de realizado e mantêm gráfico",()=>{
+ assert.match(closing,/data\.paid_unrealized\.map/);
+ assert.match(closing,/não são contabilizados como atendimentos realizados/);
+ assert.match(html,/PAGOS SEM REALIZAÇÃO CONFIRMADA/);
+ assert.match(html,/monthlyReceiptComparison\(\[\.\.\.details,\.\.\.extraPaid\]\)/);
+ assert.match(pdf,/snap\.paid_unrealized\?\.length/);
+ assert.match(html,/receiptChartSvg/);
+ assert.match(agenda,/A solicitação da NF já está pendente/);
+ assert.match(agenda,/pendingRequest&&payload\.payment_status==='PAGO'/);
+ assert.match(agenda,/Faturamento → Notas Fiscais → Solicitações/);
+});
