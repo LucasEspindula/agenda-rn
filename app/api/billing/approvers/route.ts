@@ -8,6 +8,6 @@ export async function GET(){
  const {data,error}=await getSupabaseAdmin().from("users").select("id,name,role")
   .eq("role","general_manager").order("name");
  if(error)return Response.json({error:"Não foi possível consultar os responsáveis."},{status:503});
- return Response.json({managers:(data||[]).map(({id,name})=>({id,name}))},{
+ return Response.json({managers:(data||[]).map((row:{id:number;name:string})=>({id:row.id,name:row.name}))},{
   headers:{"Cache-Control":"private, no-store"}});
 }
