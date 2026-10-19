@@ -285,7 +285,14 @@ begin
  into professional_invoice_rows from (
   select distinct on (linked.professional_id,linked.invoice_id)
     linked.professional_id,coalesce(d.name,'Profissional histórico') professional_name,
-    linked.invoice_id, inv.invoice_number
+    linked.invoice_id, inv.invoice_number,
+    (select sum(items.received_amount)
+      from public.invoice_billing_records items
+      join public.billing_records bill on bill.id=items.billing_record_id
+      join public.attendances act on act.id=bill.attendance_id
+      where items.invoice_id=linked.invoice_id and items.is_active
+        and coalesce(bill.professional_id,act.doctor_id)=linked.professional_id
+    ) as attributed_amount
   from (
    select coalesce(b.professional_id,a.doctor_id) professional_id,ib.invoice_id
    from public.invoice_billing_records ib
