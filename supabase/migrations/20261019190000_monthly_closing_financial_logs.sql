@@ -82,3 +82,32 @@ join public.financial_logs fl on fl.kind='monthly_closing'
  and fl.created_at=o.closed_at
 where not exists(select 1 from public.financial_log_changes c
  where c.log_id=fl.id and c.record_type='billing_monthly_closing');
+
+
+-- Eventos históricos de desbloqueio/rebloqueio também entram na linha do tempo.
+insert into public.financial_logs(id,actor_id,actor_name,actor_email,kind,record_id,created_at)
+select gen_random_uuid(),ev.actor_id,coalesce(nullif(u.name,''),u.email),u.email,
+ case when ev.event_type='UNLOCKED' then 'monthly_unlock' else 'monthly_closing' end,
+ ev.billing_entity_id::text||':'||ev.competence_month::text,ev.created_at
+from public.billing_monthly_closing_events ev
+join public.users u on u.id=ev.actor_id
+where not exists (
+ select 1 from public.financial_logs fl
+ where fl.kind=case when ev.event_type='UNLOCKED' then 'monthly_unlock' else 'monthly_closing' end
+   and fl.created_at=ev.created_at
+   and fl.record_id=ev.billing_entity_id::text||':'||ev.competence_month::text
+);
+insert into public.financial_log_changes(log_id,record_type,record_id,action,before_data,after_data)
+select fl.id,'billing_monthly_closing',fl.record_id,'INSERT',null,
+ jsonb_build_object('event_type',ev.event_type,
+  'billing_entity_id',ev.billing_entity_id,
+  'entity_name',coalesce(nullif(e.trade_name,''),e.name),
+  'competence_month',ev.competence_month,'notes',ev.notes,'event_id',ev.id)
+from public.billing_monthly_closing_events ev
+join public.billing_entities e on e.id=ev.billing_entity_id
+join public.financial_logs fl
+ on fl.kind=case when ev.event_type='UNLOCKED' then 'monthly_unlock' else 'monthly_closing' end
+ and fl.record_id=ev.billing_entity_id::text||':'||ev.competence_month::text
+ and fl.created_at=ev.created_at
+where not exists(select 1 from public.financial_log_changes c
+ where c.log_id=fl.id and c.record_type='billing_monthly_closing');
