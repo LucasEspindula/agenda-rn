@@ -481,6 +481,7 @@ export default function BillingClient({
       invoice_number: r.record?.invoice_number || "",
       paid_at: r.record?.paid_at || "",
       notes: r.record?.notes || "",
+      no_invoice:!!r.record?.no_invoice,
     });
   }
   function editInvoice(i?: Invoice) {
@@ -608,6 +609,7 @@ export default function BillingClient({
         editing === "record" &&
         draft.billing_method === "PARTICULAR" &&
         draft.payment_status === "PAGO" &&
+        !draft.no_invoice &&
         !draft.invoice_number &&
         !(data.requests || []).some(
           (r) =>
@@ -630,13 +632,14 @@ export default function BillingClient({
         {
           ...draft,
           ...(fiscal
-            ? { fiscal, payment_parts: fiscal.payment_parts }
+            ? { ...(fiscal.no_invoice?{}:{fiscal}), no_invoice:!!fiscal.no_invoice, payment_parts: fiscal.payment_parts }
             : editing === "record" &&
                 draft.billing_method === "PARTICULAR" &&
                 draft.payment_status === "PAGO" &&
                 parts.length
               ? { payment_parts: parts }
               : {}),
+          no_invoice:!!(fiscal?.no_invoice||draft.no_invoice),
           ...Object.fromEntries(
             ["received_amount", "total_amount", "net_amount"]
               .filter((key) => key in draft)
