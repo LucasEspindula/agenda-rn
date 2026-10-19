@@ -122,7 +122,7 @@ export default function ProfessionalChargeDialog({source,edit,data,onClose,onSav
       <label>Número da NF (se já emitida)<input value={draft.invoice_number} onChange={e=>set("invoice_number",e.target.value)}/></label>}
     </>}
    </div>
-   {direct&&paid&&!(draft.billing_method==="PARTICULAR"&&!draft.invoice_number.trim()&&!(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED"))&&<PaymentParts value={parts} onChange={setParts} amount={safeAmount()}/>}
+   {direct&&paid&&!(draft.billing_method==="PARTICULAR"&&!draft.no_invoice&&!draft.invoice_number.trim()&&!(data.requests||[]).some(r=>r.billing_record_id===existing?.id&&r.status!=="CANCELLED"))&&<PaymentParts value={parts} onChange={setParts} amount={safeAmount()}/>}
    {direct&&draft.billing_method==="CONVENIO"&&<p className="billing-historical-note">Convênio com recebimento direto: a quitação ficará pendente até configurarmos o fluxo fiscal do repasse. Não marque como pago nesta tela.</p>}
    {direct&&paid&&draft.billing_method==="PARTICULAR"&&
     <label className="fiscal-radio"><input type="checkbox"
