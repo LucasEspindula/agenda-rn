@@ -1,6 +1,8 @@
 import {getSession} from "@/app/authz";
 import {getSupabaseAdmin} from "@/lib/supabase-admin";
 import {secureMutation,readJson,HttpError} from "@/lib/security/http";
+import {verifyPassword} from "@/app/passwords";
+import {consumeLimit} from "@/lib/security/rate-limit";
 
 export const dynamic="force-dynamic";
 const enabled=()=>process.env.RN_MONTHLY_CLOSING_ENABLED==="true";
@@ -53,17 +55,42 @@ export const POST=secureMutation(async request=>{
  if(!enabled())throw new HttpError(404,"Fechamento mensal ainda não homologado.");
  const session=await authorize();
  const input=await readJson(request);
- if(input.action!=="CLOSE"||typeof input.entity_id!=="string"||!uuid.test(input.entity_id)||
-    typeof input.month!=="string"||!month.test(input.month)||
-    (input.notes!=null&&(typeof input.notes!=="string"||input.notes.length>2000)))
-   throw new HttpError(400,"Informe entidade, competência e observação válida.");
- const {data,error}=await getSupabaseAdmin().rpc("close_billing_month",{
+ if(!["CLOSE","UNLOCK"].includes(input.action)||
+    typeof input.entity_id!=="string"||!uuid.test(input.entity_id)||
+    typeof input.month!=="string"||!month.test(input.month))
+   throw new HttpError(400,"Informe entidade e competência válidas.");
+ const db=getSupabaseAdmin();
+ if(input.action==="UNLOCK"){
+   if(typeof input.password!=="string"||input.password.length<8||input.password.length>128||
+      typeof input.reason!=="string"||input.reason.trim().length<5||
+      input.reason.length>2000)
+     throw new HttpError(400,"Informe a senha do gerente e uma justificativa de desbloqueio.");
+   await consumeLimit("monthly-closing-unlock",String(session.account.id),8,900);
+   const {data:account,error:accountError}=await db.from("users")
+     .select("role,password_hash,password_salt").eq("id",session.account.id).maybeSingle();
+   if(accountError||!account||account.role!=="general_manager")throw new HttpError(403,"Acesso não autorizado.");
+   if(!account.password_hash||!account.password_salt||
+     !await verifyPassword(input.password,account.password_hash,account.password_salt))
+      throw new HttpError(401,"Senha do Gerente Geral incorreta.");
+   const {data,error}=await db.rpc("unlock_billing_month",{
+     p_actor:session.account.id,p_entity:input.entity_id,
+     p_month:input.month,p_reason:input.reason.trim()
+   });
+   if(error){
+     if(error.code==="P0001"||error.code==="23505")throw new HttpError(409,error.message);
+     throw new HttpError(503,"Não foi possível desbloquear a competência.");
+   }
+   return Response.json({id:data,unlocked:true});
+ }
+ if(input.notes!=null&&(typeof input.notes!=="string"||input.notes.length>2000))
+   throw new HttpError(400,"Observação de fechamento inválida.");
+ const {data,error}=await db.rpc("close_billing_month",{
    p_actor:session.account.id,p_entity:input.entity_id,p_month:input.month,
    p_notes:input.notes||null
  });
  if(error){
   if(error.code==="P0001"||error.code==="23505")throw new HttpError(409,error.message);
-  throw new HttpError(503,"Não foi possível concluir o fechamento.");
+  throw new HttpError(503,"Não foi possível bloquear a competência.");
  }
- return Response.json({id:data});
+ return Response.json({id:data,closed:true});
 });
