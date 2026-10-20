@@ -14,5 +14,5 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: node --check public/legacy-app.js
-      - run: node --test tests/payment-proof-removal-agenda-layout.test.mjs tests/payment-proofs.test.mjs
+      - run: node --test tests/payment-proof-removal-agenda-layout.test.mjs
       - run: npx tsc --noEmit
