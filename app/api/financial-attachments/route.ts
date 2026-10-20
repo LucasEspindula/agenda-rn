@@ -122,6 +122,19 @@ export const DELETE=secureMutation(async request=>{
  const session=await getSession();if(!session||session.account.role==='doctor')throw new HttpError(403,'Acesso negado.');
  const id=new URL(request.url).searchParams.get('id');if(!id||!validId(id))throw new HttpError(400,'Comprovante inválido.');
  const attachment=await attachmentFor(id);if(!attachment)throw new HttpError(404,'Comprovante não disponível.');
- await rejectPending(session,attachment);
+ if(attachment.status==='PENDING'){
+  await rejectPending(session,attachment);
+  return Response.json({ok:true});
+ }
+ if(attachment.status!=='READY'||!attachment.is_current||attachment.deactivated_at)
+  throw new HttpError(409,'Este comprovante já foi removido ou substituído.');
+ if(!(await permitted(session,attachment.invoice_id,attachment.billing_record_id)))
+  throw new HttpError(403,'Sem permissão para excluir este comprovante.');
+ await consumeLimit('payment-proof-remove',String(session.account.id),25,3600);
+ const {error}=await getSupabaseAdmin().rpc('remove_financial_attachment',{
+  p_actor:session.account.id,p_id:id
+ });
+ if(error)throw new HttpError(error.code==='P0001'?409:503,
+  error.message||'Não foi possível excluir o comprovante.');
  return Response.json({ok:true});
 });
