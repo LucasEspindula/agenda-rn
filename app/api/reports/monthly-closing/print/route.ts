@@ -36,6 +36,18 @@ type Snapshot={entity:{name:string;trade_name:string|null;tax_id:string|null};
  professionals:Doctor[];professional_attendances?:Attendance[];
  attendance_overview?:MonthlyAttendance[];
  paid_unrealized?:PaidUnrealized[];
+ cash?:{direct_received:number;insurance_invoice_received:number;insurance_paid_invoices_without_net?:number};
+ expenses?:{competence_total:number;paid_total:number};
+ expense_items?:Array<{id:string;description:string;category:string;competence_date:string;
+   paid_at:string|null;amount:number;status:string}>;
+ direct_payments?:Array<{id:string;professional_name:string;paid_at:string;
+   received_amount:number|null;billing_method:string}>;
+ denials?:{denied_in_month:number;recovered_in_month:number;loss_on_cases_opened_in_month_now:number};
+ denial_items?:Array<{id:string;denied_on:string;denial_kind:string;reason:string;
+   denied_amount:number;recovered_amount:number;status:string}>;
+ pending_now?:{unpaid_invoice_count:number;unpaid_invoice_net:number;unpaid_invoice_unknown_net:number};
+ production?:{attendances:number;charges:number;pending_charges_now:number;unpriced_charges:number};
+ notices?:string[];
  professional_invoice_rows?:Link[];invoices:Inv[]};
 const heading=(title:string,company:string,month:string,extra:string)=>
  '<div class="head"><div><div class="brand">RN INTEGRA</div><h1>'+esc(title)+
@@ -386,6 +398,87 @@ export async function GET(request:Request){
     'do histórico de cancelamentos. A posição atual não foi usada para alterar o histórico.</p>':"")+
    '<div class="footer"><span>RN Integra · Relação de atendimentos</span><span>'+
    esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+'</span></div>');
+  // Esta seção utiliza as mesmas medidas financeiras e listas da tela do fechamento.
+  // Competência (data de referência) e fluxo de caixa (data de pagamento) não se confundem.
+  const expenseItems=[...(snap.expense_items||[])].sort((a,b)=>
+   a.competence_date.localeCompare(b.competence_date)||a.description.localeCompare(b.description,"pt-BR"));
+  const expenseRows=expenseItems.map(e=>row([
+   [e.description],[e.category||"—"],[date(e.competence_date)],[date(e.paid_at)],
+   [e.status],[amount(e.amount),"money"]
+  ])).join("");
+  const paymentItems=[...(snap.direct_payments||[])].sort((a,b)=>
+   String(a.paid_at||"").localeCompare(String(b.paid_at||""))||
+   a.professional_name.localeCompare(b.professional_name,"pt-BR"));
+  const paymentRows=paymentItems.map(p=>row([
+   [p.professional_name],[date(p.paid_at)],[p.billing_method],
+   [amount(p.received_amount),"money"]
+  ])).join("");
+  const denialItems=[...(snap.denial_items||[])].sort((a,b)=>
+   String(a.denied_on||"").localeCompare(String(b.denied_on||"")));
+  const denialRows=denialItems.map(g=>row([
+   [date(g.denied_on)],[g.denial_kind],[g.reason],
+   [amount(g.denied_amount),"money"],[amount(g.recovered_amount),"money"],[g.status]
+  ])).join("");
+  const directAmount=snap.cash?.direct_received??null;
+  const insuranceAmount=snap.cash?.insurance_invoice_received??null;
+  const expensePaid=snap.expenses?.paid_total??null;
+  const receiptTotal=directAmount===null||insuranceAmount===null?null:
+   (Math.round(Number(directAmount)*100)+Math.round(Number(insuranceAmount)*100))/100;
+  const cashResult=receiptTotal===null||expensePaid===null?null:
+   (Math.round(receiptTotal*100)-Math.round(Number(expensePaid)*100))/100;
+  const financialCards='<div class="summary">'+
+   card("Recebimentos individuais",amount(directAmount),"Pagos no mês · não duplicar NFs")+
+   card("Convênios recebidos",amount(insuranceAmount),"NFs pagas no mês · uma vez por NF")+
+   card("Entradas em caixa",amount(receiptTotal),"Pagamentos efetivamente recebidos")+
+   card("Despesas pagas",amount(expensePaid),"Data efetiva de pagamento")+
+   card("Resultado de caixa",amount(cashResult),"Entradas menos despesas pagas")+
+   card("Despesas da competência",amount(snap.expenses?.competence_total),"Data de competência · não somar novamente")+
+   '</div>';
+  const pending=snap.pending_now;
+  const denials=snap.denials;
+  const financeWarnings=[
+   ...(snap.notices||[]),
+   ...((snap.production?.unpriced_charges||0)>0?[
+    snap.production!.unpriced_charges+" cobrança(s) sem valor individual identificado."]:[]),
+   ...((snap.cash?.insurance_paid_invoices_without_net||0)>0?[
+    snap.cash!.insurance_paid_invoices_without_net+" NF(s) recebida(s) sem valor líquido."]:[]),
+   ...(!snap.expenses||!snap.expense_items||!snap.cash?[
+    "Alguns dados financeiros não constam neste snapshot histórico. Totais ausentes não foram assumidos como zero."]:[])
+  ];
+  const financeWarningsHtml=financeWarnings.length?
+   '<div class="section-head"><h2>Pontos a conferir</h2></div><ul class="finance-notices">'+
+   financeWarnings.map(w=>'<li>'+esc(w)+'</li>').join("")+'</ul>':"";
+  const financialPage=page(heading("Caixa, Despesas e Pendências",company,label,
+   "Consolidação financeira por entidade recebedora")+
+   '<div class="section-head"><h2>Resumo do caixa</h2><small>Recebimentos e despesas por data do pagamento</small></div>'+
+   financialCards+
+   '<p class="attendance-note">O total de despesas da competência pode incluir valores ainda não pagos. '+
+   'O resultado de caixa desconta apenas despesas efetivamente pagas no mês.</p>'+
+   '<div class="section-head"><h2>Despesas registradas ('+expenseItems.length+
+   ')</h2><small>Despesas da competência e despesas pagas no mês, sem duplicação</small></div>'+
+   (expenseItems.length?table(["Descrição","Categoria","Competência","Pago em","Status","Valor"],
+    expenseRows,[27,18,15,15,10,15]):
+    '<div class="empty">Nenhuma despesa vinculada a esta competência ou paga neste mês.</div>')+
+   '<div class="section-head"><h2>Recebimentos individuais ('+paymentItems.length+
+   ')</h2><small>Recebimentos diretos por data do pagamento</small></div>'+
+   (paymentItems.length?table(["Médico / profissional","Pago em","Cobrança","Valor recebido"],
+    paymentRows,[40,20,20,20]):
+    '<div class="empty">Nenhum recebimento individual neste mês.</div>')+
+   '<div class="section-head"><h2>Glosas e pendências</h2><small>Controle financeiro da competência</small></div>'+
+   '<div class="summary">'+
+   card("Glosado no mês",amount(denials?.denied_in_month),"Data de registro da glosa")+
+   card("Recuperado no mês",amount(denials?.recovered_in_month),"Informativo · não somado novamente ao caixa")+
+   card("Perda atual de casos do mês",amount(denials?.loss_on_cases_opened_in_month_now),"Posição atual dos casos")+
+   card("NFs pendentes",String(pending?.unpaid_invoice_count??"—"),
+    "Líquido pendente: "+amount(pending?.unpaid_invoice_net)+
+    " · sem líquido: "+String(pending?.unpaid_invoice_unknown_net??"—"))+
+   '</div>'+
+   (denialItems.length?table(["Data","Tipo","Motivo","Valor glosado","Recuperado","Status"],
+    denialRows,[12,15,30,16,14,13]):
+    '<div class="empty">Nenhuma glosa registrada na competência.</div>')+
+   financeWarningsHtml+
+   '<div class="footer"><span>RN Integra · Resumo financeiro, despesas e glosas</span>'+
+   '<span>Valores do snapshot da competência</span></div>',true);
   const nonce=randomBytes(16).toString("base64");
   const js="const b=document.getElementById('print');if(b)b.addEventListener('click',()=>window.print());"+
    "window.addEventListener('load',()=>setTimeout(()=>window.print(),350));";
@@ -397,7 +490,7 @@ export async function GET(request:Request){
    '</div><div class="print-toolbar"><span>RN Integra · '+
    esc(view==="closed"?"REGISTRO MENSAL":"PRÉVIA")+' · '+esc(label)+
    '</span><button type="button" id="print">Imprimir / Salvar PDF</button></div>'+
-   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+receiptChartPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
+   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+receiptChartPage+financialPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
   return new Response(html,{headers:{"Content-Type":"text/html; charset=utf-8",
    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
    "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+
