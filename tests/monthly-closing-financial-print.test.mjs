@@ -9,7 +9,7 @@ const sql=read("supabase/migrations/20261016230000_monthly_entity_closing.sql");
 test("impressão completa contém todos os blocos financeiros existentes na tela",()=>{
  for(const field of ["cash","expenses","expense_items","direct_payments","denials","denial_items","pending_now"])
   assert.match(print,new RegExp("snap\\."+field+"\\b"));
- for(const heading of ["Resumo do caixa","Despesas registradas","Recebimentos individuais",
+ for(const heading of ["Resumo do caixa","Despesas registradas","Divisão por sócio / médico",
                         "Glosas e pendências","Resultado de caixa","Despesas pagas",
                         "Despesas da competência","NFs pendentes"]){
   assert.ok(print.includes(heading),"Campo ausente na impressão: "+heading);
@@ -39,8 +39,8 @@ test("resultado de caixa desconta somente despesas pagas, sem incluir glosas nov
  assert.match(print,/não somado novamente ao caixa/);
 });
 test("a seção financeira sai na impressão Prévia e Registro Mensal e respeita página separada",()=>{
- assert.match(print,/const financialPage=page\(heading\("Caixa, Despesas e Pendências"/);
- assert.match(print,/receiptChartPage\+financialPage\+'<script nonce=/);
+ assert.match(print,/const combinedFinancePage=page\(heading\("Divisão por Sócio \/ Médico e Fechamento Financeiro"/);
+ assert.match(print,/combinedFinancePage\+receiptChartPage\+'<script nonce=/);
  assert.match(print,/Valores do snapshot da competência<\/span><\/div>',true\);/);
  assert.match(print,/const snap:Snapshot=\(view==="closed"\?data\.closing\.snapshot:data\.current\)/);
  assert.match(print,/view==="closed"\?"REGISTRO MENSAL":"PRÉVIA"/);

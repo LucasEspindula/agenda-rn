@@ -4,7 +4,7 @@ import {getSupabaseAdmin} from "@/lib/supabase-admin";
 import {monthlyInvoiceStatus} from "@/lib/monthly-invoice-status";
 import {monthlyReceiptComparison} from "@/lib/monthly-receipt-comparison";
 
-const CSS="\n:root{--ink:#172126;--muted:#66747b;--line:#dfe5e8;--brand:#0b7f79;--red:#b42318;--amber:#8a5b00;--warnbg:#fff8e8}\n*{box-sizing:border-box}body{margin:0;background:#edf1f3;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}\n.page{width:1480px;margin:22px auto;background:#fff;padding:28px 30px 34px;box-shadow:0 8px 24px rgba(0,0,0,.07)}\n.page-break{break-before:page;page-break-before:always}\n.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #d8e1e5;padding-bottom:14px}\n.brand{font-size:12px;font-weight:850;color:var(--brand);letter-spacing:.04em}\nh1{font-size:24px;margin:4px 0 3px}.company-name{font-size:14px;font-weight:750}\n.meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.6}\n.period{display:inline-block;background:#e9f6f4;color:var(--brand);font-weight:850;padding:5px 9px;border-radius:999px}\n.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 10px}\n.card{border:1px solid var(--line);border-radius:9px;padding:10px 11px}\n.card small{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.card strong{font-size:17px;display:block;margin-top:2px}.card span{font-size:9px;color:var(--muted)}\n.dist-title{font-size:12px;font-weight:900;padding:9px 11px;background:#f4f7f8;border:1px solid var(--line);border-radius:9px 9px 0 0}\n.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;overflow:hidden}\n.dist-card{padding:11px 14px;border-right:1px solid var(--line)}.dist-card:last-child{border-right:0}\n.dist-card b{display:block;font-size:12px}.dist-card strong{display:block;font-size:16px;color:#244d68;margin-top:2px}.dist-card small{font-size:9px;color:var(--muted)}\n.doctor-section{margin-top:22px}.doctor-head{display:flex;justify-content:space-between;align-items:end;padding:8px 10px;background:#f7fafb;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0}\n.doctor-name{font-size:13px;font-weight:900}.doctor-sub{font-size:9px;color:var(--muted);margin-top:2px}\n.doctor-total{text-align:right}.doctor-total small{display:block;font-size:8px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.doctor-total strong{font-size:15px;color:var(--brand);display:block}.doctor-total span{font-size:8px;color:var(--muted)}\ntable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line)}\nth{background:#f7f9fa;color:#5f6e75;font-size:8px;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);border-right:1px solid #e7ecee}\ntd{font-size:8.8px;padding:5px 6px;border-bottom:1px solid #edf1f2;border-right:1px solid #f0f3f4;vertical-align:top;line-height:1.27;overflow-wrap:anywhere}\ntbody tr:nth-child(even){background:#fcfdfd}.nf{font-weight:900;color:#174d64}\n.money{text-align:right;white-space:nowrap}.strong{font-weight:850}\n.doctor-value{background:#f1faf8;color:#0a625e;font-weight:850}.subtotal td{background:#f5f8f9;font-weight:900}\n.shared{display:inline-block;font-size:7px;background:#fff3d6;color:#805900;padding:2px 4px;border-radius:999px;margin-left:3px}\n.section-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 7px}\n.section-head h2{font-size:14px;margin:0}.section-head small{font-size:9px;color:var(--muted)}\n.partner{font-weight:800;color:#244d68}.missing{color:#8b969b;font-style:italic}\n.total-row td{background:#f1f6f7;font-weight:900;border-top:2px solid #cbd8dc}\n.status-title{margin-top:18px;padding:8px 10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-size:12px;font-weight:900}\n.cancel{background:#fff4f2;color:var(--red)}.replace{background:#fff8e8;color:var(--amber)}\n.soft-cancel{background:#fff9f8}.soft-replace{background:#fffaf3}\n.footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid var(--line);font-size:8px;color:#8b959a}\n.sn{font-weight:900;color:#9c6e19}.print-toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:#10384b;color:white;font-size:12px}\n.print-toolbar button{padding:9px 16px;border:0;border-radius:6px;background:#e1f7f0;color:#0b5d59;font:inherit;font-weight:800;cursor:pointer}\n.insurance-section{margin-top:18px}.insurance-title{padding:9px 12px;background:#f4f7f8;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-weight:900;font-size:12px;color:#244d68}\n.empty{color:var(--muted);font-size:11px;padding:12px}\n.attendance-heading{font-size:13px;font-weight:850;margin:19px 0 7px;color:#244d68;break-after:avoid}\n.attendance-note{font-size:10px;color:var(--muted);margin:12px 0}\n.attendance-cancelled tbody tr{background:#fff9f5}\n.receipt-chart{margin-top:24px;padding-top:14px;border-top:2px solid var(--line)}\n.receipt-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px;break-after:avoid}\n.receipt-chart-head h2{font-size:15px;margin:0}\n.receipt-chart-head strong{font-size:14px;color:var(--brand)}\n.receipt-chart-note{font-size:10px;color:var(--muted);margin-bottom:12px}\n.receipt-plot{display:block;width:100%;max-width:1150px;height:auto;margin:0 auto 12px;break-inside:avoid;page-break-inside:avoid}\n.receipt-warning{font-size:9px;color:var(--amber);margin:11px 0 0}\n.finance-notices{margin:8px 0;padding-left:20px;color:var(--amber);font-size:10px;line-height:1.5}\n.finance-notices li{margin:3px 0;break-inside:avoid}\n@media(max-width:1500px){.page{width:calc(100% - 24px);padding:20px;overflow-x:auto}}\n.print-watermark{display:none}\n@media print{\n .print-watermark{display:block!important;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:62pt;font-weight:900;letter-spacing:.09em;white-space:nowrap;color:rgba(39,80,105,.12);pointer-events:none;user-select:none;z-index:20}\n @page{size:A4 landscape;margin:7mm}\n body{background:#fff}.print-toolbar{display:none!important}\n .page{width:auto;margin:0;box-shadow:none;padding:0;overflow:visible}\n .page-break{break-before:page!important;page-break-before:always!important}\n thead{display:table-header-group}table{page-break-inside:auto}\n tr{break-inside:avoid;page-break-inside:avoid}\n .doctor-head{break-after:avoid;page-break-after:avoid}\n th,td{padding:3px 3.5px;font-size:6.8pt}\n}\n";
+const CSS="\n:root{--ink:#172126;--muted:#66747b;--line:#dfe5e8;--brand:#0b7f79;--red:#b42318;--amber:#8a5b00;--warnbg:#fff8e8}\n*{box-sizing:border-box}body{margin:0;background:#edf1f3;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}\n.page{width:1480px;margin:22px auto;background:#fff;padding:28px 30px 34px;box-shadow:0 8px 24px rgba(0,0,0,.07)}\n.page-break{break-before:page;page-break-before:always}\n.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #d8e1e5;padding-bottom:14px}\n.brand{font-size:12px;font-weight:850;color:var(--brand);letter-spacing:.04em}\nh1{font-size:24px;margin:4px 0 3px}.company-name{font-size:14px;font-weight:750}\n.meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.6}\n.period{display:inline-block;background:#e9f6f4;color:var(--brand);font-weight:850;padding:5px 9px;border-radius:999px}\n.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 10px}\n.card{border:1px solid var(--line);border-radius:9px;padding:10px 11px}\n.card small{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.card strong{font-size:17px;display:block;margin-top:2px}.card span{font-size:9px;color:var(--muted)}\n.dist-title{font-size:12px;font-weight:900;padding:9px 11px;background:#f4f7f8;border:1px solid var(--line);border-radius:9px 9px 0 0}\n.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;overflow:hidden}\n.dist-card{padding:11px 14px;border-right:1px solid var(--line)}.dist-card:last-child{border-right:0}\n.dist-card b{display:block;font-size:12px}.dist-card strong{display:block;font-size:16px;color:#244d68;margin-top:2px}.dist-card small{font-size:9px;color:var(--muted)}\n.doctor-section{margin-top:22px}.doctor-head{display:flex;justify-content:space-between;align-items:end;padding:8px 10px;background:#f7fafb;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0}\n.doctor-name{font-size:13px;font-weight:900}.doctor-sub{font-size:9px;color:var(--muted);margin-top:2px}\n.doctor-total{text-align:right}.doctor-total small{display:block;font-size:8px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.doctor-total strong{font-size:15px;color:var(--brand);display:block}.doctor-total span{font-size:8px;color:var(--muted)}\ntable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line)}\nth{background:#f7f9fa;color:#5f6e75;font-size:8px;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);border-right:1px solid #e7ecee}\ntd{font-size:8.8px;padding:5px 6px;border-bottom:1px solid #edf1f2;border-right:1px solid #f0f3f4;vertical-align:top;line-height:1.27;overflow-wrap:anywhere}\ntbody tr:nth-child(even){background:#fcfdfd}.nf{font-weight:900;color:#174d64}\n.money{text-align:right;white-space:nowrap}.strong{font-weight:850}\n.doctor-value{background:#f1faf8;color:#0a625e;font-weight:850}.subtotal td{background:#f5f8f9;font-weight:900}\n.shared{display:inline-block;font-size:7px;background:#fff3d6;color:#805900;padding:2px 4px;border-radius:999px;margin-left:3px}\n.section-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 7px}\n.section-head h2{font-size:14px;margin:0}.section-head small{font-size:9px;color:var(--muted)}\n.partner{font-weight:800;color:#244d68}.missing{color:#8b969b;font-style:italic}\n.total-row td{background:#f1f6f7;font-weight:900;border-top:2px solid #cbd8dc}\n.status-title{margin-top:18px;padding:8px 10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-size:12px;font-weight:900}\n.cancel{background:#fff4f2;color:var(--red)}.replace{background:#fff8e8;color:var(--amber)}\n.soft-cancel{background:#fff9f8}.soft-replace{background:#fffaf3}\n.footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid var(--line);font-size:8px;color:#8b959a}\n.sn{font-weight:900;color:#9c6e19}.print-toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:#10384b;color:white;font-size:12px}\n.print-toolbar button{padding:9px 16px;border:0;border-radius:6px;background:#e1f7f0;color:#0b5d59;font:inherit;font-weight:800;cursor:pointer}\n.insurance-section{margin-top:18px}.insurance-title{padding:9px 12px;background:#f4f7f8;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-weight:900;font-size:12px;color:#244d68}\n.empty{color:var(--muted);font-size:11px;padding:12px}\n.attendance-heading{font-size:13px;font-weight:850;margin:19px 0 7px;color:#244d68;break-after:avoid}\n.attendance-note{font-size:10px;color:var(--muted);margin:12px 0}\n.attendance-cancelled tbody tr{background:#fff9f5}\n.receipt-chart{margin-top:24px;padding-top:14px;border-top:2px solid var(--line)}\n.receipt-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px;break-after:avoid}\n.receipt-chart-head h2{font-size:15px;margin:0}\n.receipt-chart-head strong{font-size:14px;color:var(--brand)}\n.receipt-chart-note{font-size:10px;color:var(--muted);margin-bottom:12px}\n.receipt-plot{display:block;width:100%;max-width:1150px;height:auto;margin:0 auto 12px;break-inside:avoid;page-break-inside:avoid}\n.receipt-warning{font-size:9px;color:var(--amber);margin:11px 0 0}\n.finance-notices{margin:8px 0;padding-left:20px;color:var(--amber);font-size:10px;line-height:1.5}\n.finance-notices li{margin:3px 0;break-inside:avoid}\n.doctor-note{font-size:9px;color:var(--muted);margin:7px 0 10px}\n@media(max-width:1500px){.page{width:calc(100% - 24px);padding:20px;overflow-x:auto}}\n.print-watermark{display:none}\n@media print{\n .print-watermark{display:block!important;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:62pt;font-weight:900;letter-spacing:.09em;white-space:nowrap;color:rgba(39,80,105,.12);pointer-events:none;user-select:none;z-index:20}\n @page{size:A4 landscape;margin:7mm}\n body{background:#fff}.print-toolbar{display:none!important}\n .page{width:auto;margin:0;box-shadow:none;padding:0;overflow:visible}\n .page-break{break-before:page!important;page-break-before:always!important}\n thead{display:table-header-group}table{page-break-inside:auto}\n tr{break-inside:avoid;page-break-inside:avoid}\n .doctor-head{break-after:avoid;page-break-after:avoid}\n th,td{padding:3px 3.5px;font-size:6.8pt}\n}\n";
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const MONTH=/^\d{4}-(0[1-9]|1[0-2])$/;
@@ -24,7 +24,7 @@ type Attendance={attendance_id:string;billing_record_id:string;professional_id:s
  professional_name:string;patient_name:string;procedure:string;service_date:string;
  payer_name:string;insurance_name?:string;billing_method:string;payment_status:string;no_invoice?:boolean;
  received_amount?:number|null;paid_at?:string|null;invoice_item_received?:number|null};
-type Link={professional_id:string;invoice_id:string;attributed_amount?:number|null};
+type Link={professional_id:string;professional_name?:string;invoice_id:string;attributed_amount?:number|null;patient_names?:string[];billing_record_ids?:string[]};
 type PaidUnrealized={billing_record_id:string;attendance_id:string;service_date:string;clinical_status:string;
  patient_name:string;professional_name:string;procedure:string;billing_method:string;received_amount:number|null;
  paid_at:string;insurance_name:string};
@@ -40,7 +40,7 @@ type Snapshot={entity:{name:string;trade_name:string|null;tax_id:string|null};
  expenses?:{competence_total:number;paid_total:number};
  expense_items?:Array<{id:string;description:string;category:string;competence_date:string;
    paid_at:string|null;amount:number;status:string}>;
- direct_payments?:Array<{id:string;professional_name:string;paid_at:string;
+ direct_payments?:Array<{id:string;professional_id?:string|null;professional_name:string;patient_name?:string;paid_at:string;
    received_amount:number|null;billing_method:string}>;
  denials?:{denied_in_month:number;recovered_in_month:number;loss_on_cases_opened_in_month_now:number};
  denial_items?:Array<{id:string;denied_on:string;denial_kind:string;reason:string;
@@ -152,173 +152,127 @@ export async function GET(request:Request){
   const company=snap.entity.trade_name||snap.entity.name;
   const label=period(month);
   const invoices=[...(snap.invoices||[])].sort((a,b)=>seq.compare(a.invoice_number,b.invoice_number));
-  const valid=invoices.filter(x=>x.status==="ACTIVE");
-  const cancelled=invoices.filter(x=>x.status==="CANCELLED");
-  const replaced=invoices.filter(x=>x.status==="REPLACED");
   const details=snap.professional_attendances||[];
   const links=snap.professional_invoice_rows||[];
-  const ids=invoices.map(i=>i.id);
-  // Apenas metadados associados às NFs e valores já presentes no fechamento.
-  const userName=new Map<number,string>(),issuedBy=new Map<string,number>();
-  const methodByInvoice=new Map<string,Set<string>>();
-  if(ids.length){
-   const inv=await db.from("invoices").select("id,created_by").in("id",ids);
-   if(!inv.error){
-    const invoiceActors: Array<{id:string;created_by:number|null}>=inv.data||[];
-    const peopleIds=[...new Set(invoiceActors.map(x=>x.created_by).filter((x):x is number=>typeof x==="number"))];
-    for(const i of invoiceActors)if(i.created_by)issuedBy.set(i.id,i.created_by);
-    if(peopleIds.length){
-     const people=await db.from("users").select("id,name").in("id",peopleIds);
-     if(!people.error)for(const p of (people.data||[]) as Array<{id:number;name:string}>)userName.set(p.id,p.name);
-    }
-   }
-   const payment=await db.from("payment_parts").select("invoice_id,method").in("invoice_id",ids);
-   if(!payment.error)for(const part of (payment.data||[]) as Array<{invoice_id:string|null;method:string}>){
-    if(!part.invoice_id)continue;
-    const values=methodByInvoice.get(part.invoice_id)||new Set<string>();
-    values.add(part.method);methodByInvoice.set(part.invoice_id,values);
-   }
-  }
-  const methods=(id:string)=>{
-   const map:Record<string,string>={PIX:"PIX",CREDIT_CARD:"Cartão de crédito",
-    DEBIT_CARD:"Cartão de débito",CASH:"Dinheiro",BANK_TRANSFER:"Transferência",
-    TRANSFER:"Transferência",CARD_CREDIT:"Cartão de crédito",CARD_DEBIT:"Cartão de débito"};
-   return [...(methodByInvoice.get(id)||[])].map(m=>map[m]||m).join(" + ")||"Não informado";
-  };
-  const associations=new Map<string,string[]>();
-  for(const link of links){
-   const names=associations.get(link.invoice_id)||[];
-   const d=snap.professionals.find(p=>p.professional_id===link.professional_id);
-   if(d&&!names.includes(d.professional_name))names.push(d.professional_name);
-   associations.set(link.invoice_id,names);
-  }
-  const referenced=new Map<string,string>();
-  // O campo "Referente a" só usa procedimentos efetivamente relacionados.
-  if(view==="current"&&ids.length){
-   const lines=await db.from("invoice_billing_records")
-     .select("invoice_id,billing_record_id").in("invoice_id",ids).eq("is_active",true);
-   const invoiceItems: Array<{invoice_id:string;billing_record_id:string}>=lines.data||[];
-   if(!lines.error&&invoiceItems.length){
-    const values=[...new Set(invoiceItems.map(x=>x.billing_record_id))];
-    const procByRecord=new Map<string,string>();
-    for(const a of details)procByRecord.set(a.billing_record_id,a.procedure);
-    for(const inv of ids){
-     const proc=[...new Set(invoiceItems.filter(x=>x.invoice_id===inv)
-       .map(x=>procByRecord.get(x.billing_record_id)).filter((x):x is string=>!!x))];
-     if(proc.length)referenced.set(inv,proc.length===1?proc[0]:proc.join(" / "));
-    }
-   }
-  }
-  const totalCents=(items:Inv[],field:"total_amount"|"net_amount")=>
-   items.reduce((sum,item)=>sum+Math.round(Number(item[field]||0)*100),0)/100;
   const card=(title:string,value:string,desc:string)=>
    '<div class="card"><small>'+esc(title)+'</small><strong>'+esc(value)+
    '</strong><span>'+esc(desc)+'</span></div>';
-  const summary='<div class="summary">'+
-   card("NFs válidas",String(valid.length),"Exclui canceladas/substituídas")+
-   card("Valor bruto",amount(totalCents(valid,"total_amount")),"NFs válidas da relação")+
-   card("Valor líquido",amount(totalCents(valid,"net_amount")),"NFs válidas da relação")+
-   card("Ocorrências fiscais",String(cancelled.length+replaced.length),
-    cancelled.length+" cancelada(s) · "+replaced.length+" substituída(s)")+'</div>';
-  const assocs=(id:string)=>associations.get(id)?.join(" / ")||"—";
-  const invoiceRow=(inv:Inv,allocated?:number|null)=>row([
-   ["NFS-e "+inv.invoice_number+(inv.status==="ACTIVE"?"":" · "+monthlyInvoiceStatus(inv,invoices)),"nf"],[inv.payer||"—"],[date(inv.issue_date)],
-   [date(inv.paid_at)],[amount(inv.total_amount),"money"],[amount(inv.net_amount),"money"],
-   [allocated===undefined||allocated===null?"Não discriminado":amount(allocated),"money doctor-value"]
-  ],statusClass(inv.status));
-  const doctorTables=snap.professionals.map(doc=>{
-   const items=invoices.filter(i=>links.some(l=>l.professional_id===doc.professional_id&&l.invoice_id===i.id));
-   const sn=details.filter(a=>a.professional_id===doc.professional_id&&
-    a.no_invoice&&a.payment_status==="PAGO");
-   if(!items.length&&!sn.length)return "";
-   const allocated=(i:Inv)=>{
-    const l=links.find(l=>l.professional_id===doc.professional_id&&l.invoice_id===i.id);
-    return l?.attributed_amount;
-   };
-   const docTotal=items.reduce((sum,i)=>sum+Math.round(Number(
-    (i.status==="ACTIVE"?allocated(i):null)||0)*100),0)/100+
-    sn.reduce((sum,a)=>sum+Math.round(Number(a.received_amount||0)*100),0)/100;
-   const hasMissing=items.some(i=>i.status==="ACTIVE"&&allocated(i)==null);
-   const result=items.map(i=>invoiceRow(i,allocated(i))).join("")+
-    sn.map(a=>row([["S/N","sn"],[a.patient_name],[date(a.service_date)],
-     [date(a.paid_at)],[amount(a.received_amount),"money"],
-     [amount(a.received_amount),"money"],[amount(a.received_amount),"money doctor-value"]])).join("");
-   return '<section class="doctor-section"><div class="doctor-head"><div><div class="doctor-name">'+
-    esc(doc.professional_name)+'</div><div class="doctor-sub">'+
-    esc("Notas vinculadas e recebimentos sem NF · "+doc.attendances+" atendimento(s)")+
-    '</div></div><div class="doctor-total"><small>Valores discriminados neste relatório</small><strong>'+
-    (hasMissing?"Ver discriminação":esc(amount(docTotal)))+
-    '</strong><span>'+(hasMissing?"Alguns itens não possuem valor atribuído":"NFs válidas e S/N; sem duplicar a NF compartilhada")+
-    '</span></div></div>'+
-    table(["Nº NF","Pagador","Data emissão","Pagamento","Bruto da NF","Líquido da NF","Valor deste profissional"],
-      result)+"</section>";
-  }).filter(Boolean).join("");
-  const distribution=snap.professionals.filter(d=>links.some(l=>l.professional_id===d.professional_id)&&
-   links.some(l=>l.professional_id===d.professional_id&&l.attributed_amount!=null)).map(d=>{
-    const subtotal=links.filter(l=>l.professional_id===d.professional_id &&
-     invoices.some(i=>i.id===l.invoice_id&&i.status==="ACTIVE"))
-     .reduce((s,l)=>s+Number(l.attributed_amount||0),0);
-    return '<div class="dist-card"><b>'+esc(d.professional_name)+'</b><strong>'+
-     esc(amount(subtotal))+'</strong><small>Itens de NFs discriminados no período</small></div>';
-   }).join("");
-  const allocation=distribution?'<div class="dist-title">VALORES DE NFs DISCRIMINADOS POR MÉDICO / PROFISSIONAL</div><div class="dist-grid">'+distribution+'</div>':"";
-  const partnerInvoicePage=page(heading("Divisão das Notas Fiscais por Sócio / Médico",company,label,
-   "Distribuição por médico / profissional · "+valid.length+" NFs válidas")+
-   summary+allocation+doctorTables+
-   '<div class="footer"><span>RN Integra · Distribuição por profissional</span><span>'+
-   esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+"</span></div>",true);
-  const validCols=["NF","Pagador","Referente a","Emissão","Pagamento",
-   "Forma de pagamento","Valor bruto","Valor líquido","Sócio / Médico","Emitido por"];
-  const validRows=valid.map(i=>row([
-   ["NFS-e "+i.invoice_number,"nf"],[i.payer||"—"],
-   [referenced.get(i.id)||"Não informado",referenced.has(i.id)?"":"missing"],
-   [date(i.issue_date)],[date(i.paid_at)],[methods(i.id)],
-   [amount(i.total_amount),"money"],[amount(i.net_amount),"money strong"],
-   [assocs(i.id),"partner"],[userName.get(issuedBy.get(i.id)||0)||"—"]
-  ])).join("");
-  const validInvoicePage=page(heading("Lista de Notas Fiscais válidas",company,label,
-    valid.length+" NFs válidas")+
-    '<div class="section-head"><h2>NFs válidas</h2><small>Estrutura de 10 colunas</small></div>'+
-    table(validCols,validRows+
-     '<tr class="total-row"><td colspan="6">TOTAL DAS NFS VÁLIDAS</td>'+
-     cell(amount(totalCents(valid,"total_amount")),"money")+
-     cell(amount(totalCents(valid,"net_amount")),"money")+
-     '<td colspan="2">'+esc(valid.length+" NFs válidas")+'</td></tr>',
-     [6,14,15,8,8,14,9,9,10,7])+
-     '<div class="footer"><span>RN Integra · NFs válidas</span><span>Relação por competência</span></div>',true);
-  const occurrenceRows=(items:Inv[])=>table(validCols,items.map(i=>row([
-   ["NFS-e "+i.invoice_number+" · "+monthlyInvoiceStatus(i,invoices),"nf"],[i.payer||"—"],
-   [referenced.get(i.id)||"—"],[date(i.issue_date)],[date(i.paid_at)],
-   [methods(i.id)],[amount(i.total_amount),"money"],[amount(i.net_amount),"money"],
-   [assocs(i.id)],[userName.get(issuedBy.get(i.id)||0)||"—"]
-  ],statusClass(i.status))).join(""),[6,14,15,8,8,14,9,9,10,7]);
-  const fiscalEventsPage=cancelled.length||replaced.length?page(
-   heading("Ocorrências fiscais do período",company,label,"NFs canceladas e substituídas")+
-   (cancelled.length?'<div class="status-title cancel">NFS CANCELADAS — FORA DOS TOTAIS E DISTRIBUIÇÃO</div>'+
-     occurrenceRows(cancelled):"")+
-   (replaced.length?'<div class="status-title replace">NFS SUBSTITUÍDAS — PRESERVADAS NO HISTÓRICO</div>'+
-     occurrenceRows(replaced):"")+
-   '<div class="footer"><span>RN Integra · Ocorrências fiscais</span>'+
-   '<span>Histórico preservado</span></div>',true):"";
-  // Convênios: lista única, independente do bloco de NFs por profissional.
-  // Nunca deduz valor pago de uma NF inteira: só apresenta alocação individual.
-  const insurance=details.filter(a=>a.billing_method==="CONVENIO");
-  const groups=new Map<string,Attendance[]>();
-  for(const a of insurance){
-   const key=a.insurance_name?.trim()||a.payer_name?.trim()||"Convênio não informado";
-   const list=groups.get(key)||[];list.push(a);groups.set(key,list);
+
+  // Distribuição de recebimentos: chave sempre pelo ID histórico do médico.
+  // A NF compartilhada mostra seu líquido inteiro, mas somente o item discriminado
+  // é atribuído ao profissional. Não se faz rateio presumido.
+  type DoctorGroup={id:string;name:string;
+   notes:Array<{invoice:Inv;value:number|null;patientNames:string[];recordIds:string[]}>;
+   payments:Array<{id:string;paid_at:string;billing_method:string;received_amount:number|null;patient_name:string}>;
+   directCents:number;insurerCents:number;missing:boolean};
+  const doctors=new Map<string,DoctorGroup>();
+  const profName=new Map(snap.professionals.map(d=>[d.professional_id,d.professional_name]));
+  const getDoctor=(id:string,name:string)=>{
+   const key=id||"sem-vinculo:"+name;
+   if(!doctors.has(key))doctors.set(key,{id:key,name:name||"Profissional não identificado",
+    notes:[],payments:[],directCents:0,insurerCents:0,missing:false});
+   return doctors.get(key)!;
+  };
+  const toCents=(n:unknown):number|null=>{
+   if(n===null||n===undefined||n==="")return null;
+   const number=Number(n);return Number.isFinite(number)&&number>=0?Math.round(number*100):null;
+  };
+  const directIds=new Set<string>();
+  const detailByRecord=new Map(details.map(a=>[a.billing_record_id,a]));
+  const unpaidDetail=new Map((snap.paid_unrealized||[]).map(a=>[a.billing_record_id,a]));
+  for(const p of snap.direct_payments||[]){
+   if(!p.id||directIds.has(p.id))continue;
+   directIds.add(p.id);
+   let id=p.professional_id||"",name=profName.get(id)||p.professional_name||"Profissional não identificado";
+   if(!id){
+    const alternatives=snap.professionals.filter(x=>x.professional_name===name);
+    if(alternatives.length===1)id=alternatives[0].professional_id;
+   }
+   const g=getDoctor(id,name),received=toCents(p.received_amount);
+   if(received===null)g.missing=true;else g.directCents+=received;
+   const patient=(p.patient_name||detailByRecord.get(p.id)?.patient_name||
+    unpaidDetail.get(p.id)?.patient_name||"Referência não disponível");
+   g.payments.push({id:p.id,paid_at:p.paid_at,billing_method:p.billing_method,
+    received_amount:p.received_amount,patient_name:patient});
   }
-  const insuranceBlocks=[...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR"))
-   .map(([name,items])=>{
-    const sorted=[...items].sort((a,b)=>a.service_date.localeCompare(b.service_date)||
-      a.patient_name.localeCompare(b.patient_name,"pt-BR"));
-    return '<div class="insurance-section"><div class="insurance-title">'+esc(name)+
-     ' · '+items.length+' cobrança(s)</div>'+
-     table(["Paciente","Procedimento","Atendimento","Valor pago","Médico responsável"],
-      sorted.map(a=>row([[a.patient_name],[a.procedure||"—"],[date(a.service_date)],
-        [a.payment_status==="PAGO"?amount(a.invoice_item_received??a.received_amount):"Pendente","money"],
-        [a.professional_name]])).join(""),[25,29,13,15,18])+"</div>";
+  const invoiced=new Map(invoices.map(i=>[i.id,i]));
+  const seenLinks=new Set<string>();
+  for(const l of links){
+   const inv=invoiced.get(l.invoice_id);
+   if(!inv||!l.professional_id)continue;
+   const key=l.professional_id+"::"+l.invoice_id;
+   if(seenLinks.has(key))continue;
+   seenLinks.add(key);
+   const g=getDoctor(l.professional_id,profName.get(l.professional_id)||
+    l.professional_name||"Profissional histórico");
+   const patientNames=[...new Set((l.patient_names||[]).filter(Boolean))];
+   for(const billingId of l.billing_record_ids||[]){
+    const d=detailByRecord.get(billingId)||unpaidDetail.get(billingId);
+    if(d?.patient_name&&!patientNames.includes(d.patient_name))patientNames.push(d.patient_name);
+   }
+   const itemCents=toCents(l.attributed_amount);
+   // Caixa do convênio somente na data do pagamento da NF, e sem duplicar o total.
+   if(inv.status==="ACTIVE"&&inv.recipient_type==="CONVENIO"&&
+     inv.paid_at?.slice(0,7)===month){
+    if(itemCents===null)g.missing=true;else g.insurerCents+=itemCents;
+   }
+   g.notes.push({invoice:inv,value:itemCents===null?null:itemCents/100,
+    patientNames,recordIds:l.billing_record_ids||[]});
+  }
+  const seenInvoices=new Set(links.map(l=>l.invoice_id));
+  const doctorTables=[...doctors.values()].sort((a,b)=>
+   a.name.localeCompare(b.name,"pt-BR")||a.id.localeCompare(b.id)).map(g=>{
+   const matchedPayments=new Set<string>();
+   const nfRows=g.notes.map(l=>{
+    const inv=l.invoice,privateNF=inv.recipient_type==="PARTICULAR";
+    // Pagamento direto ligado à NF particular pertence ao mesmo lançamento,
+    // portanto aparece nesta linha e não de novo em Recebimentos individuais.
+    const used=privateNF?g.payments.filter(p=>l.recordIds.includes(p.id)&&!matchedPayments.has(p.id)):[];
+    for(const payment of used){
+     matchedPayments.add(payment.id);
+     if(payment.patient_name!=="Referência não disponível"&&
+       !l.patientNames.includes(payment.patient_name))l.patientNames.push(payment.patient_name);
+    }
+    const paidDirect=used.reduce((s,p)=>s+(toCents(p.received_amount)||0),0);
+    const attributable=used.length?paidDirect/100:l.value;
+    return row([["NF "+inv.invoice_number,"nf"],[inv.payer||"—"],
+      [l.patientNames.join(" / ")||"Sem paciente discriminado no snapshot"],
+      [date(inv.issue_date)],[date(inv.paid_at)],[amount(inv.net_amount),"money"],
+      [amount(attributable),"money doctor-value"],
+      [privateNF?"Particular":"Convênio"],[monthlyInvoiceStatus(inv,invoices)]
+    ],statusClass(inv.status));
    }).join("");
+   const directRows=g.payments.filter(p=>!matchedPayments.has(p.id)).map(p=>row([
+     ["Direto / S/N","sn"],[p.billing_method==="PARTICULAR"?"Particular":"Direto"],
+     [p.patient_name],["—"],[date(p.paid_at)],["—"],
+     [amount(p.received_amount),"money doctor-value"],["Particular"],["Pago"]
+   ])).join("");
+   const total=(g.directCents+g.insurerCents)/100;
+   return '<section class="doctor-section"><div class="doctor-head"><div>'+
+    '<div class="doctor-name">'+esc(g.name)+'</div>'+
+    '<div class="doctor-sub">Direto: '+esc(amount(g.directCents/100))+
+    ' · Convênios atribuídos e pagos: '+esc(amount(g.insurerCents/100))+
+    '</div></div><div class="doctor-total"><small>Recebido neste mês</small>'+
+    '<strong>'+esc(amount(total))+(g.missing?" (parcial)":"")+'</strong></div></div>'+
+    '<p class="doctor-note">NF líquida = valor total do documento, mesmo compartilhado; '+
+    'Valor deste médico = sua parcela discriminada. Notas particulares não duplicam '+
+    'pagamentos diretos; itens sem valor não são rateados.</p>'+
+    table(["Documento","Pagador / origem","Paciente / referência","Emissão",
+     "Pagamento","NF líquida total","Valor deste médico","Tipo","Status"],
+     nfRows+directRows,[11,12,19,10,10,12,12,7,7])+
+    (g.missing?'<p class="receipt-warning">Há valores não individualizados; total parcial.</p>':"")+
+    '</section>';
+  }).join("");
+  // NFs não vinculadas permanecem visíveis, sem inventar uma divisão por sócio.
+  const noDoctorInvoices=invoices.filter(i=>!seenInvoices.has(i.id));
+  const unlinkedNotes=noDoctorInvoices.length?
+   '<div class="section-head"><h2>NFs sem vínculo por médico</h2>'+
+   '<small>Sem valor atribuído automaticamente</small></div>'+
+   table(["NF","Pagador","Emissão","Pagamento","Líquido total","Status"],
+    noDoctorInvoices.map(i=>row([["NF "+i.invoice_number,"nf"],[i.payer||"—"],
+     [date(i.issue_date)],[date(i.paid_at)],[amount(i.net_amount),"money"],
+     [monthlyInvoiceStatus(i,invoices)]],statusClass(i.status))).join(""),
+    [12,28,15,15,15,15]):"";
   // Valores por atendimento realizado nesta competência, sem ratear o total de NFs.
   // A seção permanece na mesma página lógica de "Atendimentos por convênio".
   const extraPaid=(snap.paid_unrealized||[]).map(p=>({
@@ -338,12 +292,6 @@ export async function GET(request:Request){
      '<p class="receipt-warning">'+comparison.missingPaidAmounts+
      ' cobrança(s) paga(s) sem valor individualizado foram excluídas dos totais.</p>':"")+
    '</div>';
-  const insurancePage=page(heading("Atendimentos por convênio",company,label,
-   "Todos os médicos · "+insurance.length+" cobrança(s)")+
-   (insuranceBlocks||'<div class="empty">Nenhum atendimento por convênio nesta competência.</div>')+
-   '<div class="footer"><span>RN Integra · Atendimentos por convênio</span>'+
-   '<span>Valores individuais disponíveis</span></div>',true);
-  // Página independente: o gráfico nunca fica abaixo ou colado à relação de atendimentos.
   const receiptChartPage=page(heading("Recebimentos por origem",company,label,
    "Particular e convênios · somente recebimentos confirmados")+
    receiptChart+
@@ -406,13 +354,6 @@ export async function GET(request:Request){
    [e.description],[e.category||"—"],[date(e.competence_date)],[date(e.paid_at)],
    [e.status],[amount(e.amount),"money"]
   ])).join("");
-  const paymentItems=[...(snap.direct_payments||[])].sort((a,b)=>
-   String(a.paid_at||"").localeCompare(String(b.paid_at||""))||
-   a.professional_name.localeCompare(b.professional_name,"pt-BR"));
-  const paymentRows=paymentItems.map(p=>row([
-   [p.professional_name],[date(p.paid_at)],[p.billing_method],
-   [amount(p.received_amount),"money"]
-  ])).join("");
   const denialItems=[...(snap.denial_items||[])].sort((a,b)=>
    String(a.denied_on||"").localeCompare(String(b.denied_on||"")));
   const denialRows=denialItems.map(g=>row([
@@ -454,22 +395,21 @@ export async function GET(request:Request){
   const financeWarningsHtml=financeWarnings.length?
    '<div class="section-head"><h2>Pontos a conferir</h2></div><ul class="finance-notices">'+
    financeWarnings.map(w=>'<li>'+esc(w)+'</li>').join("")+'</ul>':"";
-  const financialPage=page(heading("Caixa, Despesas e Pendências",company,label,
+  const combinedFinancePage=page(heading("Divisão por Sócio / Médico e Fechamento Financeiro",company,label,
    "Consolidação financeira por entidade recebedora")+
    '<div class="section-head"><h2>Resumo do caixa</h2><small>Recebimentos e despesas por data do pagamento</small></div>'+
    financialCards+
    '<p class="attendance-note">O total de despesas da competência pode incluir valores ainda não pagos. '+
    'O resultado de caixa desconta apenas despesas efetivamente pagas no mês.</p>'+
+   '<div class="section-head"><h2>Divisão por sócio / médico</h2>'+
+   '<small>Um bloco por médico · NFs compartilhadas discriminadas</small></div>'+
+   (doctorTables||'<div class="empty">Nenhum recebimento atribuído a profissionais.</div>')+
+   unlinkedNotes+
    '<div class="section-head"><h2>Despesas registradas ('+expenseItems.length+
    ')</h2><small>Despesas da competência e despesas pagas no mês, sem duplicação</small></div>'+
    (expenseItems.length?table(["Descrição","Categoria","Competência","Pago em","Status","Valor"],
     expenseRows,[27,18,15,15,10,15]):
     '<div class="empty">Nenhuma despesa vinculada a esta competência ou paga neste mês.</div>')+
-   '<div class="section-head"><h2>Recebimentos individuais ('+paymentItems.length+
-   ')</h2><small>Recebimentos diretos por data do pagamento</small></div>'+
-   (paymentItems.length?table(["Médico / profissional","Pago em","Cobrança","Valor recebido"],
-    paymentRows,[40,20,20,20]):
-    '<div class="empty">Nenhum recebimento individual neste mês.</div>')+
    '<div class="section-head"><h2>Glosas e pendências</h2><small>Controle financeiro da competência</small></div>'+
    '<div class="summary">'+
    card("Glosado no mês",amount(denials?.denied_in_month),"Data de registro da glosa")+
@@ -496,7 +436,7 @@ export async function GET(request:Request){
    '</div><div class="print-toolbar"><span>RN Integra · '+
    esc(view==="closed"?"REGISTRO MENSAL":"PRÉVIA")+' · '+esc(label)+
    '</span><button type="button" id="print">Imprimir / Salvar PDF</button></div>'+
-   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+receiptChartPage+financialPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
+   attendancePage+combinedFinancePage+receiptChartPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
   return new Response(html,{headers:{"Content-Type":"text/html; charset=utf-8",
    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
    "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+

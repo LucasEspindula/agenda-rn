@@ -40,26 +40,11 @@ test("valores faltantes não são inventados, mas o convênio permanece na compa
  assert.equal(result.groups.length,4);
  assert.equal(result.groups.find(g=>g.label==="Sem repasse")?.receivedCents,0);
 });
-test("impressão mensal usa colunas verticais em página própria depois dos convênios",()=>{
- const source=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
- assert.match(source,/monthlyReceiptComparison\(\[\.\.\.details,\.\.\.extraPaid\]\)/);
- assert.match(source,/receiptChartSvg\(comparison\.groups\)/);
- assert.match(source,/viewBox="0 0 /);
- assert.match(source,/receipt-plot/);
- assert.match(source,/Valor recebido \(R\$\)/);
- assert.match(source,/esc\(amount\(item\.receivedCents\/100\)\)/);
- assert.match(source,/esc\(line\)/);
- assert.doesNotMatch(source,/receiptRows|class="receipt-track"|\.receipt-row\{/);
- const insurance=source.slice(source.indexOf("const insurancePage=page("),
-  source.indexOf("const receiptChartPage=page("));
- const chart=source.slice(source.indexOf("const receiptChartPage=page("),
-  source.indexOf("// A relação clínica não depende de cobrança"));
- assert.doesNotMatch(insurance,/receiptChart\+/);
- assert.match(chart,/heading\("Recebimentos por origem"/);
- assert.match(chart,/receiptChart\+/);
- assert.match(chart,/<\/span><\/div>',true\);/);
- assert.match(source,/insurancePage\+receiptChartPage\+'<script nonce=/);
- assert.ok(source.indexOf("const insurancePage=page(") < source.indexOf("const receiptChartPage=page("),
-  "o gráfico deve ficar depois dos atendimentos por convênio, em nova página");
- assert.match(source,/\.receipt-plot\{[^}]*break-inside:avoid/);
+test("gráfico continua em folha separada após a divisão por médico",()=>{
+ const s=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
+ assert.match(s,/receiptChartSvg\(comparison\.groups\)/);
+ assert.match(s,/receipt-plot/);
+ assert.match(s,/attendancePage\+combinedFinancePage\+receiptChartPage/);
+ assert.match(s,/heading\("Recebimentos por origem"/);
+ assert.doesNotMatch(s,/const insurancePage=page|const validInvoicePage=page|const fiscalEventsPage=/);
 });
