@@ -29,7 +29,7 @@ test("área destacada mantém filtros e remove subtítulos e aviso de cancelados
 test("somente fechamento confirmado pode ser marcado como registro mensal",()=>{
  assert.match(ui,/if\(!valid\|\|view==="closed"&&!preview\?\.closed\)return/);
  assert.match(ui,/action:"CLOSE"/);
- assert.match(ui,/const finalParams=new URLSearchParams/);
+ assert.match(ui,/const params=new URLSearchParams/);
  assert.match(ui,/finalTab\.location\.replace\(/);
  assert.match(closing,/close_billing_month/);
  assert.match(print,/if\(view==="closed"&&!data\.closing\)return/);
