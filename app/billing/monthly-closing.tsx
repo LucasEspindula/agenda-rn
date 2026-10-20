@@ -141,8 +141,16 @@ export default function MonthlyClosing(){
    setUnlockError(cause instanceof Error?cause.message:"Não foi possível validar a senha.");
   }finally{setBusy(false);}
  }
+ function openPrint(view:"current"|"closed"){
+  if(!valid||view==="closed"&&!preview?.closed)return;
+  const params=new URLSearchParams({entity_id:entity,month,view});
+  window.open("/api/reports/monthly-closing/print?"+params.toString(),
+   "_blank","noopener,noreferrer");
+ }
  async function closeMonth(){
   if(busy||!canClose)return;
+  // Abrir durante o clique: o navegador pode bloquear popups após requisições assíncronas.
+  const finalTab=window.open("about:blank","_blank");
   setBusy(true);setError("");
   try{
    const response=await fetch("/api/billing/closing",{method:"POST",
@@ -152,25 +160,33 @@ export default function MonthlyClosing(){
    if(!response.ok)throw Error(result.error||"Não foi possível encerrar a competência.");
    await Promise.all([reloadOptions(),loadPreview(entity,month)]);
    setShowCloseDialog(false);setNotes("");
-   setNotice("Competência bloqueada. Só a senha do Gerente Geral permite desbloqueá-la.");
-  }catch(cause){setError(cause instanceof Error?cause.message:"Erro ao fechar competência.");}
+   const params=new URLSearchParams({entity_id:entity,month,view:"closed"});
+   if(finalTab&&!finalTab.closed)
+    finalTab.location.replace("/api/reports/monthly-closing/print?"+params.toString());
+   setNotice("Mês fechado. "+(finalTab?
+    "Registro Mensal aberto em nova aba.":"Clique em Fechar Mês para abrir o registro definitivo."));
+  }catch(cause){
+   if(finalTab&&!finalTab.closed)finalTab.close();
+   setError(cause instanceof Error?cause.message:"Erro ao fechar competência.");
+  }
   finally{setBusy(false);}
  }
  return <section className="monthly-closing" aria-label="Fechamento mensal por PJ/PF">
   <header className="monthly-heading no-print">
-   <div><h1>Fechamento mensal por PJ/PF</h1>
-    <p>Selecione a entidade recebedora e a competência. Produção, NFs, caixa e glosas usam datas diferentes e não duplicam recebimentos.</p>
-   </div>
-   <button type="button" className="billing-icon-action" disabled={!valid}
-     aria-label="Imprimir / gerar PDF do fechamento"
-     title="Imprimir / gerar PDF em nova guia"
+   <h1>Fechamento mensal por PJ/PF</h1>
+   <div className="monthly-header-actions">
+    <button type="button" className="billing-secondary monthly-preview-button" disabled={!valid||busy}
+     aria-label="Abrir prévia de impressão" title="Imprimir prévia com marca d'água"
+     onClick={()=>openPrint("current")}><PrintIcon/> Prévia</button>
+    <button type="button" className="billing-primary monthly-final-button"
+     disabled={!valid||busy||(!preview?.closed&&!canClose)}
+     title={preview?.closed?"Abrir registro mensal definitivo":!canClose?
+      "Somente competências anteriores ao mês atual podem ser fechadas":"Confirmar e gerar registro mensal"}
      onClick={()=>{
-      if(!valid)return;
-      const params=new URLSearchParams({entity_id:entity,month,
-       view:preview?.closed&&!showCurrent?"closed":"current"});
-      window.open("/api/reports/monthly-closing/print?"+params.toString(),
-       "_blank","noopener,noreferrer");
-     }}><PrintIcon/></button>
+      if(preview?.closed){openPrint("closed");return;}
+      setShowCloseDialog(true);
+     }}>Fechar Mês</button>
+   </div>
   </header>
   <div className="monthly-filters no-print">
    <label>Entidade recebedora
@@ -190,15 +206,6 @@ export default function MonthlyClosing(){
   {notice&&<p role="status" className="billing-message">{notice}</p>}
   {loading&&!valid?<p className="billing-empty">Calculando competência…</p>:null}
   {data&&<>
-   <div className="monthly-report-heading">
-    <div><h2>{data.entity.trade_name||data.entity.name}</h2>
-     <p>{data.entity.person_type||"Entidade"} · {data.entity.tax_id} · Competência {month}</p></div>
-    <div className="monthly-report-status">
-      <strong>{preview?.closed&&!showCurrent?"Fechamento histórico":"Prévia atual"}</strong>
-      {preview?.closing&&!showCurrent&&<small>Fechado em {new Date(preview.closing.closed_at).toLocaleString("pt-BR")}
-       {preview.closing.notes?" · "+preview.closing.notes:""}</small>}
-    </div>
-   </div>
    {preview?.closed&&<div className="monthly-history-alert no-print">
     <strong>Competência bloqueada.</strong>
     {preview.closing?.changed_since_close?
@@ -211,11 +218,6 @@ export default function MonthlyClosing(){
       aria-pressed={showCurrent}>Comparar com dados atuais</button>
     </div>
    </div>}
-   {data.attendance_overview&&data.attendance_overview.some(a=>a.status==="cancelled")&&
-    <div className="monthly-attendance-count">
-     <strong>{data.attendance_overview.filter(a=>a.status==="cancelled").length}</strong>
-     <span>atendimento(s) cancelado(s) na competência — fora dos totais financeiros</span>
-    </div>}
    <div className="monthly-summary">
     <article><span>Atendimentos realizados</span><strong>{data.production.attendances}</strong>
       <small>{data.production.charges} cobranças · {data.production.pending_charges_now} sem baixa financeira</small></article>
@@ -388,13 +390,11 @@ export default function MonthlyClosing(){
      Glosas recuperadas não representam nova entrada de caixa. Este fechamento é uma fotografia financeira da competência, não um demonstrativo contábil/fiscal oficial.
    </p>
    <div className="monthly-closing-actions no-print">
-    {preview?.closed?
+    {preview?.closed&&
       <button type="button" className="billing-secondary" disabled={busy}
        onClick={()=>{setUnlockError("");setUnlockPassword("");setUnlockReason("");setShowUnlockDialog(true);}}>
        Desbloquear mês com senha do Gerente Geral
-      </button>:
-      <button type="button" className="billing-primary" disabled={!canClose||busy}
-       onClick={()=>setShowCloseDialog(true)}>{preview?.unlocked?"Bloquear mês novamente":"Fechar e bloquear mês"}</button>}
+      </button>}
     {preview?.closed?<span>Competência bloqueada para alterações no fechamento.</span>:
      month>=nowMonth?<span>Competência atual ou futura: disponível somente para prévia.</span>:
       data.issued_invoices.without_net_amount>0||data.cash.insurance_paid_invoices_without_net>0?
@@ -451,7 +451,7 @@ export default function MonthlyClosing(){
    </AppDialog>}
   {showCloseDialog&&valid&&<AppDialog label="Confirmar fechamento mensal" busy={busy}
    onClose={()=>setShowCloseDialog(false)}>
-   <h2>Confirmar bloqueio de {month}</h2>
+   <h2>Fechar Mês — {month}</h2>
    <p><strong>{selectedEntity?.trade_name||selectedEntity?.name}</strong></p>
    <p>O fechamento ficará bloqueado. Para desbloqueá-lo será necessária a senha do Gerente Geral.
      O histórico anterior continuará preservado. Pagamentos, NFs e glosas retroativos não são bloqueados.</p>
@@ -461,7 +461,7 @@ export default function MonthlyClosing(){
    <div className="billing-modal-actions">
     <button type="button" className="billing-secondary" disabled={busy} onClick={()=>setShowCloseDialog(false)}>Cancelar</button>
     <button type="button" className="billing-primary" disabled={busy} onClick={()=>void closeMonth()}>
-     {busy?"Bloqueando…":"Confirmar bloqueio"}</button>
+     {busy?"Fechando…":"Confirmar Fechar Mês"}</button>
    </div>
   </AppDialog>}
  </section>;
