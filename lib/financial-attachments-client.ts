@@ -18,3 +18,11 @@ export async function uploadFinancialAttachment(file:File,target:FinancialAttach
   return {id:pendingId};
  }catch(error){if(pendingId)await cleanupPendingFinancialAttachment(pendingId);throw error instanceof Error?error:Error(failure);}
 }
+
+/** Remove da lista de comprovantes ativos, preservando auditoria financeira. */
+export async function removeFinancialAttachment(id:string){
+ const response=await fetch('/api/financial-attachments?id='+encodeURIComponent(id),{method:'DELETE'});
+ const result=await json(response);
+ if(!response.ok)throw new Error(result.error||'Não foi possível excluir o comprovante.');
+ return result;
+}

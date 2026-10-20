@@ -364,3 +364,55 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .remote-agenda-update-notice{position:fixed;right:18px;bottom:18px;z-index:80;max-width:min(420px,calc(100vw - 36px));padding:11px 14px;border:1px solid #d8b865;border-radius:10px;background:#fff8df;color:#694b08;font-size:12px;line-height:1.4;box-shadow:0 8px 24px #1b334326}.remote-agenda-update-notice[hidden]{display:none}@media(max-width:700px){.remote-agenda-update-notice{right:12px;bottom:12px;max-width:calc(100vw - 24px)}}
 
 .page-description{max-width:720px;margin:0;color:var(--muted);font-size:13px;line-height:1.5;text-align:left}.section-head.page-description-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.section-head.page-description-head>.page-description{min-width:0}.section-head.page-description-head>:last-child{margin-left:auto}.dynamic-page-heading.page-description{width:100%;text-align:left}.dynamic-page-heading.page-description p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}@media(max-width:720px){.section-head.page-description-head{flex-wrap:wrap}.section-head.page-description-head>.page-description{flex:1 0 100%}.section-head.page-description-head>:last-child{margin-left:auto}}
+
+
+/* Financeiro do agendamento: detalhes compactos, anexos legíveis e ações por arquivo. */
+#appointmentModal .native-finance{background:#fff;border:1px solid #dce6eb;border-radius:14px;padding:18px;margin:16px 0;box-shadow:0 1px 2px rgba(22,55,74,.035)}
+#appointmentModal .native-finance-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:15px}
+#appointmentModal .native-finance-head h4{font-size:16px;margin:0;font-weight:800;color:#183449}
+#appointmentModal .native-finance-tags{display:flex;flex-wrap:wrap;gap:7px}
+#appointmentModal .native-finance-tag{display:inline-flex;align-items:center;background:#eef7f7;border:1px solid #d1e6e5;color:#0f7676;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:750}
+#appointmentModal .native-finance-tag.warning{background:#fff7e9;color:#9d641b;border-color:#f2dcbb}
+#appointmentModal .native-finance-grid{gap:12px}
+#appointmentModal .native-finance-grid label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#456074;font-weight:750}
+#appointmentModal .native-finance-grid :is(input,select){height:46px;background:#fff;border:1px solid #dbe5eb;border-radius:10px;padding:8px 12px;font-size:14px;color:#1e3445;font-weight:650}
+#appointmentModal .native-payment-proofs{border-top:1px solid #e6edf2;margin-top:18px;padding-top:16px;display:flex;flex-direction:column;gap:11px}
+#appointmentModal .native-proofs-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#appointmentModal .native-proofs-title strong{font-size:13px;color:#20394e}
+#appointmentModal .native-proofs-title>span{font-size:11px;font-weight:700;color:#677c8e;background:#edf2f6;border-radius:20px;padding:4px 9px}
+#appointmentModal .native-proof-list{padding:0;margin:0;list-style:none;display:grid;gap:8px}
+#appointmentModal .native-proof-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e1e9ef;border-radius:9px;background:#fafcfe;min-width:0}
+#appointmentModal .native-proof-icon{display:inline-grid;place-items:center;flex:none;width:28px;height:30px;border-radius:7px;background:#edf5f7;color:#24737e;font-size:17px}
+#appointmentModal .native-proof-filename{min-width:0;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#294257;font-size:12px;font-weight:650}
+#appointmentModal .native-proof-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px;flex:none}
+#appointmentModal .native-proof-actions :is(a,button),#appointmentModal .native-proof-pending button{font:inherit;font-size:12px;font-weight:750;color:#187885;text-decoration:none;background:none;border:0;padding:3px;cursor:pointer}
+#appointmentModal .native-proof-actions :is(a,button):hover{text-decoration:underline}
+#appointmentModal .native-proof-actions .nativeProofDelete{color:#bb3345}
+#appointmentModal .native-proof-actions button:disabled{cursor:wait;opacity:.45}
+#appointmentModal .native-proof-upload{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#appointmentModal .native-proof-upload .secondary-btn{width:auto;min-height:37px;padding:8px 12px}
+#appointmentModal .native-proof-upload small{font-size:11px;color:#708598}
+#appointmentModal .native-proof-empty{margin:0;color:#637a8a;font-size:12px}
+#appointmentModal .native-proof-pending{font-size:12px;color:#2d6950;display:flex;gap:10px;flex-wrap:wrap}
+#appointmentModal .native-proof-history{border-top:1px dashed #dce7ed;padding-top:10px}
+#appointmentModal .native-proof-history summary{font-size:12px;font-weight:750;color:#567187;cursor:pointer;margin-bottom:8px}
+#appointmentModal .native-proof-row small{font-size:11px;color:#788a98}
+#appointmentModal .native-finance-error{padding:9px 12px;background:#fff2f2;border:1px solid #f5ccd3;border-radius:8px}
+#appointmentModal .native-finance-error:empty{display:none}
+.payment-proof-file .payment-proof-delete{color:#bc3447}
+@media(max-width:700px){
+ #appointmentModal .native-finance{padding:14px}
+ #appointmentModal .native-proof-row{align-items:flex-start;flex-wrap:wrap}
+ #appointmentModal .native-proof-filename{flex-basis:calc(100% - 44px);padding-top:6px}
+ #appointmentModal .native-proof-actions{width:100%;justify-content:flex-end}
+ #appointmentModal .native-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:450px){#appointmentModal .native-finance-grid{grid-template-columns:1fr}}
+
+
+#appointmentModal .native-finance-view-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 16px}
+#appointmentModal .native-finance-view-summary>div{display:flex;flex-direction:column;gap:5px;padding:11px 13px;border:1px solid #e1e9ef;border-radius:10px;background:#f9fcfd}
+#appointmentModal .native-finance-view-summary small{font-size:11px;color:#667e8e}
+#appointmentModal .native-finance-view-summary strong{font-size:15px;color:#183449}
+#appointmentModal .native-finance>details.native-proof-history{margin:10px 0}
+@media(max-width:450px){#appointmentModal .native-finance-view-summary{grid-template-columns:1fr}}
