@@ -316,7 +316,7 @@ export async function GET(request:Request){
   const comparison=monthlyReceiptComparison([...details,...extraPaid]);
   const receiptColumns=receiptChartSvg(comparison.groups);
   const receiptChart='<div class="receipt-chart"><div class="receipt-chart-head">'+
-   '<h2>Recebimentos por origem</h2><strong>Total: '+
+   '<h2>Comparativo de recebimentos</h2><strong>Total: '+
    esc(amount(comparison.totalCents/100))+'</strong></div>'+
    '<div class="receipt-chart-note">Particular e cada convênio separadamente · '+
    'Somente valores pagos e individualizados dos atendimentos desta competência '+
@@ -329,9 +329,14 @@ export async function GET(request:Request){
   const insurancePage=page(heading("Atendimentos por convênio",company,label,
    "Todos os médicos · "+insurance.length+" cobrança(s)")+
    (insuranceBlocks||'<div class="empty">Nenhum atendimento por convênio nesta competência.</div>')+
-   receiptChart+
    '<div class="footer"><span>RN Integra · Atendimentos por convênio</span>'+
    '<span>Valores individuais disponíveis</span></div>',true);
+  // Página independente: o gráfico nunca fica abaixo ou colado à relação de atendimentos.
+  const receiptChartPage=page(heading("Recebimentos por origem",company,label,
+   "Particular e convênios · somente recebimentos confirmados")+
+   receiptChart+
+   '<div class="footer"><span>RN Integra · Recebimentos por origem</span>'+
+   '<span>Comparativo financeiro da competência</span></div>',true);
   // A relação clínica não depende de cobrança: um atendimento pode ter vários itens.
   // Fechamentos antigos não contêm cancelamentos; nunca inferi-los da posição atual.
   const legacyOverview:MonthlyAttendance[]=[...new Map<string,MonthlyAttendance>(details.map(a=>[a.attendance_id,{
@@ -389,7 +394,7 @@ export async function GET(request:Request){
    '<title>RN Integra · '+esc(label)+' · Relatório de Fechamento Mensal</title><style>'+CSS+
    '</style></head><body><div class="print-toolbar"><span>RN Integra · Impressão '+esc(label)+
    '</span><button type="button" id="print">Imprimir / Salvar PDF</button></div>'+
-   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
+   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+receiptChartPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
   return new Response(html,{headers:{"Content-Type":"text/html; charset=utf-8",
    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
    "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+
