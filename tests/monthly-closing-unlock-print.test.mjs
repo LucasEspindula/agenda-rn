@@ -31,7 +31,7 @@ test("operações retroativas de NF, faturamento e glosa não são bloqueadas pe
 });
 test("impressora segue a mesma arquitetura de PDF que os demais relatórios",()=>{
  assert.match(ui,/import \{PrintIcon\} from "@\/components\/billing-icons"/);
- assert.match(ui,/window\.open\("\/api\/reports\/monthly-closing\?"/);
+ assert.match(ui,/window\.open\("\/api\/reports\/monthly-closing\/print\?"/);
  assert.doesNotMatch(ui,/window\.print\(/);
  assert.match(pdf,/PdfReport,brDate,brDateTime,brl,pdfResponse/);
  assert.match(pdf,/pdfResponse\(pdf/);

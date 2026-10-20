@@ -1,18 +1,16 @@
 .monthly-closing{color:#183d52;min-width:0;padding:12px 0 30px}
 .monthly-heading{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin:0 0 20px}
 .monthly-heading h1{font-size:25px;margin:0 0 6px;font-weight:730}
-.monthly-heading p{font-size:13px;color:#60758a;line-height:1.55;max-width:800px;margin:0}
+.monthly-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.monthly-header-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;white-space:nowrap;font-weight:750}
+.monthly-preview-button svg{width:18px;height:18px;flex:none}
+.monthly-final-button{min-width:124px}
 .monthly-filters{background:#fff;border:1px solid #dce7ef;border-radius:12px;padding:16px;
  display:flex;align-items:end;gap:14px;margin-bottom:18px;flex-wrap:wrap}
 .monthly-filters label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:650;color:#476070}
 .monthly-filters label:first-child{flex:1;min-width:280px}
 .monthly-filters :is(select,input){height:40px;min-width:170px;padding:8px;border:1px solid #cedce6;
  border-radius:7px;background:#fff;color:#213c51}
-.monthly-report-heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin:20px 0}
-.monthly-report-heading h2{font-size:21px;margin:0 0 4px}
-.monthly-report-heading p{margin:0;color:#617b90;font-size:13px}
-.monthly-report-status{display:flex;flex-direction:column;gap:5px;font-size:13px;text-align:right}
-.monthly-report-status small{font-size:11px;color:#60778a}
 .monthly-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
 .monthly-summary article{display:flex;flex-direction:column;gap:7px;padding:17px;background:#fff;
  border:1px solid #dce7ef;border-radius:11px}
@@ -41,7 +39,8 @@
 .monthly-history-list{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:960px){.monthly-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.monthly-summary{grid-template-columns:1fr}
- .monthly-heading,.monthly-report-heading{flex-direction:column}
+ .monthly-heading{flex-direction:column;align-items:stretch}
+ .monthly-header-actions{justify-content:flex-start}
  .monthly-report-status{text-align:left}
  .monthly-filters{display:grid;grid-template-columns:1fr}
  .monthly-filters label:first-child{min-width:0}}
@@ -66,9 +65,6 @@
 .monthly-nf-replaced:hover{background:rgba(230,157,40,.080)}
 .monthly-nf-cancelled:hover{background:rgba(208,69,69,.090)}
 
-.monthly-attendance-count{display:flex;align-items:center;gap:10px;padding:11px 14px;
- margin:12px 0;background:#fff8f3;border:1px solid #edd9c8;border-radius:9px;color:#7e472f;font-size:12px}
-.monthly-attendance-count strong{font-size:18px}
 .monthly-attendance-cancelled{background:#fff8f4}
 .monthly-attendance-cancelled:hover{background:#fff2eb}
 

@@ -34,6 +34,7 @@ test("acesso restrito ao gerente e oculto até migration homologada",()=>{
  assert.match(page,/RN_MONTHLY_CLOSING_ENABLED/);
  assert.match(api,/general_manager/);
  assert.match(api,/secureMutation/);
- assert.match(ui,/Imprimir \/ Salvar em PDF/);
+ assert.match(ui,/Prévia<\/button>/);
+ assert.match(ui,/>Fechar Mês<\/button>/);
  assert.match(ui,/attributed_invoice_items/);
 });
