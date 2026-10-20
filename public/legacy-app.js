@@ -680,6 +680,49 @@ function nativeFinanceRoot(){return $("appointmentModal").classList.contains("ap
 function nativeMethod(){return $("appointmentModal").classList.contains("appointment-view-mode")?$("detailBillingMethod")?.value:$("appointmentBillingMethod").value}
 function captureNativeFinance(){if(!nativeFinance)return;for(const [id,key] of [["nativeEntity","billing_entity_id"],["nativeAmount","received_amount"],["nativeStatus","payment_status"],["nativePaidAt","paid_at"]]){const el=$(id);if(el)nativeFinance.draft[key]=el.value}}
 function nativeFinanceError(message){const root=nativeFinanceRoot();if(!root)return;root.querySelector('[role="alert"]')?.remove();root.insertAdjacentHTML('beforeend',`<p class="native-finance-error" role="alert">${esc(message)}</p>`);root.querySelector('[role="alert"]').scrollIntoView({block:'nearest'})}
+
+function financeProofsMarkup(current,history,editable){
+ const link=a=>`<a href="/api/financial-attachments?id=${encodeURIComponent(a.id)}" target="_blank" rel="noopener noreferrer">Visualizar</a>`;
+ const proof=(a,historical=false)=>`<li class="native-proof-row">
+  <span class="native-proof-icon" aria-hidden="true">▤</span>
+  <span class="native-proof-filename" title="${esc(a.original_filename)}">${esc(a.original_filename)}</span>
+  ${historical?`<small>${a.deactivation_reason==='REMOVED_BY_USER'?'Excluído':a.deactivation_reason==='PAYMENT_REVERSED'?'Pagamento revertido':'Substituído'}</small>`:''}
+  <span class="native-proof-actions">${link(a)}
+  ${editable&&!historical?`<button type="button" class="nativeProofReplace" data-attachment="${esc(a.id)}">Substituir</button>
+   <button type="button" class="nativeProofDelete" data-attachment="${esc(a.id)}" aria-label="Excluir comprovante ${esc(a.original_filename)}">Excluir</button>`:''}
+  </span></li>`;
+ return `<div class="native-proofs-title"><strong>Comprovantes de pagamento</strong><span>${current.length} anexo${current.length===1?'':'s'}</span></div>
+  ${current.length?`<ul class="native-proof-list">${current.map(a=>proof(a)).join('')}</ul>`:'<p class="native-proof-empty">Nenhum comprovante anexado.</p>'}
+  ${history.length?`<details class="native-proof-history"><summary>Histórico (${history.length})</summary><ul class="native-proof-list">${history.map(a=>proof(a,true)).join('')}</ul></details>`:''}`;
+}
+async function deleteNativeProof(f,id){
+ const proof=(f.data?.attachments||[]).find(a=>a.id===id&&a.status==='READY'&&a.is_current);
+ if(!proof)return nativeFinanceError('Comprovante não disponível.');
+ if(!window.confirm('Excluir este comprovante? O pagamento será mantido e a exclusão ficará registrada no histórico.'))return;
+ const buttons=nativeFinanceRoot()?.querySelectorAll('.nativeProofDelete,.nativeProofReplace');
+ buttons?.forEach(b=>b.disabled=true);
+ try{
+  await window.RNFinance.removePaymentProof(id);
+  await loadNativeFinance(f.id,f.draft);
+  toast('Comprovante excluído.');
+ }catch(error){
+  buttons?.forEach(b=>b.disabled=false);
+  nativeFinanceError(error.message||'Não foi possível excluir o comprovante.');
+ }
+}
+function bindNativeProofDeletion(root,f){
+ root.querySelectorAll('.nativeProofDelete').forEach(button=>button.onclick=()=>deleteNativeProof(f,button.dataset.attachment||''));
+}
+function nativeFinanceHeading(f){
+ const record=f.row?.record,requests=f.data?.requests||[];
+ const nf=record?.no_invoice?'S/N':requests.some(r=>r.attendance_id===f.id&&r.status==='PENDING')?'NF solicitada':
+  requests.some(r=>r.attendance_id===f.id&&r.status==='CANCELLED')?'NF cancelada':'Sem solicitação';
+ const status=record?.payment_status==='PAGO'&&f.row?.status_atendimento!=='realized'?
+  '<span class="native-finance-tag warning" title="Pagamento recebido, mas atendimento ainda não realizado.">Atendimento não realizado</span>':'';
+ return `<div class="native-finance-head"><h4>Financeiro do atendimento</h4><div class="native-finance-tags">
+   ${nativeMethod()==='PARTICULAR'?'<span class="native-finance-tag">'+esc(nf)+'</span>':''}
+   ${status}</div></div>`;
+}
 function paintNativeFinance(){
  const root=nativeFinanceRoot(),f=nativeFinance;if(!root||!f)return;captureNativeFinance();
  if(f.loading){root.innerHTML='<p>Carregando financeiro…</p>';return}
@@ -689,14 +732,35 @@ function paintNativeFinance(){
  if(!direct){root.innerHTML='<h4>Financeiro do atendimento</h4><p>'+ (nativeMethod()==='CONVENIO'?'Pagamento gerenciado pelo faturamento do convênio.':'Selecione a forma de cobrança para preencher o financeiro.')+'</p>';return}
  const options=f.row?window.RNFinance.allowedEntities(f.row,f.data):[];
  if(!f.draft.billing_entity_id&&options.length===1)f.draft.billing_entity_id=options[0].id;
- const proofs=(f.data?.attachments||[]).filter(a=>a.billing_record_id===f.row?.record?.id&&a.status==='READY'),currentProofs=proofs.filter(a=>a.is_current),historicalProofs=proofs.filter(a=>!a.is_current),showProofs=f.draft.payment_status==='PAGO',proofLink=a=>`<a href="/api/financial-attachments?id=${encodeURIComponent(a.id)}" target="_blank" rel="noreferrer">Visualizar</a>`;
- root.innerHTML=`<h4>Financeiro do atendimento</h4>${nativeMethod()==='PARTICULAR'?`<p>NF: ${f.row?.record?.no_invoice?'S/N':(f.data?.requests||[]).some(r=>r.attendance_id===f.id&&r.status==='PENDING')?'Solicitada':(f.data?.requests||[]).some(r=>r.attendance_id===f.id&&r.status==='CANCELLED')?'Cancelada':'Sem solicitação'}</p>`:''}<div class="native-finance-grid">${f.row?`<label>Entidade recebedora<select id="nativeEntity"><option value="">Selecione</option>${options.map(e=>`<option value="${esc(e.id)}">${esc(e.trade_name||e.name)}</option>`).join('')}</select></label>`:''}<label>Valor recebido<input id="nativeAmount" type="text" inputmode="decimal" placeholder="R$ 0,00"></label><label>Status do pagamento<select id="nativeStatus"><option value="PENDENTE">Pendente</option><option value="PAGO">Recebido</option></select></label><label>Data de pagamento<input id="nativePaidAt" type="date"></label></div>${showProofs?`<section class="native-payment-proofs" aria-label="Comprovante de pagamento"><h4>Comprovante de pagamento</h4><p>${currentProofs.length?'Pago · Comprovante anexado':'Pago · Sem comprovante'}</p>${currentProofs.length?`<ul>${currentProofs.map(a=>`<li>✓ ${esc(a.original_filename)} · ${proofLink(a)} · <button type="button" class="nativeProofReplace" data-attachment="${esc(a.id)}">Substituir</button></li>`).join('')}</ul>`:''}<label>Anexar comprovante<input id="nativePaymentProof" type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"></label><button type="button" id="addNativePaymentProof" class="secondary-btn">+ Adicionar comprovante</button><small>PDF, JPG ou PNG · até 10 MB</small>${f.proofFile?`<p>✓ ${esc(f.proofFile.name)}<br><small>${f.row?.record?.payment_status==='PAGO'?'Será enviado agora.':'Será enviado após salvar o pagamento.'}</small></p><button type="button" id="clearNativePaymentProof" class="secondary-btn">Remover arquivo</button>`:''}${f.proofTargetId&&f.proofFile?`<p class="native-finance-error" role="alert">✓ Pagamento salvo. O comprovante não foi enviado.</p><button type="button" id="retryNativePaymentProof" class="secondary-btn">Tentar novamente</button>`:''}${historicalProofs.length?`<details><summary>Histórico de comprovantes</summary><ul>${historicalProofs.map(a=>`<li>${esc(a.original_filename)} · ${proofLink(a)}</li>`).join('')}</ul></details>`:''}</section>`:''}`;
- const fiscalPending=(f.data?.requests||[]).some(r=>r.attendance_id===f.id&&r.status==='PENDING');
- if(fiscalPending&&nativeMethod()==='PARTICULAR')root.insertAdjacentHTML('beforeend',
-  '<p class="native-finance-hint">A solicitação da NF já está pendente. Para emitir a nota, acesse Faturamento → Notas Fiscais → Solicitações. Desvincular/desfazer uma NF não cancela essa solicitação. Para mudar valor, data ou tomador, reverta o pagamento de forma auditada antes de confirmar novamente.</p>');
- if(f.row?.record?.payment_status==='PAGO'&&f.row?.status_atendimento!=='realized')
-  root.insertAdjacentHTML('beforeend',
-  '<p class="native-finance-hint">Pagamento registrado, porém o atendimento ainda não está marcado como Realizado na Agenda. O recebimento entra no caixa, mas a produção realizada só será contabilizada após a confirmação clínica.</p>');
+
+ const proofs=(f.data?.attachments||[]).filter(a=>a.billing_record_id===f.row?.record?.id&&a.status==='READY');
+ const currentProofs=proofs.filter(a=>a.is_current);
+ const historicalProofs=proofs.filter(a=>!a.is_current);
+ const showProofs=f.draft.payment_status==='PAGO';
+ root.innerHTML=nativeFinanceHeading(f)+
+  `<div class="native-finance-grid">
+   ${f.row?`<label>Entidade recebedora<select id="nativeEntity"><option value="">Selecione</option>
+    ${options.map(e=>`<option value="${esc(e.id)}">${esc(e.trade_name||e.name)}</option>`).join('')}
+   </select></label>`:''}
+   <label>Valor recebido<input id="nativeAmount" type="text" inputmode="decimal" placeholder="R$ 0,00"></label>
+   <label>Status do pagamento<select id="nativeStatus"><option value="PENDENTE">Pendente</option>
+    <option value="PAGO">Recebido</option></select></label>
+   <label>Data de pagamento<input id="nativePaidAt" type="date"></label>
+  </div>`+
+  (showProofs?`<section class="native-payment-proofs" aria-label="Comprovantes de pagamento">
+    ${financeProofsMarkup(currentProofs,historicalProofs,true)}
+    <div class="native-proof-upload">
+     <input id="nativePaymentProof" type="file" hidden
+      accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-label="Selecionar comprovante">
+     <button type="button" id="addNativePaymentProof" class="secondary-btn">+ Adicionar comprovante</button>
+     <small>PDF, JPG ou PNG · até 10 MB</small>
+    </div>
+    ${f.proofFile?`<div class="native-proof-pending">✓ ${esc(f.proofFile.name)}
+     <button type="button" id="clearNativePaymentProof">Remover seleção</button></div>`:''}
+    ${f.proofTargetId&&f.proofFile?`<p class="native-finance-error" role="alert">Comprovante não enviado.
+     <button type="button" id="retryNativePaymentProof" class="secondary-btn">Tentar novamente</button></p>`:''}
+   </section>`:'');
+ bindNativeProofDeletion(root,f);
  if($("nativeEntity"))$("nativeEntity").value=f.draft.billing_entity_id||'';
  $("nativeAmount").value=f.draft.received_amount??'';$("nativeStatus").value=f.draft.payment_status||'PENDENTE';$("nativePaidAt").value=f.draft.paid_at||'';
  $("nativeAmount").oninput=e=>{e.target.setCustomValidity('');captureNativeFinance()};
