@@ -688,7 +688,7 @@ function financeProofsMarkup(current,history,editable){
   <span class="native-proof-filename" title="${esc(a.original_filename)}">${esc(a.original_filename)}</span>
   ${historical?`<small>${a.deactivation_reason==='REMOVED_BY_USER'?'Excluído':a.deactivation_reason==='PAYMENT_REVERSED'?'Pagamento revertido':'Substituído'}</small>`:''}
   <span class="native-proof-actions">${link(a)}
-  ${editable&&!historical?`<button type="button" class="nativeProofReplace" data-attachment="${esc(a.id)}">Substituir</button>
+  ${editable&&!historical?`${editable==='full'?'<button type="button" class="nativeProofReplace" data-attachment="'+esc(a.id)+'">Substituir</button>':''}
    <button type="button" class="nativeProofDelete" data-attachment="${esc(a.id)}" aria-label="Excluir comprovante ${esc(a.original_filename)}">Excluir</button>`:''}
   </span></li>`;
  return `<div class="native-proofs-title"><strong>Comprovantes de pagamento</strong><span>${current.length} anexo${current.length===1?'':'s'}</span></div>
@@ -727,7 +727,31 @@ function paintNativeFinance(){
  const root=nativeFinanceRoot(),f=nativeFinance;if(!root||!f)return;captureNativeFinance();
  if(f.loading){root.innerHTML='<p>Carregando financeiro…</p>';return}
  if(f.error){root.innerHTML=`<p role="alert">${esc(f.error)}</p><button type="button" id="retryNativeFinance" class="secondary-btn">Tentar novamente</button>`;$("retryNativeFinance").onclick=()=>loadNativeFinance(f.id,f.draft);return}
- if(f.row?.invoice){const parts=(f.data?.payment_parts||[]).filter(p=>p.billing_record_id===f.row.record?.id),proofs=(f.data?.attachments||[]).filter(a=>a.billing_record_id===f.row.record?.id&&a.status==='READY'),currentProofs=proofs.filter(a=>a.is_current),historicalProofs=proofs.filter(a=>!a.is_current),proofLink=a=>`<a href="/api/financial-attachments?id=${encodeURIComponent(a.id)}" target="_blank" rel="noreferrer">Visualizar</a>`;root.innerHTML=`<h4>Financeiro do atendimento</h4><p>NF ${esc(f.row.invoice.invoice_number)} · ${f.row.invoice.paid_at?'Pago':'Aguardando pagamento'} · ${esc(money(window.RNFinance.individualReceived(f.row)))} · Pagamento: ${esc(f.row.invoice.paid_at?parseDate(f.row.invoice.paid_at.slice(0,10)).toLocaleDateString("pt-BR"):'—')}</p><p>${f.row.invoice.recipient_type==='PARTICULAR'?'NF emitida. Alterações no pagamento exigem correção fiscal/manual pelo Faturamento.':'Pagamento gerenciado na NF vinculada.'}</p>${f.row.invoice.recipient_type==='PARTICULAR'?`<section aria-label="Composição do pagamento registrada"><h4>Formas de pagamento · somente leitura</h4>${parts.length?`<ul>${parts.map(p=>`<li>${esc(window.RNFinance.paymentMethods[p.method]||'Outra forma')} · ${esc(money(p.amount))}${p.method==='CREDIT_CARD'&&p.installments?` · ${esc(p.installments)} parcelas`:''}</li>`).join('')}</ul>`:'<p>Composição não informada no registro anterior.</p>'}</section><section class="native-payment-proofs" aria-label="Comprovantes de pagamento"><h4>Comprovante de pagamento</h4><p>${currentProofs.length?'Pago · Comprovante anexado':'Pago · Sem comprovante'}</p>${currentProofs.length?`<ul>${currentProofs.map(a=>`<li>✓ ${esc(a.original_filename)} · ${proofLink(a)}</li>`).join('')}</ul>`:''}${historicalProofs.length?`<details><summary>Histórico de comprovantes</summary><ul>${historicalProofs.map(a=>`<li>${esc(a.original_filename)} · ${proofLink(a)}</li>`).join('')}</ul></details>`:''}</section>`:''}`;return}
+
+ if(f.row?.invoice){
+  const parts=(f.data?.payment_parts||[]).filter(p=>p.billing_record_id===f.row.record?.id);
+  const proofs=(f.data?.attachments||[]).filter(a=>a.billing_record_id===f.row.record?.id&&a.status==='READY');
+  const currentProofs=proofs.filter(a=>a.is_current),historicalProofs=proofs.filter(a=>!a.is_current);
+  const invoice=f.row.invoice;
+  root.innerHTML=`<div class="native-finance-head"><h4>Financeiro do atendimento</h4>
+    <div class="native-finance-tags"><span class="native-finance-tag">NF ${esc(invoice.invoice_number)}</span>
+    <span class="native-finance-tag">${invoice.paid_at?'Pago':'Aguardando pagamento'}</span></div></div>
+    <div class="native-finance-view-summary">
+     <div><small>Valor recebido</small><strong>${esc(money(window.RNFinance.individualReceived(f.row)))}</strong></div>
+     <div><small>Data do pagamento</small><strong>${esc(invoice.paid_at?
+      parseDate(invoice.paid_at.slice(0,10)).toLocaleDateString("pt-BR"):'—')}</strong></div>
+    </div>`+
+   (invoice.recipient_type==='PARTICULAR'?`<details class="native-proof-history">
+    <summary>Formas de pagamento</summary>
+    ${parts.length?`<ul>${parts.map(p=>`<li>${esc(window.RNFinance.paymentMethods[p.method]||'Outra forma')}
+     · ${esc(money(p.amount))}${p.method==='CREDIT_CARD'&&p.installments?` · ${esc(p.installments)} parcelas`:''}
+    </li>`).join('')}</ul>`:'Composição não informada.'}</details>
+    <section class="native-payment-proofs" aria-label="Comprovantes de pagamento">
+     ${financeProofsMarkup(currentProofs,historicalProofs,'delete')}
+    </section>`:'');
+  bindNativeProofDeletion(root,f);
+  return;
+ }
  const direct=f.row?window.RNFinance.directPayment(f.row,f.data,nativeMethod()):nativeMethod()==='PARTICULAR';
  if(!direct){root.innerHTML='<h4>Financeiro do atendimento</h4><p>'+ (nativeMethod()==='CONVENIO'?'Pagamento gerenciado pelo faturamento do convênio.':'Selecione a forma de cobrança para preencher o financeiro.')+'</p>';return}
  const options=f.row?window.RNFinance.allowedEntities(f.row,f.data):[];
@@ -748,7 +772,7 @@ function paintNativeFinance(){
    <label>Data de pagamento<input id="nativePaidAt" type="date"></label>
   </div>`+
   (showProofs?`<section class="native-payment-proofs" aria-label="Comprovantes de pagamento">
-    ${financeProofsMarkup(currentProofs,historicalProofs,true)}
+    ${financeProofsMarkup(currentProofs,historicalProofs,'full')}
     <div class="native-proof-upload">
      <input id="nativePaymentProof" type="file" hidden
       accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" aria-label="Selecionar comprovante">
