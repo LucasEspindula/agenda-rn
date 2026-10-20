@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=path=>readFileSync(path,'utf8');
+const migration=read('supabase/migrations/20261020221500_remove_financial_payment_proof.sql');
+const route=read('app/api/financial-attachments/route.ts');
+const agenda=read('public/legacy-app.js');
+const styles=read('public/legacy.css');
+const component=read('components/payment-proofs.tsx');
+const client=read('lib/financial-attachments-client.ts');
+const app=read('app/dashboard/legacy-app.tsx');
+
+test('exclusão de comprovante pronto é auditada e nunca apaga o pagamento',()=>{
+ assert.match(migration,/create or replace function public\.remove_financial_attachment/);
+ assert.match(migration,/not attachment\.is_current/);
+ assert.match(migration,/authorized_financial_attachment_actor/);
+ assert.match(migration,/perform public\.financial_operation\(/);
+ assert.match(migration,/set is_current=false/);
+ assert.match(migration,/deactivation_reason='REMOVED_BY_USER'/);
+ assert.doesNotMatch(migration,/delete\s+from\s+public\.(financial_attachments|billing_records)/i);
+ assert.doesNotMatch(migration,/storage\.objects|storage\.from|\.remove\(/i);
+ assert.match(migration,/grant execute on function public\.remove_financial_attachment\(bigint,uuid\)/);
+});
+test('DELETE mantém limpeza PENDING e aceita READY apenas ativo e autorizado',()=>{
+ assert.match(route,/if\(attachment\.status==='PENDING'\)/);
+ assert.match(route,/await rejectPending\(session,attachment\)/);
+ assert.match(route,/attachment\.status!=='READY'\|\|!attachment\.is_current\|\|attachment\.deactivated_at/);
+ assert.match(route,/await permitted\(session,attachment\.invoice_id,attachment\.billing_record_id\)/);
+ assert.match(route,/consumeLimit\('payment-proof-remove'/);
+ assert.match(route,/\.rpc\('remove_financial_attachment'/);
+ assert.match(route,/session\.account\.role==='doctor'/);
+ assert.match(route,/export const DELETE=secureMutation/);
+});
+test('agenda mostra comprovantes como itens, com Visualizar, Substituir e Excluir',()=>{
+ assert.match(agenda,/function financeProofsMarkup/);
+ assert.match(agenda,/class="native-proof-row"/);
+ assert.match(agenda,/class="nativeProofReplace"/);
+ assert.match(agenda,/class="nativeProofDelete"/);
+ assert.match(agenda,/window\.RNFinance\.removePaymentProof\(id\)/);
+ assert.match(agenda,/window\.confirm\('Excluir este comprovante/);
+ assert.match(agenda,/await loadNativeFinance\(f\.id,f\.draft\)/);
+ assert.match(agenda,/financeProofsMarkup\(currentProofs,historicalProofs,'full'\)/);
+ assert.match(agenda,/financeProofsMarkup\(currentProofs,historicalProofs,'delete'\)/);
+ assert.match(agenda,/deactivation_reason==='REMOVED_BY_USER'\?'Excluído'/);
+ assert.match(agenda,/id="nativePaymentProof" type="file" hidden/);
+ assert.doesNotMatch(agenda,/A solicitação da NF já está pendente\. Para emitir a nota/);
+ assert.doesNotMatch(agenda,/Pagamento registrado, porém o atendimento ainda não está marcado como Realizado/);
+ assert.match(styles,/\.native-proof-filename\{[^}]*text-overflow:ellipsis/);
+ assert.match(styles,/\.native-proof-actions \.nativeProofDelete\{color:/);
+ assert.match(styles,/@media\(max-width:700px\)/);
+});
+test('remoção também disponível no componente financeiro reutilizado',()=>{
+ assert.match(client,/export async function removeFinancialAttachment\(id:string\)/);
+ assert.match(client,/method:'DELETE'/);
+ assert.match(app,/removeFinancialAttachment/);
+ assert.match(app,/removePaymentProof\}/);
+ assert.match(component,/onClick=\{\(\)=>void removeProof\(a\.id\)\}/);
+ assert.match(component,/onChanged\?\.\(\)/);
+ assert.match(component,/deactivation_reason==='REMOVED_BY_USER'/);
+});
