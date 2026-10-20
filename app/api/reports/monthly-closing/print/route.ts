@@ -4,7 +4,7 @@ import {getSupabaseAdmin} from "@/lib/supabase-admin";
 import {monthlyInvoiceStatus} from "@/lib/monthly-invoice-status";
 import {monthlyReceiptComparison} from "@/lib/monthly-receipt-comparison";
 
-const CSS="\n:root{--ink:#172126;--muted:#66747b;--line:#dfe5e8;--brand:#0b7f79;--red:#b42318;--amber:#8a5b00;--warnbg:#fff8e8}\n*{box-sizing:border-box}body{margin:0;background:#edf1f3;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}\n.page{width:1480px;margin:22px auto;background:#fff;padding:28px 30px 34px;box-shadow:0 8px 24px rgba(0,0,0,.07)}\n.page-break{break-before:page;page-break-before:always}\n.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #d8e1e5;padding-bottom:14px}\n.brand{font-size:12px;font-weight:850;color:var(--brand);letter-spacing:.04em}\nh1{font-size:24px;margin:4px 0 3px}.company-name{font-size:14px;font-weight:750}\n.meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.6}\n.period{display:inline-block;background:#e9f6f4;color:var(--brand);font-weight:850;padding:5px 9px;border-radius:999px}\n.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 10px}\n.card{border:1px solid var(--line);border-radius:9px;padding:10px 11px}\n.card small{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.card strong{font-size:17px;display:block;margin-top:2px}.card span{font-size:9px;color:var(--muted)}\n.dist-title{font-size:12px;font-weight:900;padding:9px 11px;background:#f4f7f8;border:1px solid var(--line);border-radius:9px 9px 0 0}\n.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;overflow:hidden}\n.dist-card{padding:11px 14px;border-right:1px solid var(--line)}.dist-card:last-child{border-right:0}\n.dist-card b{display:block;font-size:12px}.dist-card strong{display:block;font-size:16px;color:#244d68;margin-top:2px}.dist-card small{font-size:9px;color:var(--muted)}\n.doctor-section{margin-top:22px}.doctor-head{display:flex;justify-content:space-between;align-items:end;padding:8px 10px;background:#f7fafb;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0}\n.doctor-name{font-size:13px;font-weight:900}.doctor-sub{font-size:9px;color:var(--muted);margin-top:2px}\n.doctor-total{text-align:right}.doctor-total small{display:block;font-size:8px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.doctor-total strong{font-size:15px;color:var(--brand);display:block}.doctor-total span{font-size:8px;color:var(--muted)}\ntable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line)}\nth{background:#f7f9fa;color:#5f6e75;font-size:8px;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);border-right:1px solid #e7ecee}\ntd{font-size:8.8px;padding:5px 6px;border-bottom:1px solid #edf1f2;border-right:1px solid #f0f3f4;vertical-align:top;line-height:1.27;overflow-wrap:anywhere}\ntbody tr:nth-child(even){background:#fcfdfd}.nf{font-weight:900;color:#174d64}\n.money{text-align:right;white-space:nowrap}.strong{font-weight:850}\n.doctor-value{background:#f1faf8;color:#0a625e;font-weight:850}.subtotal td{background:#f5f8f9;font-weight:900}\n.shared{display:inline-block;font-size:7px;background:#fff3d6;color:#805900;padding:2px 4px;border-radius:999px;margin-left:3px}\n.section-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 7px}\n.section-head h2{font-size:14px;margin:0}.section-head small{font-size:9px;color:var(--muted)}\n.partner{font-weight:800;color:#244d68}.missing{color:#8b969b;font-style:italic}\n.total-row td{background:#f1f6f7;font-weight:900;border-top:2px solid #cbd8dc}\n.status-title{margin-top:18px;padding:8px 10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-size:12px;font-weight:900}\n.cancel{background:#fff4f2;color:var(--red)}.replace{background:#fff8e8;color:var(--amber)}\n.soft-cancel{background:#fff9f8}.soft-replace{background:#fffaf3}\n.footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid var(--line);font-size:8px;color:#8b959a}\n.sn{font-weight:900;color:#9c6e19}.print-toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:#10384b;color:white;font-size:12px}\n.print-toolbar button{padding:9px 16px;border:0;border-radius:6px;background:#e1f7f0;color:#0b5d59;font:inherit;font-weight:800;cursor:pointer}\n.insurance-section{margin-top:18px}.insurance-title{padding:9px 12px;background:#f4f7f8;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-weight:900;font-size:12px;color:#244d68}\n.empty{color:var(--muted);font-size:11px;padding:12px}\n.attendance-heading{font-size:13px;font-weight:850;margin:19px 0 7px;color:#244d68;break-after:avoid}\n.attendance-note{font-size:10px;color:var(--muted);margin:12px 0}\n.attendance-cancelled tbody tr{background:#fff9f5}\n.receipt-chart{margin-top:24px;padding-top:14px;border-top:2px solid var(--line)}\n.receipt-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px;break-after:avoid}\n.receipt-chart-head h2{font-size:15px;margin:0}\n.receipt-chart-head strong{font-size:14px;color:var(--brand)}\n.receipt-chart-note{font-size:10px;color:var(--muted);margin-bottom:12px}\n.receipt-plot{display:block;width:100%;max-width:1150px;height:auto;margin:0 auto 12px;break-inside:avoid;page-break-inside:avoid}\n.receipt-warning{font-size:9px;color:var(--amber);margin:11px 0 0}\n@media(max-width:1500px){.page{width:calc(100% - 24px);padding:20px;overflow-x:auto}}\n.print-watermark{display:none}\n@media print{\n .print-watermark{display:block!important;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:62pt;font-weight:900;letter-spacing:.09em;white-space:nowrap;color:rgba(39,80,105,.12);pointer-events:none;user-select:none;z-index:20}\n @page{size:A4 landscape;margin:7mm}\n body{background:#fff}.print-toolbar{display:none!important}\n .page{width:auto;margin:0;box-shadow:none;padding:0;overflow:visible}\n .page-break{break-before:page!important;page-break-before:always!important}\n thead{display:table-header-group}table{page-break-inside:auto}\n tr{break-inside:avoid;page-break-inside:avoid}\n .doctor-head{break-after:avoid;page-break-after:avoid}\n th,td{padding:3px 3.5px;font-size:6.8pt}\n}\n";
+const CSS="\n:root{--ink:#172126;--muted:#66747b;--line:#dfe5e8;--brand:#0b7f79;--red:#b42318;--amber:#8a5b00;--warnbg:#fff8e8}\n*{box-sizing:border-box}body{margin:0;background:#edf1f3;font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}\n.page{width:1480px;margin:22px auto;background:#fff;padding:28px 30px 34px;box-shadow:0 8px 24px rgba(0,0,0,.07)}\n.page-break{break-before:page;page-break-before:always}\n.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #d8e1e5;padding-bottom:14px}\n.brand{font-size:12px;font-weight:850;color:var(--brand);letter-spacing:.04em}\nh1{font-size:24px;margin:4px 0 3px}.company-name{font-size:14px;font-weight:750}\n.meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.6}\n.period{display:inline-block;background:#e9f6f4;color:var(--brand);font-weight:850;padding:5px 9px;border-radius:999px}\n.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:15px 0 10px}\n.card{border:1px solid var(--line);border-radius:9px;padding:10px 11px}\n.card small{display:block;font-size:9px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.card strong{font-size:17px;display:block;margin-top:2px}.card span{font-size:9px;color:var(--muted)}\n.dist-title{font-size:12px;font-weight:900;padding:9px 11px;background:#f4f7f8;border:1px solid var(--line);border-radius:9px 9px 0 0}\n.dist-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-top:0;border-radius:0 0 9px 9px;overflow:hidden}\n.dist-card{padding:11px 14px;border-right:1px solid var(--line)}.dist-card:last-child{border-right:0}\n.dist-card b{display:block;font-size:12px}.dist-card strong{display:block;font-size:16px;color:#244d68;margin-top:2px}.dist-card small{font-size:9px;color:var(--muted)}\n.doctor-section{margin-top:22px}.doctor-head{display:flex;justify-content:space-between;align-items:end;padding:8px 10px;background:#f7fafb;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0}\n.doctor-name{font-size:13px;font-weight:900}.doctor-sub{font-size:9px;color:var(--muted);margin-top:2px}\n.doctor-total{text-align:right}.doctor-total small{display:block;font-size:8px;text-transform:uppercase;color:var(--muted);font-weight:850}\n.doctor-total strong{font-size:15px;color:var(--brand);display:block}.doctor-total span{font-size:8px;color:var(--muted)}\ntable{width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid var(--line)}\nth{background:#f7f9fa;color:#5f6e75;font-size:8px;text-transform:uppercase;text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);border-right:1px solid #e7ecee}\ntd{font-size:8.8px;padding:5px 6px;border-bottom:1px solid #edf1f2;border-right:1px solid #f0f3f4;vertical-align:top;line-height:1.27;overflow-wrap:anywhere}\ntbody tr:nth-child(even){background:#fcfdfd}.nf{font-weight:900;color:#174d64}\n.money{text-align:right;white-space:nowrap}.strong{font-weight:850}\n.doctor-value{background:#f1faf8;color:#0a625e;font-weight:850}.subtotal td{background:#f5f8f9;font-weight:900}\n.shared{display:inline-block;font-size:7px;background:#fff3d6;color:#805900;padding:2px 4px;border-radius:999px;margin-left:3px}\n.section-head{display:flex;justify-content:space-between;align-items:end;margin:15px 0 7px}\n.section-head h2{font-size:14px;margin:0}.section-head small{font-size:9px;color:var(--muted)}\n.partner{font-weight:800;color:#244d68}.missing{color:#8b969b;font-style:italic}\n.total-row td{background:#f1f6f7;font-weight:900;border-top:2px solid #cbd8dc}\n.status-title{margin-top:18px;padding:8px 10px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-size:12px;font-weight:900}\n.cancel{background:#fff4f2;color:var(--red)}.replace{background:#fff8e8;color:var(--amber)}\n.soft-cancel{background:#fff9f8}.soft-replace{background:#fffaf3}\n.footer{display:flex;justify-content:space-between;margin-top:16px;padding-top:8px;border-top:1px solid var(--line);font-size:8px;color:#8b959a}\n.sn{font-weight:900;color:#9c6e19}.print-toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:#10384b;color:white;font-size:12px}\n.print-toolbar button{padding:9px 16px;border:0;border-radius:6px;background:#e1f7f0;color:#0b5d59;font:inherit;font-weight:800;cursor:pointer}\n.insurance-section{margin-top:18px}.insurance-title{padding:9px 12px;background:#f4f7f8;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;font-weight:900;font-size:12px;color:#244d68}\n.empty{color:var(--muted);font-size:11px;padding:12px}\n.attendance-heading{font-size:13px;font-weight:850;margin:19px 0 7px;color:#244d68;break-after:avoid}\n.attendance-note{font-size:10px;color:var(--muted);margin:12px 0}\n.attendance-cancelled tbody tr{background:#fff9f5}\n.receipt-chart{margin-top:24px;padding-top:14px;border-top:2px solid var(--line)}\n.receipt-chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:5px;break-after:avoid}\n.receipt-chart-head h2{font-size:15px;margin:0}\n.receipt-chart-head strong{font-size:14px;color:var(--brand)}\n.receipt-chart-note{font-size:10px;color:var(--muted);margin-bottom:12px}\n.receipt-plot{display:block;width:100%;max-width:1150px;height:auto;margin:0 auto 12px;break-inside:avoid;page-break-inside:avoid}\n.receipt-warning{font-size:9px;color:var(--amber);margin:11px 0 0}\n.finance-notices{margin:8px 0;padding-left:20px;color:var(--amber);font-size:10px;line-height:1.5}\n.finance-notices li{margin:3px 0;break-inside:avoid}\n@media(max-width:1500px){.page{width:calc(100% - 24px);padding:20px;overflow-x:auto}}\n.print-watermark{display:none}\n@media print{\n .print-watermark{display:block!important;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-32deg);font-size:62pt;font-weight:900;letter-spacing:.09em;white-space:nowrap;color:rgba(39,80,105,.12);pointer-events:none;user-select:none;z-index:20}\n @page{size:A4 landscape;margin:7mm}\n body{background:#fff}.print-toolbar{display:none!important}\n .page{width:auto;margin:0;box-shadow:none;padding:0;overflow:visible}\n .page-break{break-before:page!important;page-break-before:always!important}\n thead{display:table-header-group}table{page-break-inside:auto}\n tr{break-inside:avoid;page-break-inside:avoid}\n .doctor-head{break-after:avoid;page-break-after:avoid}\n th,td{padding:3px 3.5px;font-size:6.8pt}\n}\n";
 export const dynamic="force-dynamic";
 const UUID=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const MONTH=/^\d{4}-(0[1-9]|1[0-2])$/;
@@ -32,10 +32,22 @@ type MonthlyAttendance={attendance_id:string;service_date:string;status:"realize
  patient_name:string;professional_name:string;procedure:string;billing_method:string;
  insurance_name:string;cancelled_at?:string|null;cancellation_reason?:string|null};
 type Snapshot={entity:{name:string;trade_name:string|null;tax_id:string|null};
- competence:string;issued_invoices:{count:number;gross_total:number;net_total:number};
+ competence:string;issued_invoices:{count:number;gross_total:number;net_total:number;without_net_amount?:number};
  professionals:Doctor[];professional_attendances?:Attendance[];
  attendance_overview?:MonthlyAttendance[];
  paid_unrealized?:PaidUnrealized[];
+ cash?:{direct_received:number;insurance_invoice_received:number;insurance_paid_invoices_without_net?:number};
+ expenses?:{competence_total:number;paid_total:number};
+ expense_items?:Array<{id:string;description:string;category:string;competence_date:string;
+   paid_at:string|null;amount:number;status:string}>;
+ direct_payments?:Array<{id:string;professional_name:string;paid_at:string;
+   received_amount:number|null;billing_method:string}>;
+ denials?:{denied_in_month:number;recovered_in_month:number;loss_on_cases_opened_in_month_now:number};
+ denial_items?:Array<{id:string;denied_on:string;denial_kind:string;reason:string;
+   denied_amount:number;recovered_amount:number;status:string}>;
+ pending_now?:{unpaid_invoice_count:number;unpaid_invoice_net:number;unpaid_invoice_unknown_net:number};
+ production?:{attendances:number;charges:number;pending_charges_now:number;unpriced_charges:number};
+ notices?:string[];
  professional_invoice_rows?:Link[];invoices:Inv[]};
 const heading=(title:string,company:string,month:string,extra:string)=>
  '<div class="head"><div><div class="brand">RN INTEGRA</div><h1>'+esc(title)+
@@ -386,6 +398,93 @@ export async function GET(request:Request){
     'do histórico de cancelamentos. A posição atual não foi usada para alterar o histórico.</p>':"")+
    '<div class="footer"><span>RN Integra · Relação de atendimentos</span><span>'+
    esc(view==="closed"?"Fechamento histórico preservado":"Posição atual")+'</span></div>');
+  // Esta seção utiliza as mesmas medidas financeiras e listas da tela do fechamento.
+  // Competência (data de referência) e fluxo de caixa (data de pagamento) não se confundem.
+  const expenseItems=[...(snap.expense_items||[])].sort((a,b)=>
+   a.competence_date.localeCompare(b.competence_date)||a.description.localeCompare(b.description,"pt-BR"));
+  const expenseRows=expenseItems.map(e=>row([
+   [e.description],[e.category||"—"],[date(e.competence_date)],[date(e.paid_at)],
+   [e.status],[amount(e.amount),"money"]
+  ])).join("");
+  const paymentItems=[...(snap.direct_payments||[])].sort((a,b)=>
+   String(a.paid_at||"").localeCompare(String(b.paid_at||""))||
+   a.professional_name.localeCompare(b.professional_name,"pt-BR"));
+  const paymentRows=paymentItems.map(p=>row([
+   [p.professional_name],[date(p.paid_at)],[p.billing_method],
+   [amount(p.received_amount),"money"]
+  ])).join("");
+  const denialItems=[...(snap.denial_items||[])].sort((a,b)=>
+   String(a.denied_on||"").localeCompare(String(b.denied_on||"")));
+  const denialRows=denialItems.map(g=>row([
+   [date(g.denied_on)],[g.denial_kind],[g.reason],
+   [amount(g.denied_amount),"money"],[amount(g.recovered_amount),"money"],[g.status]
+  ])).join("");
+  const directAmount=snap.cash?.direct_received??null;
+  const insuranceAmount=snap.cash?.insurance_invoice_received??null;
+  const expensePaid=snap.expenses?.paid_total??null;
+  const receiptTotal=directAmount===null||insuranceAmount===null?null:
+   (Math.round(Number(directAmount)*100)+Math.round(Number(insuranceAmount)*100))/100;
+  const cashResult=receiptTotal===null||expensePaid===null?null:
+   (Math.round(receiptTotal*100)-Math.round(Number(expensePaid)*100))/100;
+  const financialCards='<div class="summary">'+
+   card("Recebimentos individuais",amount(directAmount),"Pagos no mês · não duplicar NFs")+
+   card("Convênios recebidos",amount(insuranceAmount),"NFs pagas no mês · uma vez por NF")+
+   card("Entradas em caixa",amount(receiptTotal),"Pagamentos efetivamente recebidos")+
+   card("Despesas pagas",amount(expensePaid),"Data efetiva de pagamento")+
+   card("Resultado de caixa",amount(cashResult),"Entradas menos despesas pagas")+
+   card("Despesas da competência",amount(snap.expenses?.competence_total),"Data de competência · não somar novamente")+
+   card("Cobranças sem baixa",String(snap.production?.pending_charges_now??"—"),
+    "Situação atual dos atendimentos da competência")+
+   card("NFs sem valor líquido",String(snap.issued_invoices.without_net_amount??"—"),
+    "Não incluir valor desconhecido no caixa")+
+   '</div>';
+  const pending=snap.pending_now;
+  const denials=snap.denials;
+  const financeWarnings=[
+   ...(snap.notices||[]),
+   ...((snap.production?.unpriced_charges||0)>0?[
+    snap.production!.unpriced_charges+" cobrança(s) sem valor individual identificado."]:[]),
+   ...((snap.cash?.insurance_paid_invoices_without_net||0)>0?[
+    snap.cash!.insurance_paid_invoices_without_net+" NF(s) recebida(s) sem valor líquido."]:[]),
+   ...((snap.issued_invoices.without_net_amount||0)>0?[
+    snap.issued_invoices.without_net_amount+" NF(s) emitida(s) sem valor líquido."]:[]),
+   ...(!snap.expenses||!snap.expense_items||!snap.cash?[
+    "Alguns dados financeiros não constam neste snapshot histórico. Totais ausentes não foram assumidos como zero."]:[])
+  ];
+  const financeWarningsHtml=financeWarnings.length?
+   '<div class="section-head"><h2>Pontos a conferir</h2></div><ul class="finance-notices">'+
+   financeWarnings.map(w=>'<li>'+esc(w)+'</li>').join("")+'</ul>':"";
+  const financialPage=page(heading("Caixa, Despesas e Pendências",company,label,
+   "Consolidação financeira por entidade recebedora")+
+   '<div class="section-head"><h2>Resumo do caixa</h2><small>Recebimentos e despesas por data do pagamento</small></div>'+
+   financialCards+
+   '<p class="attendance-note">O total de despesas da competência pode incluir valores ainda não pagos. '+
+   'O resultado de caixa desconta apenas despesas efetivamente pagas no mês.</p>'+
+   '<div class="section-head"><h2>Despesas registradas ('+expenseItems.length+
+   ')</h2><small>Despesas da competência e despesas pagas no mês, sem duplicação</small></div>'+
+   (expenseItems.length?table(["Descrição","Categoria","Competência","Pago em","Status","Valor"],
+    expenseRows,[27,18,15,15,10,15]):
+    '<div class="empty">Nenhuma despesa vinculada a esta competência ou paga neste mês.</div>')+
+   '<div class="section-head"><h2>Recebimentos individuais ('+paymentItems.length+
+   ')</h2><small>Recebimentos diretos por data do pagamento</small></div>'+
+   (paymentItems.length?table(["Médico / profissional","Pago em","Cobrança","Valor recebido"],
+    paymentRows,[40,20,20,20]):
+    '<div class="empty">Nenhum recebimento individual neste mês.</div>')+
+   '<div class="section-head"><h2>Glosas e pendências</h2><small>Controle financeiro da competência</small></div>'+
+   '<div class="summary">'+
+   card("Glosado no mês",amount(denials?.denied_in_month),"Data de registro da glosa")+
+   card("Recuperado no mês",amount(denials?.recovered_in_month),"Informativo · não somado novamente ao caixa")+
+   card("Perda atual de casos do mês",amount(denials?.loss_on_cases_opened_in_month_now),"Posição atual dos casos")+
+   card("NFs pendentes",String(pending?.unpaid_invoice_count??"—"),
+    "Líquido pendente: "+amount(pending?.unpaid_invoice_net)+
+    " · sem líquido: "+String(pending?.unpaid_invoice_unknown_net??"—"))+
+   '</div>'+
+   (denialItems.length?table(["Data","Tipo","Motivo","Valor glosado","Recuperado","Status"],
+    denialRows,[12,15,30,16,14,13]):
+    '<div class="empty">Nenhuma glosa registrada na competência.</div>')+
+   financeWarningsHtml+
+   '<div class="footer"><span>RN Integra · Resumo financeiro, despesas e glosas</span>'+
+   '<span>Valores do snapshot da competência</span></div>',true);
   const nonce=randomBytes(16).toString("base64");
   const js="const b=document.getElementById('print');if(b)b.addEventListener('click',()=>window.print());"+
    "window.addEventListener('load',()=>setTimeout(()=>window.print(),350));";
@@ -397,7 +496,7 @@ export async function GET(request:Request){
    '</div><div class="print-toolbar"><span>RN Integra · '+
    esc(view==="closed"?"REGISTRO MENSAL":"PRÉVIA")+' · '+esc(label)+
    '</span><button type="button" id="print">Imprimir / Salvar PDF</button></div>'+
-   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+receiptChartPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
+   attendancePage+partnerInvoicePage+validInvoicePage+fiscalEventsPage+insurancePage+receiptChartPage+financialPage+'<script nonce="'+nonce+'">'+js+'</script></body></html>';
   return new Response(html,{headers:{"Content-Type":"text/html; charset=utf-8",
    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
    "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+
