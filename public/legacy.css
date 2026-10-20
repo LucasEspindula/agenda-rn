@@ -408,3 +408,11 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  #appointmentModal .native-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:450px){#appointmentModal .native-finance-grid{grid-template-columns:1fr}}
+
+
+#appointmentModal .native-finance-view-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 16px}
+#appointmentModal .native-finance-view-summary>div{display:flex;flex-direction:column;gap:5px;padding:11px 13px;border:1px solid #e1e9ef;border-radius:10px;background:#f9fcfd}
+#appointmentModal .native-finance-view-summary small{font-size:11px;color:#667e8e}
+#appointmentModal .native-finance-view-summary strong{font-size:15px;color:#183449}
+#appointmentModal .native-finance>details.native-proof-history{margin:10px 0}
+@media(max-width:450px){#appointmentModal .native-finance-view-summary{grid-template-columns:1fr}}
