@@ -31,7 +31,7 @@ test("tela apresenta realizados e cancelados sem duplicar cobrança ou misturar 
 
 test("impressão mensal preserva gráfico e adiciona listagem clínica separada",()=>{
  assert.match(print,/const attendancePage=page\(heading\("Relatório de Fechamento Mensal"/);
- assert.match(print,/attendancePage\+combinedFinancePage\+receiptChartPage/);
+ assert.match(print,/attendancePage\+combinedFinancePage\+expensesPage\+receiptChartPage/);
  assert.match(print,/receiptChartSvg\(comparison\.groups\)/);
  assert.match(print,/<h2>Atendimentos da competência<\/h2>/);
  assert.match(print,/ATENDIMENTOS REALIZADOS/);
@@ -59,10 +59,10 @@ test("impressão abre com atendimentos e força nova página antes da divisão d
  assert.match(first,/PAGOS SEM REALIZAÇÃO CONFIRMADA/);
  assert.match(first, /<\/span><\/div>'\);/);
  assert.doesNotMatch(first, /<\/span><\/div>',true\);/);
- assert.match(fiscal,/heading\("Divisão por Sócio \/ Médico e Fechamento Financeiro"/);
+ assert.match(fiscal,/heading\("Divisão por Sócio \/ Médico e Caixa"/);
  assert.match(fiscal,/doctorTables/);
  assert.match(fiscal,/<\/span><\/div>',true\);/);
- assert.match(print,/attendancePage\+combinedFinancePage\+receiptChartPage/);
+ assert.match(print,/attendancePage\+combinedFinancePage\+expensesPage\+receiptChartPage/);
  assert.match(print,/Relatório de Fechamento Mensal<\/title>/);
  assert.match(print,/\.page-break\{break-before:page/);
  assert.match(print,/receiptChartSvg\(comparison\.groups\)/);

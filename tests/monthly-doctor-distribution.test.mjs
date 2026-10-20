@@ -4,7 +4,7 @@ import {readFileSync} from "node:fs";
 const src=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
 const sql=readFileSync("supabase/migrations/20261020203000_monthly_doctor_patient_references.sql","utf8");
 test("impressão mensal usa três partes e elimina relatórios repetidos",()=>{
- assert.match(src,/attendancePage\+combinedFinancePage\+receiptChartPage/);
+ assert.match(src,/attendancePage\+combinedFinancePage\+expensesPage\+receiptChartPage/);
  assert.match(src,/const doctorTables=/);
  assert.match(src,/NF líquida total/);
  assert.match(src,/Valor deste médico/);

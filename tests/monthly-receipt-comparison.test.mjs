@@ -44,7 +44,7 @@ test("gráfico continua em folha separada após a divisão por médico",()=>{
  const s=readFileSync("app/api/reports/monthly-closing/print/route.ts","utf8");
  assert.match(s,/receiptChartSvg\(comparison\.groups\)/);
  assert.match(s,/receipt-plot/);
- assert.match(s,/attendancePage\+combinedFinancePage\+receiptChartPage/);
+ assert.match(s,/attendancePage\+combinedFinancePage\+expensesPage\+receiptChartPage/);
  assert.match(s,/heading\("Recebimentos por origem"/);
  assert.doesNotMatch(s,/const insurancePage=page|const validInvoicePage=page|const fiscalEventsPage=/);
 });
