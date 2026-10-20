@@ -18,7 +18,6 @@ import {
 } from "@/lib/fiscal-document";
 import { formatBRL as money, parseBRL, moneyInput } from "@/lib/money";
 import { formatDateBR } from "@/lib/date-format";
-import {isInvoiceFromEarlierMonth} from "@/lib/invoice-prior-month";
 import {
   notifyFinancialChange,
   isExternalFinancialChange,
@@ -30,6 +29,7 @@ import { confirmFiscalPayment } from "@/components/confirm-fiscal-payment";
 import type { InvoiceRequest } from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
 import { useCallback, useEffect, useState, useRef } from "react";
+import { RotateCcw } from "lucide-react";
 import { eligibleForInvoice, payerKey } from "@/lib/billing-eligibility";
 import {
   attendanceInsuranceOptions,
@@ -240,6 +240,9 @@ export default function BillingClient({
   }, [appointmentId, load]);
   async function fiscalAction() {
     if (!lifecycle || busy || !reason.trim()) return;
+    if(lifecycle.kind!=="replace_invoice"&&(!fiscalApprover||fiscalPassword.length<8)){
+      setModalError("Selecione o Gerente Geral e informe sua senha.");return;
+    }
     setBusy(true);
     setModalError("");
     try {
@@ -691,6 +694,8 @@ export default function BillingClient({
         )
           throw Error("As formas de pagamento devem somar o valor líquido.");
       }
+      if(replacement&&editing==="invoice"&&(!fiscalApprover||fiscalPassword.length<8))
+        throw Error("Selecione o Gerente Geral e informe sua senha para substituir a NF.");
       const r = await fetch("/api/billing", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1556,16 +1561,18 @@ export default function BillingClient({
                                   </button>
                                 </div>
                               ) : (
-                                <button
-                                  className="billing-icon-action billing-history"
-                                  title="Histórico"
-                                  aria-label={
-                                    "Histórico da NF " + i.invoice_number
-                                  }
-                                  onClick={() => setHistoryInvoice(i)}
-                                >
-                                  <HistoryIcon />
-                                </button>
+                                <div className="billing-row-actions">
+                                  <button className="billing-icon-action billing-history"
+                                   title="Histórico" aria-label={"Histórico da NF "+i.invoice_number}
+                                   onClick={()=>setHistoryInvoice(i)}><HistoryIcon/></button>
+                                  {!i.voided_at&&["CANCELLED","REPLACED"].includes(i.status||"")&&
+                                   <button className="billing-icon-action"
+                                    title="Reativar NF (exige senha do Gerente Geral)"
+                                    aria-label={"Reativar NF "+i.invoice_number}
+                                    onClick={()=>askFiscal("restore_invoice",i.id,i.updated_at,"Reativar NF "+i.invoice_number)}>
+                                    <RotateCcw size={18}/>
+                                   </button>}
+                                </div>
                               )}
                             </td>
                           </tr>
@@ -2217,16 +2224,16 @@ export default function BillingClient({
                       onChanged={() => void load()}
                     />
                   )}
-                  {replacement?.invoice&&isInvoiceFromEarlierMonth(replacement.invoice.issue_date)&&
+                  {replacement?.invoice&&
                    <label>Gerente Geral que autoriza
                     <select value={fiscalApprover} onChange={e=>setFiscalApprover(e.target.value)}>
-                     <option value="">Meu usuário de gerência</option>
+                     <option value="">Selecione o Gerente Geral</option>
                      {fiscalApprovers.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                    </label>}
-                  {replacement?.invoice&&isInvoiceFromEarlierMonth(replacement.invoice.issue_date)&&
+                  {replacement?.invoice&&
                    <label>
-                    Senha atual do Gerente Geral — substituir NF de mês anterior
+                    Senha atual do Gerente Geral — substituir NF
                     <input type="password" required minLength={8} maxLength={128}
                      autoComplete="current-password" value={fiscalPassword}
                      onChange={e=>setFiscalPassword(e.target.value)}/>
@@ -2425,6 +2432,8 @@ export default function BillingClient({
                   ? "Confirme que o documento foi cancelado fiscalmente. O histórico permanecerá disponível."
                   : lifecycle.kind === "replace_invoice"
                     ? "Informe o motivo e preencha a nova NF. A substituição será salva em uma única operação."
+                    : lifecycle.kind==="restore_invoice"
+                    ? "A reativação é auditada e só ocorre sem outra NF ativa para o mesmo atendimento."
                     : "O atendimento ficará cancelado no histórico e sairá das pendências ativas."}
             </p>
             <label>
@@ -2435,24 +2444,18 @@ export default function BillingClient({
                 onChange={(e) => setReason(e.target.value)}
               />
             </label>
-            {["cancel_invoice","undo_invoice","replace_invoice"].includes(lifecycle.kind) &&
-              data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date))&&
+            {["cancel_invoice","undo_invoice","restore_invoice"].includes(lifecycle.kind)&&<>
               <label>Gerente Geral que autoriza
-               <select value={fiscalApprover} onChange={e=>setFiscalApprover(e.target.value)}>
-                <option value="">Meu usuário de gerência</option>
+               <select required value={fiscalApprover} onChange={e=>setFiscalApprover(e.target.value)}>
+                <option value="">Selecione o Gerente Geral</option>
                 {fiscalApprovers.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
-               </select>
-              </label>}
-            {["cancel_invoice","undo_invoice"].includes(lifecycle.kind) &&
-             data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date)) &&
-             <label>
-              Senha atual do Gerente Geral — NF de mês anterior
-              <input type="password" value={fiscalPassword}
-               autoComplete="current-password" minLength={8} maxLength={128} required
-               onChange={e=>setFiscalPassword(e.target.value)}/>
-             </label>}
-            {lifecycle.kind==="replace_invoice"&&data.invoices.some(i=>i.id===lifecycle.id&&isInvoiceFromEarlierMonth(i.issue_date))&&
-             <p>NF de mês anterior: a senha do Gerente Geral será solicitada ao salvar a substituta.</p>}
+               </select></label>
+              <label>Senha atual do Gerente Geral
+               <input type="password" required minLength={8} maxLength={128}
+                autoComplete="current-password" value={fiscalPassword}
+                onChange={e=>setFiscalPassword(e.target.value)}/>
+              </label>
+             </>}
             {modalError && <p role="alert">{modalError}</p>}
             <div className="billing-modal-actions">
               <button
@@ -2464,7 +2467,7 @@ export default function BillingClient({
               </button>
               <button
                 className="billing-danger"
-                disabled={busy || !reason.trim()}
+                disabled={busy || !reason.trim() || (lifecycle.kind!=="replace_invoice"&&(!fiscalApprover||fiscalPassword.length<8))}
                 onClick={() => void fiscalAction()}
               >
                 {lifecycle.kind === "replace_invoice"
