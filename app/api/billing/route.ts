@@ -3,7 +3,6 @@ import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {secureMutation,readJson,HttpError} from '@/lib/security/http';
 import {verifyPassword} from '@/app/passwords';
 import {consumeLimit} from '@/lib/security/rate-limit';
-import {isInvoiceFromEarlierMonth} from '@/lib/invoice-prior-month';
 import {canReadAppointment,type Row} from '@/lib/security/state';
 import {loadBillingData} from '@/lib/billing-data';
 import {doctorBillingProjection,projectFinancialRow} from '@/lib/billing-projection';
@@ -51,40 +50,41 @@ export const POST=secureMutation(async request=>{
  const session=await getSession();
  if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
  const {kind,data,manager_password,manager_user_id}=await readJson(request);
- if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
- const fiscalActions=['cancel_invoice','replace_invoice','undo_invoice'];
+ if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','restore_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ const fiscalActions=['cancel_invoice','replace_invoice','undo_invoice','restore_invoice'];
  if(session.account.role!=='general_manager'&&!['record','professional_charge'].includes(kind)
     &&!(session.account.role==='secretary'&&fiscalActions.includes(kind)))
   throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
  if(['professional_charge','professional_invoice'].includes(kind)&&process.env.RN_PROFESSIONAL_BILLING_ENABLED!=='true') throw new HttpError(404,'Faturamento por profissional aguarda homologação da migration.');
- // Reautenticação obrigatória para toda reversão fiscal de NF emitida em competência anterior.
- // Inclui "desfazer": sem isso seria possível contornar a proteção de cancelar/substituir.
- // Senha é lida no nível da requisição e NUNCA enviada ao RPC ou log financeiro.
+ // Aprovação por senha para TODAS as ações fiscais, em qualquer competência.
+ // A senha nunca chega ao banco nem ao log; só o ID do Gerente verificado.
  let approvedManagerId:number|null=null;
  if(fiscalActions.includes(kind)){
   const id=typeof data.id==='string'?data.id:'';
   if(!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(id))
    throw new HttpError(400,'NF inválida.');
+  await consumeLimit('manager-fiscal-authorization',String(session.account.id),8,900);
+  if(typeof manager_password!=='string'||manager_password.length<8||manager_password.length>128)
+   throw new HttpError(403,'Informe a senha atual do Gerente Geral.');
+  const chosen=manager_user_id==null?session.account.id:Number(manager_user_id);
+  if(!Number.isSafeInteger(chosen)||chosen<1)
+   throw new HttpError(400,'Selecione o Gerente Geral responsável pela autorização.');
   const db=getSupabaseAdmin();
-  const {data:invoice,error:invoiceError}=await db.from('invoices').select('id,issue_date').eq('id',id).maybeSingle();
+  const {data:invoice,error:invoiceError}=await db.from('invoices')
+   .select('id,status,voided_at').eq('id',id).maybeSingle();
   if(invoiceError||!invoice)throw new HttpError(404,'NF não encontrada.');
-  if(session.account.role!=='general_manager'&&!isInvoiceFromEarlierMonth(invoice.issue_date))
-    throw new HttpError(403,'A equipe operacional não pode alterar NFs sem autorização da gerência.');
-  if(isInvoiceFromEarlierMonth(invoice.issue_date)){
-   await consumeLimit('prior-invoice-fiscal-change',String(session.account.id),8,900);
-   if(typeof manager_password!=='string'||manager_password.length<8||manager_password.length>128)
-    throw new HttpError(403,'NF de mês anterior: informe a senha atual do Gerente Geral.');
-   const chosen=manager_user_id==null?session.account.id:Number(manager_user_id);
-   if(!Number.isSafeInteger(chosen)||chosen<1)
-     throw new HttpError(400,'Selecione o Gerente Geral responsável pela autorização.');
-   const {data:manager,error:managerError}=await db.from('users')
-     .select('id,role,password_hash,password_salt').eq('id',chosen).maybeSingle();
-   if(managerError||!manager||manager.role!=='general_manager'||
-      !manager.password_hash||!manager.password_salt||
-      !await verifyPassword(manager_password,manager.password_hash,manager.password_salt))
-     throw new HttpError(403,'Senha do Gerente Geral incorreta.');
-   approvedManagerId=manager.id;
-  }
+  if(kind==='restore_invoice'&&
+    (!['CANCELLED','REPLACED'].includes(invoice.status)||invoice.voided_at))
+   throw new HttpError(409,'Esta NF não pode ser reativada.');
+  if(kind!=='restore_invoice'&&(invoice.status!=='ACTIVE'||invoice.voided_at))
+   throw new HttpError(409,'A NF não está ativa.');
+  const {data:manager,error:managerError}=await db.from('users')
+   .select('id,role,password_hash,password_salt').eq('id',chosen).maybeSingle();
+  if(managerError||!manager||manager.role!=='general_manager'||
+     !manager.password_hash||!manager.password_salt||
+     !await verifyPassword(manager_password,manager.password_hash,manager.password_salt))
+   throw new HttpError(403,'Senha do Gerente Geral incorreta.');
+  approvedManagerId=manager.id;
  }
  const rpc=approvedManagerId!==null?'save_billing_with_manager_approval':
   kind==='cancel_attendance'?'cancel_manual_attendance':kind==='attendance'?'save_manual_attendance':
