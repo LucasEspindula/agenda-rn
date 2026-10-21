@@ -1,0 +1,20 @@
+name: Verify agenda NF save flow
+on:
+  push:
+    branches:
+      - fix/agenda-nf-save-modal-loading-sync-20261021
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --check public/legacy-app.js
+      - run: node --test tests/agenda-nf-save-detail-modal.test.mjs
+      - run: node --test tests/agenda-sync.test.mjs tests/state-sync.test.mjs
+      - run: npx tsc --noEmit
+      - run: npm run build
