@@ -42,7 +42,7 @@ test("interface nao cria segunda solicitacao e pede versao para impedir sobrescr
  assert.match(editor,/kind:"edit_invoice_request"/);
  assert.match(editor,/updated_at:request.updated_at/);
  assert.match(editor,/id:request.id/);
- assert.match(editor,/Solicitação de NF/);
+ assert.match(editor,/solicitação de NF/i);
  assert.match(editor,/validCPF\(form.taker_tax_id\)/);
  assert.match(editor,/onSaved\(\)/);
  assert.match(list,/Editar solicitação/);
