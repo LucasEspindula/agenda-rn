@@ -40,7 +40,7 @@ let remoteAgendaUpdatePending=false,remoteAgendaRevision=null,agendaSyncInFlight
 function agendaRevisionIsNewer(serverRevision,currentRevision){if(!serverRevision)return false;if(!currentRevision)return true;const serverTime=Date.parse(serverRevision),currentTime=Date.parse(currentRevision);return Number.isFinite(serverTime)&&Number.isFinite(currentTime)?serverTime>currentTime:false}
 function agendaSyncDecision({serverRevision,currentRevision,editorOpen=false,saving=false,pending=false}={}){if(!agendaRevisionIsNewer(serverRevision,currentRevision))return "ignore";return editorOpen||saving||pending?"pending":"apply"}
 function agendaEditorOpen(){return !!document.querySelector(".modal:not(.hidden),dialog[open]")}
-function remoteAgendaNotice(show){let notice=$("remoteAgendaUpdateNotice");if(show&&!notice){notice=document.createElement("div");notice.id="remoteAgendaUpdateNotice";notice.className="remote-agenda-update-notice";notice.setAttribute("role","status");notice.textContent="A agenda foi atualizada por outra pessoa. Conclua ou feche esta edição para carregar as alterações.";document.body.appendChild(notice)}if(notice)notice.hidden=!show}
+function remoteAgendaNotice(show){let notice=$("remoteAgendaUpdateNotice");if(show&&!agendaEditorOpen()&&!notice){notice=document.createElement("div");notice.id="remoteAgendaUpdateNotice";notice.className="remote-agenda-update-notice";notice.setAttribute("role","status");notice.textContent="A agenda foi atualizada por outra pessoa. Conclua ou feche esta edição para carregar as alterações.";document.body.appendChild(notice)}if(notice)notice.hidden=!show||agendaEditorOpen()}
 function clearRemoteAgendaUpdate(){remoteAgendaUpdatePending=false;remoteAgendaRevision=null;remoteAgendaNotice(false)}
 function agendaRemotePendingDecision(remoteRevision,currentRevision){return agendaRevisionIsNewer(remoteRevision,currentRevision)?"keep":"clear"}
 function reconcileRemoteAgendaUpdate(){if(!remoteAgendaUpdatePending)return true;if(agendaRemotePendingDecision(remoteAgendaRevision,window.AgendaRevision)==="clear"){clearRemoteAgendaUpdate();return true}return false}
@@ -643,7 +643,7 @@ function money(v){return window.RNMoney.formatBRL(v==null?null:Number(v))}
 
 function renderAll(){renderProfessionalOptions();renderAppointmentOptions();renderCalendar();renderPatients();renderCancelled();renderSettings();renderRules();if((window.AgendaAuth||{}).role==="general_manager")renderAccess()}
 let lastFocusedElement=null;
-function openModal(id){lastFocusedElement=document.activeElement;const modal=$(id);$("modalBackdrop").classList.remove("hidden");modal.classList.remove("hidden");modal.setAttribute("role","dialog");modal.setAttribute("aria-modal","true");requestAnimationFrame(()=>{if(id==="appointmentModal"&&modal.classList.contains("appointment-view-mode")){const title=$("appointmentModalTitle");title.tabIndex=-1;title.focus({preventScroll:true})}else modal.querySelector("input:not([type=hidden]):not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not([data-close])")?.focus()})}
+function openModal(id){lastFocusedElement=document.activeElement;remoteAgendaNotice(false);const modal=$(id);$("modalBackdrop").classList.remove("hidden");modal.classList.remove("hidden");modal.setAttribute("role","dialog");modal.setAttribute("aria-modal","true");requestAnimationFrame(()=>{if(id==="appointmentModal"&&modal.classList.contains("appointment-view-mode")){const title=$("appointmentModalTitle");title.tabIndex=-1;title.focus({preventScroll:true})}else modal.querySelector("input:not([type=hidden]):not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not([data-close])")?.focus()})}
 function closeModals(){$("modalBackdrop").classList.add("hidden");qsa(".modal").forEach(m=>m.classList.add("hidden"));if(systemDialogResolve){const done=systemDialogResolve;systemDialogResolve=null;done(false)}if(lastFocusedElement?.isConnected)lastFocusedElement.focus();lastFocusedElement=null;window.AgendaSyncAfterModalClose?.()}
 function renderHistory(pid,target,limit=999){
  const list=state.patientHistory.filter(h=>h.patientId===pid).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,limit);
@@ -798,8 +798,8 @@ function paintNativeFinance(){
 }
 async function loadNativeFinance(id,draft=null){
  nativeFinanceRoot()?.replaceChildren();const f={id,draft:draft?{...draft}:{received_amount:'',payment_status:'PENDENTE',paid_at:'',billing_entity_id:''},proofFile:null,proofTargetId:null,proofReplacesId:null,loading:!!id,error:'',row:null,data:null};nativeFinance=f;paintNativeFinance();if(!id)return;
- try{const r=await fetch('/api/billing?appointment_id='+encodeURIComponent(id),{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error);if(nativeFinance!==f)return;f.data=data;f.row=data.rows.find(r=>r.appointment_id===id);if(!f.row)throw Error('Atendimento não encontrado no faturamento.');if(!draft){const record=f.row.record;f.draft={billing_entity_id:record?.billing_entity_id||'',received_amount:record?.received_amount==null?'':money(record.received_amount),payment_status:record?.payment_status||'PENDENTE',paid_at:record?.paid_at||'',no_invoice:!!record?.no_invoice}}}
- catch(error){f.error=error.message||'Não foi possível carregar o financeiro.'}finally{f.loading=false;if(nativeFinance===f)paintNativeFinance()}
+ try{const r=await fetch('/api/billing?appointment_id='+encodeURIComponent(id),{cache:'no-store',signal:AbortSignal.timeout(20000)}),data=await r.json();if(!r.ok)throw Error(data.error);if(nativeFinance!==f)return;f.data=data;f.row=data.rows.find(r=>r.appointment_id===id);if(!f.row)throw Error('Atendimento não encontrado no faturamento.');if(!draft){const record=f.row.record;f.draft={billing_entity_id:record?.billing_entity_id||'',received_amount:record?.received_amount==null?'':money(record.received_amount),payment_status:record?.payment_status||'PENDENTE',paid_at:record?.paid_at||'',no_invoice:!!record?.no_invoice}}}
+ catch(error){f.error=error?.name==='TimeoutError'?'O financeiro demorou para responder. Tente novamente.':error.message||'Não foi possível carregar o financeiro.'}finally{f.loading=false;if(nativeFinance===f)paintNativeFinance()}
 }
 function validateNativeFinance(){
  if((window.AgendaAuth||{}).role==='doctor')return;const f=nativeFinance;if(!f||f.loading)throw Error('Aguarde o carregamento do financeiro.');if(f.error)throw Error(f.error);captureNativeFinance();if(f.row?.invoice)return;
@@ -824,7 +824,22 @@ async function saveNativeFinance(id){
  if(method==='PARTICULAR'&&payload.payment_status==='PAGO'&&!(f.data.requests||[]).some(r=>r.attendance_id===id&&r.status!=='CANCELLED')&&!f.row.record?.invoice_number&&(!f.row.record?.no_invoice||Number(amount)!==Number(f.row.record?.received_amount)||payload.paid_at!==f.row.record?.paid_at)){const fiscal=await window.RNFinance.confirmFiscalPayment({patient:patient(f.row.patient_id)||{id:f.row.patient_id,name:f.row.patient},amount,paidAt:payload.paid_at,noInvoice:!!f.row.record?.no_invoice});if(!fiscal)throw Error('Confirmação cancelada. O pagamento não foi alterado.');payload.no_invoice=!!fiscal.no_invoice;if(!fiscal.no_invoice)payload.fiscal=fiscal;payload.payment_parts=fiscal.payment_parts;}
  const r=await fetch('/api/billing',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'record',data:payload})}),result=await r.json();if(!r.ok)throw Error(result.error||'Não foi possível salvar o pagamento.');
  if(f.proofFile&&payload.payment_status==='PAGO'&&result.id){try{await window.RNFinance.uploadPaymentProof(result.id,f.proofFile,f.proofReplacesId);f.proofFile=null;f.proofTargetId=null;f.proofReplacesId=null}catch(error){f.proofTargetId=result.id;proofUploadFailed=true}}
- window.RNFinance.notifyFinancialChange();const response=await fetch('/api/state',{cache:'no-store'});if(response.ok){const snapshot=await response.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state)}else throw Error('Pagamento salvo. Recarregue a agenda antes de continuar.');if(proofUploadFailed){paintNativeFinance();throw Error('✓ Pagamento salvo. O comprovante não foi enviado. Tente novamente.');}
+ window.RNFinance.notifyFinancialChange();
+  // Após resposta de sucesso da API, recarregar o estado é apenas sincronização,
+  // não parte da confirmação do recebimento.
+  let stateRefreshed=false;
+  try{
+   const response=await fetch('/api/state',{cache:'no-store',signal:AbortSignal.timeout(12000)});
+   if(response.ok){
+    const snapshot=await response.json();
+    window.AgendaRevision=snapshot.revision;
+    state=Storage.migrate(snapshot.state);
+    stateRefreshed=true;
+    reconcileRemoteAgendaUpdate();
+   }
+  }catch{/* Sincronismo de agenda recupera eventual falha de leitura. */}
+  if(proofUploadFailed){paintNativeFinance();throw Error('✓ Pagamento salvo. O comprovante não foi enviado. Tente novamente.');}
+  return {paymentSaved:true,stateRefreshed};
 }
 
 async function saveAppointmentDetailChanges(id,button){
@@ -849,8 +864,14 @@ async function saveAppointmentDetailChanges(id,button){
  try{
   if((window.AgendaAuth||{}).role==="doctor"){const sent=await sendAgendaSuggestion("update",updated,id,button);if(sent){closeModals();toast("Sugestão enviada, aguarde aprovação.")}return}
   if(changed){const previousStatus=a.status;Object.assign(a,updated);if(otherChanged)hist(a.patientId,"Agendamento alterado",`${a.procedure} · ${a.date} às ${a.time}`,id);if(statusChanged)hist(a.patientId,"Status alterado",`${statusLabel(previousStatus)} → ${statusLabel(a.status)}`,id);if(await persist()===false)return}
-  try{await saveNativeFinance(id)}catch(error){nativeFinanceError((changed?"Agendamento salvo. ":"")+error.message);return}
-  renderAll();renderAppointmentDetail(state.appointments.find(x=>x.id===id)||a);toast("Agendamento salvo.")
+  let financeResult;
+  try{financeResult=await saveNativeFinance(id)}catch(error){nativeFinanceError((changed?"Agendamento salvo. ":"")+error.message);return}
+  closeModals();
+  renderAll();
+  if(financeResult?.paymentSaved&&!financeResult.stateRefreshed){
+   toast("Pagamento salvo. A agenda será atualizada automaticamente.");
+   void checkAgendaRevision();
+  }else toast("Agendamento salvo.");
  }finally{if(button.isConnected){delete button.dataset.saving;button.disabled=false;button.removeAttribute("aria-busy");button.textContent=oldText}}
 }
 function renderAppointmentDetail(a){
