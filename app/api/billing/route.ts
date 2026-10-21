@@ -50,9 +50,9 @@ export const POST=secureMutation(async request=>{
  const session=await getSession();
  if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
  const {kind,data,manager_password,manager_user_id}=await readJson(request);
- if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','restore_invoice','cancel_attendance'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','restore_invoice','cancel_attendance','edit_invoice_request'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
  const fiscalActions=['cancel_invoice','replace_invoice','undo_invoice','restore_invoice'];
- if(session.account.role!=='general_manager'&&!['record','professional_charge'].includes(kind)
+ if(session.account.role!=='general_manager'&&!['record','professional_charge','edit_invoice_request'].includes(kind)
     &&!(session.account.role==='secretary'&&fiscalActions.includes(kind)))
   throw new HttpError(403,'Somente a gerência pode gerenciar empresas e notas.');
  if(['professional_charge','professional_invoice'].includes(kind)&&process.env.RN_PROFESSIONAL_BILLING_ENABLED!=='true') throw new HttpError(404,'Faturamento por profissional aguarda homologação da migration.');
@@ -90,10 +90,10 @@ export const POST=secureMutation(async request=>{
   kind==='cancel_attendance'?'cancel_manual_attendance':kind==='attendance'?'save_manual_attendance':
   ['expense','associate'].includes(kind)?'save_company_finance':
   kind==='professional_charge'?'save_professional_charge':
-  kind==='professional_invoice'?'save_professional_invoice':'save_billing';
+  kind==='professional_invoice'?'save_professional_invoice':kind==='edit_invoice_request'?'update_pending_invoice_request':'save_billing';
  const args=approvedManagerId!==null?
    {p_approver:approvedManagerId,p_kind:kind}:
-   (['attendance','cancel_attendance'].includes(kind)||['professional_charge','professional_invoice'].includes(kind)?{}:{p_kind:kind});
+   (['attendance','cancel_attendance','edit_invoice_request'].includes(kind)||['professional_charge','professional_invoice'].includes(kind)?{}:{p_kind:kind});
  const {data:id,error}=await getSupabaseAdmin().rpc(rpc,{p_actor:session.account.id,...args,p_data:data});
  if(error){if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
  return Response.json({id});
