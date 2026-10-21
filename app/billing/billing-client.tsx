@@ -25,6 +25,7 @@ import {
 import { uploadFinancialAttachment } from "@/lib/financial-attachments-client";
 import PrivateInvoice from "./private-invoice";
 import InvoiceRequests from "./invoice-requests";
+import InvoiceRequestEditor from "@/components/invoice-request-editor";
 import { confirmFiscalPayment } from "@/components/confirm-fiscal-payment";
 import type { InvoiceRequest } from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
@@ -115,6 +116,7 @@ export default function BillingClient({
     reason: string;
   } | null>(null);
   const [historyInvoice, setHistoryInvoice] = useState<Invoice | null>(null);
+  const [editingRequest,setEditingRequest]=useState<InvoiceRequest|null>(null);
   const [invoiceView, setInvoiceView] = useState("requests");
   const [insuranceView, setInsuranceView] = useState<"payments"|"portal">("payments");
   const [privateInvoice, setPrivateInvoice] = useState<
@@ -1414,6 +1416,7 @@ export default function BillingClient({
                     data={data}
                     onIssue={setPrivateInvoice}
                     onReview={editRecord}
+                    onEdit={setEditingRequest}
                   />
                 ) : (
                   <div className="billing-panel">
@@ -1766,6 +1769,9 @@ export default function BillingClient({
             </div>
           </AppDialog>
         )}
+        {editingRequest && <InvoiceRequestEditor request={editingRequest}
+          onClose={()=>setEditingRequest(null)}
+          onSaved={()=>{setEditingRequest(null);setMessage("Solicitação atualizada.");notifyFinancialChange();void load();}}/>}
         {privateInvoice && (
           <PrivateInvoice
             data={data}

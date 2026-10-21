@@ -8,6 +8,7 @@ import {paymentMethods} from '@/lib/fiscal-money';
 import {individualReceived} from '@/lib/billing-reports';
 import {notifyFinancialChange} from '@/lib/financial-events';
 import {confirmFiscalPayment} from '@/components/confirm-fiscal-payment';
+import {editPendingInvoiceRequest} from '@/components/invoice-request-editor';
 import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
 import {uploadFinancialAttachment,removeFinancialAttachment} from '@/lib/financial-attachments-client';
 import { legacyBody } from "./legacy-body";
@@ -43,7 +44,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
       (window as Window & { AgendaInitialView?: string }).AgendaInitialView = initialView;
       if (cancelled) return;
       (window as Window & {MedicalDirectory?:unknown}).MedicalDirectory={specialties:MEDICAL_SPECIALTIES,isAnesthesiologist};
-      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{paymentMethods,directPayment,allowedEntities,individualReceived,confirmFiscalPayment,notifyFinancialChange,uploadPaymentProof,removePaymentProof},RNCPF:{formatCPF,normalizeCPF,validCPF},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
+      Object.assign(window,{RNMoney:{formatBRL,parseBRL},RNFinance:{paymentMethods,directPayment,allowedEntities,individualReceived,confirmFiscalPayment,editPendingInvoiceRequest,notifyFinancialChange,uploadPaymentProof,removePaymentProof},RNCPF:{formatCPF,normalizeCPF,validCPF},AgendaAdminSection:adminSection,AgendaDoctorId:doctorId});
       setReady(true);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "Falha ao carregar."));
     return () => { cancelled = true; };

@@ -715,12 +715,14 @@ function bindNativeProofDeletion(root,f){
 }
 function nativeFinanceHeading(f){
  const record=f.row?.record,requests=f.data?.requests||[];
+ const pendingRequest=requests.find(r=>r.billing_record_id===record?.id&&r.status==='PENDING'&&!r.invoice_id);
  const nf=record?.no_invoice?'S/N':requests.some(r=>r.attendance_id===f.id&&r.status==='PENDING')?'NF solicitada':
   requests.some(r=>r.attendance_id===f.id&&r.status==='CANCELLED')?'NF cancelada':'Sem solicitação';
  const status=record?.payment_status==='PAGO'&&f.row?.status_atendimento!=='realized'?
   '<span class="native-finance-tag warning" title="Pagamento recebido, mas atendimento ainda não realizado.">Atendimento não realizado</span>':'';
  return `<div class="native-finance-head"><h4>Financeiro do atendimento</h4><div class="native-finance-tags">
    ${nativeMethod()==='PARTICULAR'?'<span class="native-finance-tag">'+esc(nf)+'</span>':''}
+   ${pendingRequest?'<button type="button" id="nativeEditInvoiceRequest" class="secondary-btn native-edit-invoice-request">Editar solicitação</button>':''}
    ${status}</div></div>`;
 }
 function paintNativeFinance(){
@@ -785,6 +787,15 @@ function paintNativeFinance(){
      <button type="button" id="retryNativePaymentProof" class="secondary-btn">Tentar novamente</button></p>`:''}
    </section>`:'');
  bindNativeProofDeletion(root,f);
+ const pendingRequest=(f.data?.requests||[]).find(r=>r.billing_record_id===f.row?.record?.id&&r.status==='PENDING'&&!r.invoice_id);
+ if($('nativeEditInvoiceRequest')&&pendingRequest)$('nativeEditInvoiceRequest').onclick=async()=>{
+  const button=$('nativeEditInvoiceRequest');button.disabled=true;
+  try{
+   const changed=await window.RNFinance.editPendingInvoiceRequest(pendingRequest);
+   if(changed){await loadNativeFinance(f.id);toast('Solicitação de NF atualizada.');}
+   else if(button.isConnected)button.disabled=false;
+  }catch(error){if(button.isConnected)button.disabled=false;nativeFinanceError(error.message||'Não foi possível editar a solicitação.');}
+ };
  if($("nativeEntity"))$("nativeEntity").value=f.draft.billing_entity_id||'';
  $("nativeAmount").value=f.draft.received_amount??'';$("nativeStatus").value=f.draft.payment_status||'PENDENTE';$("nativePaidAt").value=f.draft.paid_at||'';
  $("nativeAmount").oninput=e=>{e.target.setCustomValidity('');captureNativeFinance()};

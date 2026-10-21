@@ -1,0 +1,23 @@
+dialog.invoice-request-editor-dialog{width:min(670px,calc(100vw - 22px));max-height:calc(100dvh - 30px);overflow:auto;border:0;border-radius:16px;padding:24px;background:#fff;color:#22394c;box-shadow:0 22px 70px #12324a45}
+dialog.invoice-request-editor-dialog::backdrop{background:#0b263c76}
+.invoice-request-editor{display:flex;flex-direction:column;gap:16px}
+.invoice-request-editor h2{font-size:21px;font-weight:800;margin:0}
+.invoice-request-context{color:#61798b;font-size:13px;margin:0}
+.invoice-request-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.invoice-request-fields fieldset{grid-column:1/-1;padding:0;border:0;margin:0;min-width:0}
+.invoice-request-fields legend{font-size:13px;font-weight:750;margin-bottom:10px}
+.invoice-request-options{display:flex;gap:22px;flex-wrap:wrap}
+.invoice-request-options label{display:inline-flex!important;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.invoice-request-options input[type=radio]{appearance:auto!important;width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:0!important;padding:0!important;accent-color:#168f88}
+.invoice-request-fields>label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#3f5a6a;font-weight:750;min-width:0}
+.invoice-request-span{grid-column:1/-1}
+.invoice-request-fields input:not([type=radio]),.invoice-request-fields textarea{box-sizing:border-box;display:block;width:100%;min-width:0;min-height:43px;border:1px solid #cddde6;border-radius:9px;padding:10px 12px;background:#fff;color:#173a50;font-size:14px}
+.invoice-request-fields input[readonly]{background:#f5f8fa}
+.invoice-request-fields textarea{min-height:76px;resize:vertical}
+.invoice-request-readonly{font-size:11px;color:#728899;margin:0}
+.invoice-request-error{color:#a52c3a;background:#fff4f5;padding:10px 12px;border:1px solid #f0cbd0;border-radius:8px;font-size:12px;margin:0}
+.invoice-request-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;border-top:1px solid #e3ebf1;padding-top:14px}
+.invoice-request-actions button{border:1px solid #c9dbe5;border-radius:9px;background:#fff;padding:10px 15px;cursor:pointer;font-weight:750;color:#314a61}
+.invoice-request-actions button[type=submit]{background:#168985;color:#fff;border-color:#168985}
+.invoice-request-actions button:disabled{opacity:.6;cursor:wait}
+@media(max-width:570px){dialog.invoice-request-editor-dialog{padding:16px}.invoice-request-fields{grid-template-columns:1fr}.invoice-request-span{grid-column:1}.invoice-request-actions button{flex:1}}
