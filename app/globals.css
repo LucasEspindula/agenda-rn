@@ -137,8 +137,111 @@ body {
 
 html{scrollbar-gutter:auto}body{margin:0}body:has(dialog[open]),body:has(.modal:not(.hidden)){overflow:hidden}
 
-/* Fiscal confirmation is shared by Agenda and Billing. */
-dialog:has(.fiscal-confirmation){border:0;border-radius:18px;width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:24px;background:#fff;color:#17354c;overflow:auto;box-shadow:0 24px 80px #092b4b40}dialog:has(.fiscal-confirmation)::backdrop{background:#0b254566}.fiscal-confirmation{display:grid;gap:14px}.fiscal-confirmation h2{font-size:22px;font-weight:700}.fiscal-confirmation h3{font-size:15px;font-weight:700;margin-top:8px}.fiscal-confirmation label:not(.fiscal-radio){display:grid;gap:6px;font-size:14px}.fiscal-confirmation input:not([type=radio]),.fiscal-confirmation textarea{border:1px solid #cbd5e1;border-radius:8px;padding:10px;width:100%;background:#fff;color:#18354d}.fiscal-confirmation fieldset{border:0;display:flex;flex-wrap:wrap;gap:16px}.fiscal-radio{display:flex;align-items:center;gap:7px}.fiscal-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}.fiscal-actions button{padding:10px 14px;border-radius:8px;border:1px solid #ccd6e0;cursor:pointer}.fiscal-actions .fiscal-primary{background:#075b91;color:#fff;border-color:#075b91}.fiscal-confirmation [role=alert]{color:#b42318}
-
-dialog:has(.fiscal-confirmation){margin:auto;inset:0}.fiscal-radio input[type=radio]{width:18px;height:18px;min-height:0;padding:0;flex:0 0 18px}.fiscal-radio{font-size:14px}.fiscal-confirmation fieldset{gap:12px}.fiscal-confirmation legend{margin-bottom:10px}
-
+/* Confirmar recebimento — usado tanto na Agenda quanto no Faturamento. */
+dialog.fiscal-confirmation-dialog{
+  border:0;border-radius:18px;width:min(680px,calc(100vw - 24px));
+  max-width:calc(100vw - 24px);max-height:calc(100dvh - 32px);
+  padding:24px;margin:auto;inset:0;overflow:auto;box-sizing:border-box;
+  background:#fff;color:#17354c;box-shadow:0 24px 80px #092b4b40;
+}
+dialog.fiscal-confirmation-dialog::backdrop{background:#0b254566}
+.fiscal-confirmation{display:flex;flex-direction:column;gap:16px;min-width:0}
+.fiscal-confirmation h2{font-size:23px;font-weight:800;line-height:1.25;margin:0 0 2px;color:#153b53}
+.fiscal-confirmation h3{font-size:16px;font-weight:800;margin:0 0 15px;color:#173b51}
+.fiscal-confirmation .fiscal-card{
+  display:flex;flex-direction:column;gap:14px;border:1px solid #dce7ed;
+  border-radius:13px;padding:18px;background:#fff;min-width:0;
+}
+.fiscal-confirmation label:not(.fiscal-radio){display:flex;flex-direction:column;gap:7px;min-width:0;font-size:13px;font-weight:700;color:#3b5569}
+.fiscal-confirmation input:not([type=radio]):not([type=checkbox]),
+.fiscal-confirmation select,.fiscal-confirmation textarea{
+  display:block;box-sizing:border-box;width:100%;min-width:0;min-height:44px;
+  background:#fff;color:#18354d;border:1px solid #cbd9e3;
+  border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;
+}
+.fiscal-confirmation input:read-only{background:#f6f9fb;color:#4e6373}
+.fiscal-confirmation textarea{resize:vertical;min-height:78px}
+.fiscal-confirmation :is(input,select,textarea,button):focus-visible{outline:2px solid #168f88;outline-offset:2px}
+.fiscal-confirmation .fiscal-payment-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fiscal-confirmation .fiscal-payment-summary>div{
+  display:flex;flex-direction:column;gap:6px;border:1px solid #e1eaf0;
+  background:#f8fbfd;border-radius:10px;padding:12px 14px;min-width:0
+}
+.fiscal-confirmation .fiscal-payment-summary span{font-size:12px;color:#677e91;font-weight:600}
+.fiscal-confirmation .fiscal-payment-summary strong{font-size:16px;font-weight:800;color:#143c54}
+.fiscal-confirmation fieldset{min-width:0;margin:0}
+.fiscal-confirmation .payment-parts{
+  display:block;border:1px solid #e0e9ef;border-radius:11px;
+  padding:14px;background:#fbfcfd;margin:0;
+}
+.fiscal-confirmation .payment-parts legend{font-size:13px;font-weight:750;color:#3d586c;padding:0 6px}
+.fiscal-confirmation .payment-parts-list{display:grid;gap:10px}
+.fiscal-confirmation .payment-part{display:flex;flex-wrap:wrap;align-items:end;gap:9px;margin:0}
+.fiscal-confirmation .payment-part label{flex:1 1 150px}
+.fiscal-confirmation .payment-part .billing-delete{
+  display:inline-flex;justify-content:center;align-items:center;flex:0 0 42px;
+  width:42px;height:42px;padding:8px;border:1px solid #e2e8ee;border-radius:9px;background:#fff
+}
+.fiscal-confirmation .payment-parts-toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px 16px;
+  flex-wrap:wrap;margin-top:4px;
+}
+.fiscal-confirmation .payment-parts-toolbar .billing-add{
+  min-height:37px;border:1px solid #b6d8d8;border-radius:8px;
+  padding:8px 12px;background:#eef8f8;color:#087c7c;
+  font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer;
+}
+.fiscal-confirmation .payment-parts-toolbar p{
+  display:flex;align-items:center;gap:5px 9px;flex-wrap:wrap;
+  margin:0;font-size:12px;color:#557083;
+}
+.fiscal-confirmation .payment-parts-toolbar strong{font-weight:800;color:#173f55}
+.fiscal-confirmation .payment-parts-difference{color:#ae5c27;font-weight:750}
+.fiscal-confirmation .payment-parts-ok{color:#16845c;font-weight:750}
+.fiscal-confirmation .fiscal-radio{
+  display:inline-flex!important;flex-direction:row!important;
+  align-items:center;gap:9px;font-size:13px;font-weight:700;color:#314d62;cursor:pointer;
+  width:auto;min-height:0;
+}
+.fiscal-confirmation .fiscal-radio :is(input[type=checkbox],input[type=radio]){
+  appearance:auto;display:inline-block;box-sizing:border-box;flex:0 0 18px;
+  width:18px!important;height:18px!important;min-width:18px;min-height:18px!important;
+  max-width:18px;max-height:18px;margin:0;padding:0;border:0;
+  accent-color:#168f88;vertical-align:middle;cursor:pointer;
+}
+.fiscal-confirmation .fiscal-no-invoice{
+  padding:11px 13px;border:1px solid #dce7ed;border-radius:10px;
+  background:#f9fbfc;align-self:flex-start;
+}
+.fiscal-confirmation .fiscal-recipient-kind{display:block;border:0;padding:0;margin:0}
+.fiscal-confirmation .fiscal-recipient-kind legend{padding:0;margin:0 0 10px;font-size:13px;font-weight:700;color:#3b5569}
+.fiscal-confirmation .fiscal-recipient-options{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px}
+.fiscal-confirmation .fiscal-recipient-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.fiscal-confirmation .fiscal-field-full{grid-column:1/-1}
+.fiscal-confirmation .fiscal-validation-error{
+  margin:0;color:#a72229;font-size:13px;font-weight:650;
+  padding:10px 12px;border:1px solid #f1c9ce;background:#fff6f6;border-radius:8px;
+}
+.fiscal-confirmation .fiscal-actions{
+  display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;
+  padding-top:15px;border-top:1px solid #e4ecf0;
+}
+.fiscal-confirmation .fiscal-actions button{
+  min-height:42px;padding:10px 15px;border-radius:9px;border:1px solid #cbd9e3;
+  background:#fff;color:#314d62;font-size:13px;font-weight:750;cursor:pointer;
+}
+.fiscal-confirmation .fiscal-actions .fiscal-primary{
+  background:#106982;border-color:#106982;color:#fff;
+}
+@media(max-width:620px){
+ dialog.fiscal-confirmation-dialog{padding:16px;border-radius:15px}
+ .fiscal-confirmation .fiscal-card{padding:14px}
+ .fiscal-confirmation .fiscal-recipient-grid{grid-template-columns:1fr}
+ .fiscal-confirmation .fiscal-field-full{grid-column:auto}
+ .fiscal-confirmation .fiscal-payment-summary{grid-template-columns:1fr 1fr}
+ .fiscal-confirmation .fiscal-payment-summary strong{font-size:14px}
+ .fiscal-confirmation .fiscal-actions button{flex:1 1 170px}
+}
+@media(max-width:370px){
+ .fiscal-confirmation .fiscal-payment-summary{grid-template-columns:1fr}
+}
