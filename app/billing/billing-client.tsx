@@ -29,7 +29,7 @@ import { confirmFiscalPayment } from "@/components/confirm-fiscal-payment";
 import type { InvoiceRequest } from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
 import { useCallback, useEffect, useState, useRef } from "react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, BarChart3 } from "lucide-react";
 import { eligibleForInvoice, payerKey } from "@/lib/billing-eligibility";
 import {
   attendanceInsuranceOptions,
@@ -1632,6 +1632,12 @@ export default function BillingClient({
                           <td>{status(e.active)}</td>
                           <td>
                             <div className="billing-row-actions">
+                              <a href={"/billing/entidades/"+encodeURIComponent(e.id)+"/indicadores"}
+                                className="billing-icon-action"
+                                title={"Indicadores financeiros de "+(e.trade_name||e.name)}
+                                aria-label={"Ver gráficos de ganhos de "+e.name}>
+                                <BarChart3 size={19} aria-hidden="true"/>
+                              </a>
                               <button
                                 className="billing-icon-action billing-edit"
                                 title="Editar entidade"
