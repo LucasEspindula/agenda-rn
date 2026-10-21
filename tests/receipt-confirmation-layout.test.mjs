@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const form=readFileSync('components/confirm-fiscal-payment.tsx','utf8');
 const parts=readFileSync('components/payment-parts.tsx','utf8');
-const css=readFileSync('app/globals.css','utf8');
+const css=readFileSync('components/confirm-fiscal-payment.css','utf8');
 
 test('checkbox Sem NF permanece compacto e nao herda tamanho de input de texto',()=>{
  assert.match(css,/input:not\(\[type=radio\]\):not\(\[type=checkbox\]\)/);
@@ -37,7 +37,18 @@ test('formas de pagamento mantem composição e removivel com resumo em barra se
  assert.match(parts,/paymentDifference\(value,amount\)/);
  assert.match(parts,/payment-parts-difference/);
  assert.match(parts,/payment-parts-ok/);
- assert.match(css,/\.fiscal-confirmation \.payment-parts-toolbar/);
- assert.match(css,/\.fiscal-confirmation \.fiscal-recipient-grid/);
+ assert.match(css,/dialog\.fiscal-confirmation-dialog \.fiscal-confirmation \.payment-parts-toolbar/);
+ assert.match(css,/dialog\.fiscal-confirmation-dialog \.fiscal-confirmation \.fiscal-recipient-grid/);
  assert.match(css,/@media\(max-width:620px\)/);
+});
+
+test('CSS isolado é importado pelo componente, com estilo inline defensivo e bust do legado',()=>{
+ assert.match(form,/import '\.\/confirm-fiscal-payment\.css'/);
+ assert.match(form,/data-layout-version="receipt-20261021-v2"/);
+ assert.match(form,/style=\{\{width:18,height:18,minWidth:18,minHeight:18/);
+ const legacy=readFileSync('app/dashboard/legacy-app.tsx','utf8');
+ assert.match(legacy,/legacy-app\.js\?v=receipt-modal-v2-20261021/);
+ assert.match(legacy,/legacy\.css\?v=receipt-modal-v2-20261021/);
+ const globals=readFileSync('app/globals.css','utf8');
+ assert.doesNotMatch(globals,/\.fiscal-confirmation input:not\(\[type=radio\]\)/);
 });
