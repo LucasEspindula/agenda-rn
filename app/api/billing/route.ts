@@ -40,7 +40,7 @@ export async function GET(request:Request){
    data.links=data.links.filter(l=>doctors.has(l.doctor_id));data.links.forEach(l=>entityIds.add(l.billing_entity_id));
    data.entities=data.entities.filter(e=>entityIds.has(e.id));data.doctors=data.doctors.filter(d=>doctors.has(d.id));
    data.rows=data.rows.map(r=>({...r,invoice:r.invoice?{...r.invoice,total_amount:null,net_amount:null,notes:null,recipient_tax_id:null,recipient_address:null}:null}));
-   data.requests=(data.requests||[]).map(r=>({...r,taker_tax_id:'',taker_address:null,notes:null}));
+   if(!appointmentId)data.requests=(data.requests||[]).map(r=>({...r,taker_tax_id:'',taker_address:null,notes:null}));
    data.payment_parts=(data.payment_parts||[]).filter(p=>!!p.billing_record_id&&data.rows.some(r=>r.record?.id===p.billing_record_id));data.attachments=(data.attachments||[]).filter(a=>!!a.billing_record_id&&data.rows.some(r=>r.record?.id===a.billing_record_id));data.invoices=[];data.items=[];data.expenses=[];data.associates=[];data.patients=(data.patients||[]).filter(p=>data.rows.some(r=>r.patient_id===p.id));data.users=[];data.payers=[...new Set(data.rows.map(r=>r.insurance))];
   }
   return Response.json(data,{headers:{'Cache-Control':'private, no-store'}});
