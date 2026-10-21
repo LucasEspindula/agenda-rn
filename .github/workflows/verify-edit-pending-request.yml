@@ -1,0 +1,19 @@
+name: Validate pending fiscal request edit
+on:
+  push:
+    branches:
+      - feat/editar-solicitacao-nf-pendente-20261021
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --check public/legacy-app.js
+      - run: node --test tests/edit-pending-invoice-request.test.mjs
+      - run: npx tsc --noEmit
+      - run: npm run build
