@@ -4,6 +4,7 @@ import {validPaymentParts,type PaymentPart} from '@/lib/fiscal-money';
 import {useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import AppDialog from './app-dialog';
+import './confirm-fiscal-payment.css';
 import {formatBRL} from '@/lib/money';
 import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
 
@@ -41,7 +42,7 @@ function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipien
 
  return <AppDialog label="Confirmar pagamento e solicitar NF" onClose={()=>done(null)}
    className="fiscal-confirmation-dialog">
-  <form className="fiscal-confirmation" onSubmit={submit}>
+  <form className="fiscal-confirmation" data-layout-version="receipt-20261021-v2" onSubmit={submit}>
    <h2>Confirmar recebimento</h2>
 
    <section className="fiscal-card" aria-labelledby="fiscal-payment-title">
@@ -55,6 +56,8 @@ function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipien
 
     <label className="fiscal-radio fiscal-no-invoice">
      <input type="checkbox" checked={noInvoice}
+      style={{width:18,height:18,minWidth:18,minHeight:18,flex:'0 0 18px',
+       padding:0,margin:0,boxSizing:'border-box'}}
       onChange={e=>{setNoInvoice(e.target.checked);setError('');}}/>
      <span>Sem Nota Fiscal (S/N)</span>
     </label>
@@ -68,6 +71,8 @@ function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipien
       {([['PATIENT','Próprio paciente'],['OTHER','Outra pessoa']] as const).map(([kind,label])=>
        <label key={kind} className="fiscal-radio">
         <input type="radio" name="taker_kind" checked={value.taker_kind===kind}
+         style={{width:18,height:18,minWidth:18,minHeight:18,flex:'0 0 18px',
+          padding:0,margin:0,boxSizing:'border-box'}}
          onChange={()=>{
           setError('');
           setValue(kind==='PATIENT'?patientRecipient(context.patient):
