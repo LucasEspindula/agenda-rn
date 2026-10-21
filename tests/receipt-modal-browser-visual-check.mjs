@@ -4,17 +4,19 @@ import assert from 'node:assert/strict';
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});
 try{
  const page=await browser.newPage({viewport:{width:1200,height:900},deviceScaleFactor:1});
+ page.on("pageerror",err=>console.error("BROWSER_PAGE_ERROR",err.message));
  let lastError;
  for(let attempt=0;attempt<35;attempt++){
   try{
-   const response=await page.goto('http://127.0.0.1:3000/receipt-visual-test',{waitUntil:'domcontentloaded',timeout:10000});
+   const response=await page.goto('http://localhost:3000/receipt-visual-test',{waitUntil:'domcontentloaded',timeout:10000});
    if(response?.ok())break;
    lastError=new Error('HTTP '+response?.status());
   }catch(err){lastError=err;}
   await new Promise(resolve=>setTimeout(resolve,1000));
   if(attempt===34)throw lastError;
  }
- await page.locator('[data-testid="open-receipt"]').click();
+ await page.locator('[data-testid="open-receipt"]').waitFor({state:'visible'});
+ await page.locator('[data-testid="open-receipt"]').click({timeout:20000});
  await page.locator('dialog.fiscal-confirmation-dialog[open]').waitFor({timeout:15000});
  const desktop=await page.evaluate(()=>{
   const checkbox=document.querySelector('.fiscal-no-invoice input');
