@@ -32,7 +32,7 @@ test('somente gerente pode obter indicadores da entidade',()=>{
  assert.match(route,/\.eq\('id',entityId\)/);
  assert.match(route,/\.rpc\('billing_entity_receipts_analytics',\{p_entity:entityId\}\)/);
  assert.match(route,/private, no-store/);
- assert.match(page,/session\.account\.role!=='general_manager'/);
+ assert.match(page,/session\.account\.role!==[\"']general_manager[\"']/);
 });
 test('Entidades recebedoras possui apenas ícone como ação adicional',()=>{
  assert.match(entities,/aria-label=\{"Ver gráficos de ganhos de "\+e\.name\}/);
