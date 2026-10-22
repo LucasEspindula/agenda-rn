@@ -14,7 +14,7 @@ test('page descriptions are scoped, left-aligned and preserve actions',()=>{
  assert.doesNotMatch(doctors,/tab==='doctors'\?'Médicos':'Agenda'/);
 
  const billing=read('app/billing/billing-client.tsx');
- assert.match(billing,/tab==='entities'.*?page-description">Cadastre os CPF\\/CNPJ utilizados para receber pagamentos e emitir notas fiscais\..*?\\+ Cadastrar entidade/s);
+ assert.match(billing,/tab==='entities'.*?page-description">Cadastre os CPF\/CNPJ utilizados para receber pagamentos e emitir notas fiscais\..*?\+ Cadastrar entidade/s);
  assert.doesNotMatch(billing,/adminView|Vínculos médico ↔ entidade|Empresas e vínculos/);
 
  const finance=read('app/billing/company-finance.tsx');
