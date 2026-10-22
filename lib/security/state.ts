@@ -61,7 +61,12 @@ export function visibleState(s: State, p: Principal): State {
   if (p.account.role === 'general_manager') return s;
   const appointments = (s.appointments || []).filter((a: Row) => canReadAppointment(p,a));
   const cancelled = (s.cancelledAppointments || []).filter((a: Row) => canReadAppointment(p,a));
-  const patients = (s.patients || []).filter((a: Row) => ownedPatient(p,a));
+  // O anestesista também participa do agendamento, ainda que o cadastro único
+  // do paciente tenha sido associado originalmente à agenda do cirurgião.
+  // Visibilidade clínica não concede permissão de alterar o cadastro alheio.
+  const accessiblePatientIds = new Set([...appointments,...cancelled].map((a: Row) => a.patientId).filter(Boolean));
+  const patients = (s.patients || []).filter((a: Row) =>
+    ownedPatient(p,a) || accessiblePatientIds.has(a.id));
   const patientIds = new Set(patients.map((a: Row) => a.id));
   const appointmentIds = new Set([...appointments,...cancelled].map((a: Row) => a.id));
   return { schemaVersion:s.schemaVersion, settings:s.settings, professionals:s.professionals || [], hospitals:s.hospitals || [],
