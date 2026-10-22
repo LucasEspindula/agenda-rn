@@ -1,0 +1,44 @@
+name: RN Integra full audit
+on:
+  push:
+    branches:
+      - audit/rn-integra-full-review-20261022
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: All existing functional tests
+        id: tests
+        continue-on-error: true
+        run: npm test > /tmp/rn-tests.log 2>&1; rc=$?; tail -n 100 /tmp/rn-tests.log; exit $rc
+      - name: Static lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint > /tmp/rn-lint.log 2>&1; rc=$?; tail -n 100 /tmp/rn-lint.log; exit $rc
+      - name: TypeScript
+        id: types
+        continue-on-error: true
+        run: npx tsc --noEmit
+      - name: Production build
+        id: build
+        continue-on-error: true
+        run: npm run build
+      - name: Dependency vulnerability scan
+        id: deps
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high > /tmp/rn-audit.log 2>&1; rc=$?; tail -n 100 /tmp/rn-audit.log; exit $rc
+      - name: Report checks
+        run: |
+          echo "tests=${{ steps.tests.outcome }}"
+          echo "lint=${{ steps.lint.outcome }}"
+          echo "types=${{ steps.types.outcome }}"
+          echo "build=${{ steps.build.outcome }}"
+          echo "deps=${{ steps.deps.outcome }}"
