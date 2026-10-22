@@ -15,6 +15,10 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Legacy agenda JavaScript parse
+        run: node --check public/legacy-app.js
+      - name: Targeted audit regression tests
+        run: node --test tests/audit-five-context-role-matrix.test.mjs tests/audit-agenda-persistence-security.test.mjs
       - name: All existing functional tests
         id: tests
         continue-on-error: true
