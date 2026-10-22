@@ -29,7 +29,12 @@ test('Secretaria: vê agendamento da sua agenda e não pode alterar agendamento 
  const s=fixture(),p=principal('secretary',['surgeon']),snapshot=visibleState(s,p);
  assert.deepEqual(snapshot.appointments.map(x=>x.id),['a1']);
  const changed=structuredClone(snapshot);changed.appointments.push(s.appointments[1]);
- assert.throws(()=>mergeState(s,changed,p),/agenda|permissão/i);
+ const result=mergeState(s,changed,p);
+ // Enviar de volta uma linha estrangeira intacta não autoriza duplicá-la ou mudá-la.
+ assert.equal(result.appointments.filter(x=>x.id==='a2').length,1);
+ assert.deepEqual(result.appointments.find(x=>x.id==='a2'),s.appointments[1]);
+ changed.appointments[1]={...changed.appointments[1],procedure:'Alteração forjada'};
+ assert.throws(()=>mergeState(s,changed,p),/outra agenda|permissão/i);
 });
 test('Faturamento: acesso financeiro administrativo somente com perfil de gerência',()=>{
  assert.match(apiSource,/session.account.role==='secretary'&&!appointmentId&&!summary/);
