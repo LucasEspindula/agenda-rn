@@ -13,7 +13,7 @@ GitHub Actions [auditoria](https://github.com/LucasEspindula/agenda-rn/actions/r
 - `npm ci --ignore-scripts`: aprovado.
 - `npx tsc --noEmit`: aprovado, **com a ressalva** de que `app/billing/billing-client.tsx` tem `// @ts-nocheck`.
 - `npm run build`: aprovado.
-- `npm test`: **374 testes, 338 aprovações, 36 falhas** no snapshot examinado. Entre as falhas constam contratos antigos de interface/relatórios, testes com fixtures desatualizadas e teste que tenta ler `.next/static` **antes do build**. Devem ser discriminadas, não removidas indiscriminadamente.
+- `npm test`: primeira rodada **374 testes, 338 aprovações, 36 falhas**. Após correções e novos testes: **379 testes, 344 aprovações, 35 falhas** (run [39775547115](https://github.com/LucasEspindula/agenda-rn/actions/runs/39775547115)). A matriz separada de cinco contextos passou **8/8**.
 - `npm run lint`: **52 apontamentos** (14 erros, 38 avisos), incluindo hooks React e símbolos sem uso.
 - `npm audit --omit=dev --audit-level=high`: **2 alertas críticos e 2 altos**, resultado não aprovado.
 
