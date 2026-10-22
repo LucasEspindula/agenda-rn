@@ -18,11 +18,15 @@ jobs:
       - name: All existing functional tests
         id: tests
         continue-on-error: true
-        run: npm test > /tmp/rn-tests.log 2>&1; rc=$?; tail -n 100 /tmp/rn-tests.log; exit $rc
+        run: set +e; npm test > /tmp/rn-tests.log 2>&1; rc=$?; grep -E '^(# (tests|pass|fail)|not ok|# error|# duration)' /tmp/rn-tests.log | tail -n 120; tail -n 50 /tmp/rn-tests.log; exit $rc
+      - name: Five-context profile scenario tests
+        id: roles
+        continue-on-error: true
+        run: node --test tests/audit-five-context-role-matrix.test.mjs
       - name: Static lint
         id: lint
         continue-on-error: true
-        run: npm run lint > /tmp/rn-lint.log 2>&1; rc=$?; tail -n 100 /tmp/rn-lint.log; exit $rc
+        run: set +e; npm run lint > /tmp/rn-lint.log 2>&1; rc=$?; tail -n 65 /tmp/rn-lint.log; exit $rc
       - name: TypeScript
         id: types
         continue-on-error: true
@@ -34,11 +38,11 @@ jobs:
       - name: Dependency vulnerability scan
         id: deps
         continue-on-error: true
-        run: npm audit --omit=dev --audit-level=high > /tmp/rn-audit.log 2>&1; rc=$?; tail -n 100 /tmp/rn-audit.log; exit $rc
+        run: set +e; npm audit --omit=dev --audit-level=high > /tmp/rn-audit.log 2>&1; rc=$?; tail -n 100 /tmp/rn-audit.log; exit $rc
       - name: Report checks
         run: |
           echo "tests=${{ steps.tests.outcome }}"
-          echo "lint=${{ steps.lint.outcome }}"
+          echo "roles=\${{ steps.roles.outcome }}"\n          echo "lint=${{ steps.lint.outcome }}"
           echo "types=${{ steps.types.outcome }}"
           echo "build=${{ steps.build.outcome }}"
           echo "deps=${{ steps.deps.outcome }}"
