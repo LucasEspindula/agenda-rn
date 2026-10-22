@@ -1,0 +1,26 @@
+name: Generate dependency upgrade patch
+on:
+  push:
+    branches:
+      - audit/rn-integra-full-review-20261022
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'chore(audit): calculate dependency patch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Produce updated dependency manifests without modifying repository
+        run: |
+          npm install --save-exact next@16.4.2 fast-xml-parser@5.11.2 sharp@0.35.5
+          npm audit fix || true
+          npm audit --omit=dev --audit-level=high
+          echo RN_DIFF_START
+          git diff -- package.json package-lock.json
+          echo RN_DIFF_END
