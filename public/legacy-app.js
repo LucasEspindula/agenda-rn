@@ -144,16 +144,6 @@ function evaluateSchedulingRules(a){
  }
  return messages
 }
-function evaluateBlocks(a){
- const issues=[];
- const professionals=[a.doctorId,a.anesthetistId].filter(Boolean);
- for(const pid of professionals){
-   for(const b of state.scheduleBlocks.filter(x=>x.professionalId===pid&&blockAppliesToAppointment(x,a))){
-     issues.push({professionalId:pid,block:b});
-   }
- }
- return issues
-}
 function evaluateManualBlocksAbsolute(a){
  const issues=[];
  if(!a||!a.date||!a.time)return issues;
@@ -669,7 +659,6 @@ async function applyAppointmentStatus(id,status,reason=""){
  if((window.AgendaAuth||{}).role==="doctor"){if($("appointmentStatusSelect"))$("appointmentStatusSelect").value=previous;return appNotice("Acesso restrito","Status, valor e nota fiscal são alterados pela secretaria ou gerência.")}
  Object.assign(a,updated);hist(a.patientId,"Status alterado",`${statusLabel(previous)} → ${statusLabel(status)}${reason?` · Motivo: ${reason}`:""}`,id);if(await persist()===false)return;renderAppointmentDetail(a);toast(`Status alterado para ${statusLabel(status)}.`)
 }
-function requestAppointmentStatus(id,status){applyAppointmentStatus(id,status)}
 function rescheduleLine(label,date,time,type){return `<div class="reschedule-line ${type}"><span>${label}</span><b aria-hidden="true">${type==="from"?"≫":"≪"}</b><strong>${date?parseDate(date).toLocaleDateString("pt-BR"):"—"} às ${esc(time||"—")}</strong></div>`}
 function renderReschedulePreview(){const a=state.appointments.find(x=>x.id===$("rescheduleAppointmentId").value);if(!a)return;$("reschedulePreview").innerHTML=rescheduleLine("De",a.date,a.time,"from")+rescheduleLine("Para",$("rescheduleNewDate").value,$("rescheduleNewTime").value,"to")}
 function openReschedule(id){const a=state.appointments.find(x=>x.id===id);if(!a)return;$("rescheduleReasonForm").reset();$("rescheduleAppointmentId").value=id;$("rescheduleNewDate").value=a.date;$("rescheduleNewDate").min=ds(new Date());$("rescheduleNewTime").value=a.time;renderReschedulePreview();openModal("rescheduleReasonModal")}
