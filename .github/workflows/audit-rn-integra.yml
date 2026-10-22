@@ -19,6 +19,10 @@ jobs:
         run: node --check public/legacy-app.js
       - name: Targeted audit regression tests
         run: node --test tests/audit-five-context-role-matrix.test.mjs tests/audit-agenda-persistence-security.test.mjs
+      - name: Production build
+        id: build
+        continue-on-error: true
+        run: npm run build
       - name: All existing functional tests
         id: tests
         continue-on-error: true
@@ -30,15 +34,11 @@ jobs:
       - name: Static lint
         id: lint
         continue-on-error: true
-        run: set +e; npm run lint > /tmp/rn-lint.log 2>&1; rc=$?; tail -n 65 /tmp/rn-lint.log; exit $rc
+        run: set +e; npm run lint > /tmp/rn-lint.log 2>&1; rc=$?; cat /tmp/rn-lint.log | tail -n 260; exit $rc
       - name: TypeScript
         id: types
         continue-on-error: true
         run: npx tsc --noEmit
-      - name: Production build
-        id: build
-        continue-on-error: true
-        run: npm run build
       - name: Dependency vulnerability scan
         id: deps
         continue-on-error: true
@@ -46,7 +46,8 @@ jobs:
       - name: Report checks
         run: |
           echo "tests=${{ steps.tests.outcome }}"
-          echo "roles=\${{ steps.roles.outcome }}"\n          echo "lint=${{ steps.lint.outcome }}"
+          echo "roles=${{ steps.roles.outcome }}"
+          echo "lint=${{ steps.lint.outcome }}"
           echo "types=${{ steps.types.outcome }}"
           echo "build=${{ steps.build.outcome }}"
           echo "deps=${{ steps.deps.outcome }}"
