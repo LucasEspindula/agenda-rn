@@ -1,9 +1,4 @@
-import {test as baseTest} from 'node:test';
-const test=(name,callback)=>baseTest(name,async(...args)=>{
- console.error('[perseu-check] START '+name);
- try{return await callback(...args)}
- finally{console.error('[perseu-check] END '+name)}
-});
+import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as XLSX from 'xlsx';
@@ -274,6 +269,13 @@ test('Perseu enforces bounded structural input',()=>{
  assert.throws(()=>engine.inspectPerseusDocument('CSV',text(header+'\n'+header+'\n')),/limite de colunas/);
  assert.throws(()=>engine.inspectPerseusDocument('CSV',text('Campo\n'+'x'.repeat(10001)+'\n')),/limite de tamanho de célula/);
  assert.throws(()=>engine.inspectPerseusDocument('CSV',text('Campo\n'+Array.from({length:10001},()=> 'x').join('\n'))),/limite de linhas/);
+});
+
+test('Perseu handles thousands of valid one-column CSV records without runaway memory',()=>{
+ const content=['Nome',...Array.from({length:4000},(_,index)=>'Paciente '+index)].join('\n')+'\n';
+ const result=engine.inspectPerseusDocument('CSV',text(content));
+ assert.equal(result.kind,'parsed');
+ if(result.kind==='parsed')assert.equal(result.result.items.length,4000);
 });
 
 test('Perseu preview keeps detected tables distinct instead of mixing their columns',()=>{
