@@ -20,3 +20,11 @@ jobs:
         run: node --test --test-name-pattern="Perseu replace RPC rolls back" tests/perseu.test.mjs
         env:
           NODE_OPTIONS: --max-old-space-size=1024
+      - name: Reproduce isolated supervised mapping
+        run: node --test --test-name-pattern="Perseu applies and reuses a supervised mapping atomically" tests/perseu.test.mjs
+        env:
+          NODE_OPTIONS: --max-old-space-size=1024
+      - name: Reproduce isolated operational history
+        run: node --test --test-name-pattern="Perseu keeps operational events transactional" tests/perseu.test.mjs
+        env:
+          NODE_OPTIONS: --max-old-space-size=1024
