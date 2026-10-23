@@ -25,7 +25,7 @@ test('cancel, undo and replacement restore queue unless operational replacement 
 const data={rows:[base,{...base,attendance_id:'b',patient:'Maria',procedure:'Cirurgia',date:'2026-07-30',billing_entity_id:'f',insurance:'UNIMED'},{...base,attendance_id:'c',date:'2026-09-20',insurance:' cabergs '},{...base,attendance_id:'paid',invoice:{...invoice,paid_at:'2026-09-29'}}],entities:[{id:'e',name:'Empresa E'},{id:'f',name:'Empresa F'},{id:'empty',name:'Sem fila'}],doctors:[{id:'d',invoice_enabled:true}],links:[]};
 const all={entity:'',doctor:'',insurance:'',start:'',end:''};
 test('filters intersect, search accents ignored, generic status cannot hide pending; global source unchanged',()=>{
- const filters=[{entity:'f'},{insurance:'unimed'},{doctor:'an',search:'cirurgia'},{search:'joao',start:'2026-06-01',end:'2026-06-01'},{search:'AVALIACAO',start:'2026-09-01'}];
+ const filters=[{entity:'f'},{insurance:'unimed'},{doctor:'d',search:'cirurgia'},{search:'joao',start:'2026-06-01',end:'2026-06-01'},{search:'AVALIACAO',start:'2026-09-01'}];
  for(const filter of filters)assert.equal(filterPendingRows(data,{...all,...filter}).length,1);
  assert.equal(filterPendingRows(data,{...all,entity:'empty'}).length,0);
  assert.equal(filterPendingRows(data,{...all,status:'Pago'}).length,3);

@@ -32,7 +32,7 @@ test('doctor modal owns auto-saved entity links and preserves failures after rel
  assert.match(source,/Salve o médico primeiro para configurar as entidades recebedoras./);
  assert.match(source,/As alterações desta seção são salvas automaticamente./);
  assert.match(source,/Gerenciar entidades recebedoras/);
- assert.match(source,/buildDoctorEntityLinkMutation(links,draft.id,entityId,desiredActive)/);
+ assert.match(source,/buildDoctorEntityLinkMutation\(links,doctorId,entityId,desiredActive\)/);
  assert.match(source,/kind:'link'/);
  const handler=source.slice(source.indexOf('async function toggleDoctorEntityLink'),source.indexOf(' async function removeAccess'));
  assert.match(handler,/const errorMessage=/);
@@ -60,7 +60,7 @@ test('focused doctor entities endpoint only serves managers and returns no finan
 
 test('billing retains entity registration but no longer renders the old links administration',()=>{
  const source=readFileSync('app/billing/billing-client.tsx','utf8');
- assert.match(source,/\['entities','Entidades recebedoras'\]/);
+ assert.match(readFileSync('app/billing/billing-subnav.tsx','utf8'),/>Entidades recebedoras/);
  assert.match(source,/Cadastre os CPF\/CNPJ utilizados para receber pagamentos e emitir notas fiscais\./);
  assert.match(source,/\+ Cadastrar entidade/);
  assert.doesNotMatch(source,/adminView|administration|Vínculos médico ↔ entidade|toggleDoctorEntityLink/);
@@ -72,7 +72,7 @@ test('doctor ID is normalized once before the entity-link flow',()=>{
  assert.match(source,/const doctorId=typeof draft\.id==='string'\?draft\.id:'';/);
  const handler=source.slice(source.indexOf('async function toggleDoctorEntityLink'),source.indexOf(' async function removeAccess'));
  assert.match(handler,/if\(!doctorId\)return;/);
- assert.match(handler,/const key=doctorId\+'\:'+entityId;/);
+ assert.ok(handler.includes("const key=doctorId+':'+entityId;"));
  assert.match(handler,/buildDoctorEntityLinkMutation\(links,doctorId,entityId,desiredActive\)/);
  assert.doesNotMatch(handler,/draft\.id as string/);
 });

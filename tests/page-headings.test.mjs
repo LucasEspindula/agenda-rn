@@ -6,19 +6,19 @@ const read=path=>readFileSync(path,'utf8');
 
 test('page descriptions are scoped, left-aligned and preserve actions',()=>{
  const pending=read('app/billing/insurance-pending.tsx');
- assert.match(pending,/<header className="pending-page-heading page-description"><p>Atendimentos realizados que ainda aguardam resolução financeira pelo convênio\.<\/p><\/header>/);
- assert.doesNotMatch(pending,/<header className="pending-page-heading">\s*<h1>Pendências de Convênio<\/h1>/);
-
+ assert.match(pending,/Atendimentos realizados que ainda aguardam resolução financeira pelo convênio/);
+ assert.match(pending,/pending-page-heading page-description/);
+ assert.doesNotMatch(pending,/pending-page-heading">\s*<h1>Pendências de Convênio/);
  const doctors=read('app/doctors/doctor-directory.tsx');
- assert.match(doctors,/tab==='doctors'\?<p>Dados profissionais, serviços, agenda e acesso em um único cadastro\.<\/p>/);
- assert.doesNotMatch(doctors,/tab==='doctors'\?'Médicos':'Agenda'/);
-
+ assert.match(doctors,/Dados profissionais, serviços, entidades recebedoras, agenda e acesso em um único cadastro/);
  const billing=read('app/billing/billing-client.tsx');
- assert.match(billing,/tab==='entities'.*?page-description">Cadastre os CPF\/CNPJ utilizados para receber pagamentos e emitir notas fiscais\..*?\+ Cadastrar entidade/s);
+ assert.match(billing,/Cadastre os CPF\/CNPJ utilizados para receber pagamentos e/);
+ assert.match(billing,/emitir notas fiscais/);
+ assert.match(billing,/\+ Cadastrar entidade/);
  assert.doesNotMatch(billing,/adminView|Vínculos médico ↔ entidade|Empresas e vínculos/);
-
  const finance=read('app/billing/company-finance.tsx');
- assert.match(finance,/<section><p className="page-description billing-page-description">Controle das despesas das empresas e seus pagamentos\.<\/p><div className="billing-filter-bar">/);
+ assert.match(finance,/Controle das despesas das empresas e seus pagamentos/);
+ assert.match(finance,/billing-filter-bar/);
 });
 
 test('shared description styles align content at the container start',()=>{

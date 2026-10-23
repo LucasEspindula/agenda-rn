@@ -73,7 +73,7 @@ test('native hospital UI orders abbreviations first and persists normalized valu
  assert.doesNotMatch(source,/<th>Hospital<\/th><th>Abreviação<\/th>/);
  assert.doesNotMatch(source,/Disponibilidade|Todas as agendas/);
  assert.match(source,/const name=draftName\.trim\(\),abbreviation=normalizeHospitalAbbreviation\(draftAbbreviation\);/);
- assert.match(source,/setDraftAbbreviation\(normalizeHospitalAbbreviation\(event\.target\.value\)\)/);
+ assert.match(source,/setDraftAbbreviation\(event\.target\.value\.toLocaleUpperCase\('pt-BR'\)\)/);
  assert.match(source,/hospitalAbbreviation\(hospital\)/);
 });
 

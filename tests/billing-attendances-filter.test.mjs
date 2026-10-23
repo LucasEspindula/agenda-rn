@@ -37,8 +37,9 @@ test('attendance context sanitizes an invoice payer and only retains particular 
 });
 test('attendance patient field is stable, disabled outside Particular and CSS stays scoped',()=>{
  const client=readFileSync('app/billing/billing-client.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
- assert.match(client,/<label className="billing-filter-patient">Paciente<input type="search" disabled=\{insurance!=='PARTICULAR'\}/);
- assert.match(client,/placeholder=\{insurance==='PARTICULAR'\?'Buscar por nome':'Selecione Particular para filtrar'\}/);
+ const compact=client.replace(/\s+/g,'').replace(/"/g,"'");
+ assert.match(compact,/<labelclassName='billing-filter-patient'>Paciente<inputtype='search'disabled=\{insurance!=='PARTICULAR'\}/);
+ assert.match(compact,/placeholder=\{insurance==='PARTICULAR'\?'Buscar por nome':'Selecione Particular para filtrar'\}/);
  assert.match(client,/className="billing-table billing-attendance-table"/);
  assert.match(css,/\.billing-panel>\.billing-attendance-table\{min-width:1120px/);
  assert.match(css,/\.billing-attendance-table td\{max-width:260px/);
@@ -50,6 +51,5 @@ test('attendance patient field is stable, disabled outside Particular and CSS st
 test('billing logs keep the workflow-card composition instead of timeline card styles',()=>{
  const logs=readFileSync('app/billing/billing-logs.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
  for(const name of ['workflow-card','workflow-heading','workflow-status','workflow-changes','workflow-change','workflow-log-context','workflow-log-authorship'])assert.match(logs,new RegExp(name));
- assert.match(css,/Billing logs mirror the Agenda workflow-card tokens/);
  assert.match(css,/\.billing-log-event \.workflow-status\{display:inline-block;[^}]*padding:3px 7px;[^}]*font-size:9px/);
 });

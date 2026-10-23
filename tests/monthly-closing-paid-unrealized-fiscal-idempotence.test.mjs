@@ -34,7 +34,7 @@ test("tela, impressão e PDF distinguem recebido de realizado e mantêm gráfico
  assert.match(html,/monthlyReceiptComparison\(\[\.\.\.details,\.\.\.extraPaid\]\)/);
  assert.match(pdf,/snap\.paid_unrealized\?\.length/);
  assert.match(html,/receiptChartSvg/);
- assert.match(agenda,/A solicitação da NF já está pendente/);
+ assert.match(agenda,/Solicitação de NF já pendente/);
  assert.match(agenda,/pendingRequest&&payload\.payment_status==='PAGO'/);
  assert.match(agenda,/Faturamento → Notas Fiscais → Solicitações/);
 });

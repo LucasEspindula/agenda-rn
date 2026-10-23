@@ -27,6 +27,6 @@ for(const billing of [true,false])test('Agenda + NF explicit readonly authorizat
  session.services.invoice_enabled=false;assert.equal((await api.GET(new Request('https://example.test/api/billing?view=invoices'))).status,403);
 });
 test('documentary preview, accessible compact actions and no associates operational tab',()=>{
- const client=readFileSync('app/billing/billing-client.tsx','utf8');assert.match(client,/aria-label="Abrir financeiro"/);assert.match(client,/aria-label="Editar atendimento"/);assert.match(client,/billing-filter-action/);assert.match(client,/Imprimir atendimentos filtrados/);assert.ok(!client.includes("['associates','Associados']"));assert.ok(!client.includes('window.print('));
+ const client=readFileSync('app/billing/billing-client.tsx','utf8');assert.match(client,/aria-label="Abrir financeiro"/);assert.match(client,/aria-label="Editar atendimento"/);assert.match(client,/billing-filter-action/);assert.match(client,/aria-label="Imprimir \/ gerar relatório"/);assert.ok(!client.includes("['associates','Associados']"));assert.ok(!client.includes('window.print('));
  const css=readFileSync('app/billing/billing.css','utf8');assert.match(css,/minmax\(0,1fr\) 52px/);assert.match(css,/table-header-group/);assert.match(css,/break-inside:avoid/);
 });

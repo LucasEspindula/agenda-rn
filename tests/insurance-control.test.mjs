@@ -140,7 +140,7 @@ test("Convênios contains only Pendências and does not mount Perseu workspace",
   assert.match(billing, /<BillingSubnav\s+active=\{tab\}/);
   assert.match(billing, /tab === "insurance"[\s\S]{0,220}<InsurancePending/);
   assert.doesNotMatch(billing, /InsuranceControl/);
-  assert.doesNotMatch(billing, /insuranceView/);
+  assert.doesNotMatch(billing, /perseus-workspace/);
   assert.doesNotMatch(billing, /insurance-workspace-tabs/);
 });
 
