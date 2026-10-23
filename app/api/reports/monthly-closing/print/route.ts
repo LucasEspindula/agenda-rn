@@ -183,7 +183,7 @@ export async function GET(request:Request){
   for(const p of snap.direct_payments||[]){
    if(!p.id||directIds.has(p.id))continue;
    directIds.add(p.id);
-   let id=p.professional_id||"",name=profName.get(id)||p.professional_name||"Profissional não identificado";
+   let id=p.professional_id||"";const name=profName.get(id)||p.professional_name||"Profissional não identificado";
    if(!id){
     const alternatives=snap.professionals.filter(x=>x.professional_name===name);
     if(alternatives.length===1)id=alternatives[0].professional_id;
