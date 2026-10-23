@@ -79,7 +79,7 @@ export default function EntityAnalytics({entityId}:{entityId:string}){
   return [...sums].map(([y,amount])=>({year:String(y),amount}))
    .sort((a,b)=>Number(b.year)-Number(a.year));
  },[buckets]);
- const yearsForMonthly=years.slice(-7);
+ const yearsForMonthly=useMemo(()=>years.slice(-7),[years]);
  const monthly=useMemo(()=>months.map((label,i)=>{
   const item:Record<string,number|string>={month:label};
   for(const y of yearsForMonthly)item[String(y)]=0;
