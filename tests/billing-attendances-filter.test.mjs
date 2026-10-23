@@ -39,7 +39,7 @@ test('attendance patient field is stable, disabled outside Particular and CSS st
  const client=readFileSync('app/billing/billing-client.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
  const compact=client.replace(/\s+/g,'').replace(/"/g,"'");
  assert.match(compact,/<labelclassName='billing-filter-patient'>Paciente<inputtype='search'disabled=\{insurance!=='PARTICULAR'\}/);
- assert.match(compact,/placeholder=\{insurance==='PARTICULAR'\?'Buscar por nome':'Selecione Particular para filtrar'\}/);
+ assert.match(client,/placeholder=\{\s*insurance === "PARTICULAR"\s*\? "Buscar por nome"\s*: "Selecione Particular para filtrar"\s*\}/);
  assert.match(client,/className="billing-table billing-attendance-table"/);
  assert.match(css,/\.billing-panel>\.billing-attendance-table\{min-width:1120px/);
  assert.match(css,/\.billing-attendance-table td\{max-width:260px/);

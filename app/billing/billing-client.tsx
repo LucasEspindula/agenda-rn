@@ -88,6 +88,7 @@ export default function BillingClient({
   portalSubmissionsEnabled = false,
   denialsEnabled = false,
   closingEnabled = false,
+  perseusEnabled = false,
 }: {
   appointmentId?: string;
   initialView?: string;
@@ -95,6 +96,7 @@ export default function BillingClient({
   portalSubmissionsEnabled?: boolean;
   denialsEnabled?: boolean;
   closingEnabled?: boolean;
+  perseusEnabled?: boolean;
 }) {
   const [pendingSearch, setPendingSearch] = useState("");
   const [pendingSource, setPendingSource] = useState<BillingRow | null>(null),
@@ -1322,6 +1324,7 @@ export default function BillingClient({
           insurancePendingCount={insurancePendingCount}
           denialsEnabled={denialsEnabled}
           closingEnabled={closingEnabled}
+          perseusEnabled={perseusEnabled}
         />
       )}
       <main

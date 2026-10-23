@@ -2,7 +2,11 @@ name: RN Integra stabilization checks
 on:
   push:
     branches:
+      - main
       - fix/rn-integra-stabilization-20261023
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 permissions:
   contents: read

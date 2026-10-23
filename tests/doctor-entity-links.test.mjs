@@ -37,7 +37,7 @@ test('doctor modal owns auto-saved entity links and preserves failures after rel
  const handler=source.slice(source.indexOf('async function toggleDoctorEntityLink'),source.indexOf(' async function removeAccess'));
  assert.match(handler,/const errorMessage=/);
  assert.ok(handler.indexOf('await load();')<handler.indexOf('setModalError(errorMessage);'));
- assert.match(handler,/delete next[key]/);
+ assert.match(handler,/delete next\[key\]/);
  assert.doesNotMatch(handler,/delete_link/);
 });
 
@@ -61,7 +61,7 @@ test('focused doctor entities endpoint only serves managers and returns no finan
 test('billing retains entity registration but no longer renders the old links administration',()=>{
  const source=readFileSync('app/billing/billing-client.tsx','utf8');
  assert.match(readFileSync('app/billing/billing-subnav.tsx','utf8'),/>Entidades recebedoras/);
- assert.match(source,/Cadastre os CPF\/CNPJ utilizados para receber pagamentos e emitir notas fiscais\./);
+ assert.match(source,/Cadastre os CPF\/CNPJ utilizados para receber pagamentos e\s+emitir notas fiscais\./);
  assert.match(source,/\+ Cadastrar entidade/);
  assert.doesNotMatch(source,/adminView|administration|Vínculos médico ↔ entidade|toggleDoctorEntityLink/);
 });

@@ -56,5 +56,5 @@ test('Hub calls the module Cadastros and billing receives its initial view from 
  assert.match(client,/function BillingClient\([\s\S]{0,200}?initialView[\s\S]{0,200}?initialView\?: string/);
  assert.match(client,/const initialTab: BillingNavigationView/);
  assert.match(client,/new URLSearchParams\(window\.location\.search\)/);
- assert.match(client,/appointmentId\?:string/);
+ assert.match(client,/appointmentId\?:\s*string/);
 });

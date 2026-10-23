@@ -53,7 +53,7 @@ test('NF actions preserve historical adjustment on edit and reset it on replacem
  assert.match(client,/closing_adjustment:\s*0,\s*closing_adjustment_reason:\s*""/);
  assert.match(css,/invoice-row-cancelled:hover>\.billing-actions-cell\{background:#fff7f7\}/);
  assert.match(css,/invoice-row-replaced:hover>\.billing-actions-cell\{background:#fffbed\}/);
- assert.match(legacy,/label:\"Adicionar:\"/);
+ assert.match(legacy,/<span class="workflow-change-label">Adicionar:/);
  assert.match(legacy,/workflow-change-label\">Adicionar:/);
  assert.doesNotMatch(legacy,/ADICIONADO/);
 });

@@ -133,6 +133,9 @@ test("Perseu is an independent manager-only route with a shared billing subnav",
   assert.match(nav, /href="\/perseu"/);
   assert.match(nav, /className="billing-subnav-financial"/);
   assert.match(nav, /className="billing-subnav-perseus"/);
+  assert.match(nav, /\{perseusEnabled && \(/);
+  assert.match(read("app/billing/billing-client.tsx"),/perseusEnabled=\{perseusEnabled\}/);
+  assert.match(read("app/billing/page.tsx"),/s\.account\.role==='general_manager'&&process\.env\.RN_PERSEUS_ENABLED==='true'/);
 });
 
 test("Convênios contains only Pendências and does not mount Perseu workspace", () => {

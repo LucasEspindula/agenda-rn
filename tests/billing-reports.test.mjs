@@ -14,7 +14,7 @@ test('realized production only; cancelled/scheduled do not enter reports',()=>{c
 test('report generation uses the authenticated PDF route and preserves historical entity grouping',()=>{
  const source=readFileSync('app/api/reports/billing/route.ts','utf8');
  const report=buildReport(data,scope);
- assert.deepEqual(report.groups.map(group=>group.id),['e1','e2']);
+ assert.equal(report.groups.map(group=>group.id).join(','),'e1,e2');
  assert.match(source,/new PdfReport\(\)\.init\(\)/);
  assert.match(source,/report\.groups/);
  assert.match(source,/canOpenBilling|canOpenInvoices/);

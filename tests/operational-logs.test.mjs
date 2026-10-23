@@ -170,12 +170,13 @@ test('billing timeline presents add/remove without empty opposite sides or actor
  const html=renderToStaticMarkup(React.createElement(Component,{data:{rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:'secretary',name:'Roseni'}]}}));
  for(const text of ['Adicionou','REMOVIDO','workflow-change-label">DE</b>','workflow-change-label">PARA</b>','Responsável:','Agenda','Faturamento · cadastro manual','Fiscal · cadastro manual'])assert.ok(html.includes(text),text);
  assert.doesNotMatch(html,/hidden@example|Novo registro|PENDENTE|FATURAMENTO_MANUAL|FISCAL_MANUAL|c0a80101/);
- assert.equal((html.match(/class="workflow-change /g)||[]).length,5);
+ // An update renders its original and resulting values in separate visual rows.
+ assert.equal((html.match(/class="workflow-change /g)||[]).length,6);
 });
 
 test('native Agenda issued Particular composition remains read-only',()=>{
  const fn=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name.text==='paintNativeFinance').getText(ast);
- const root={innerHTML:''};const context={nativeFinance:{row:{record:{id:'b'},invoice:{invoice_number:'10',recipient_type:'PARTICULAR',paid_at:'2026-09-22'}},data:{payment_parts:[{billing_record_id:'b',method:'PIX',amount:1000},{billing_record_id:'b',method:'CREDIT_CARD',amount:500,installments:3},{billing_record_id:'other',method:'CASH',amount:99}]}},nativeFinanceRoot:()=>root,captureNativeFinance:()=>{},esc:v=>String(v??''),money:v=>String(v),parseDate:v=>new Date(v+'T12:00:00'),financeProofsMarkup:()=>'',window:{RNFinance:{individualReceived:()=>1500,paymentMethods:{PIX:'PIX',CREDIT_CARD:'Cartão de crédito',CASH:'Dinheiro'}}}};
+ const root={innerHTML:''};const context={nativeFinance:{row:{record:{id:'b'},invoice:{invoice_number:'10',recipient_type:'PARTICULAR',paid_at:'2026-09-22'}},data:{payment_parts:[{billing_record_id:'b',method:'PIX',amount:1000},{billing_record_id:'b',method:'CREDIT_CARD',amount:500,installments:3},{billing_record_id:'other',method:'CASH',amount:99}]}},nativeFinanceRoot:()=>root,captureNativeFinance:()=>{},esc:v=>String(v??''),money:v=>String(v),parseDate:v=>new Date(v+'T12:00:00'),financeProofsMarkup:()=>'',bindNativeProofDeletion:()=>{},window:{RNFinance:{individualReceived:()=>1500,paymentMethods:{PIX:'PIX',CREDIT_CARD:'Cartão de crédito',CASH:'Dinheiro'}}}};
  vm.createContext(context);vm.runInContext(fn+';paintNativeFinance()',context);
  assert.match(root.innerHTML,/somente leitura/);assert.match(root.innerHTML,/PIX/);assert.match(root.innerHTML,/3 parcelas/);assert.doesNotMatch(root.innerHTML,/<input|<select|Dinheiro/);
 });

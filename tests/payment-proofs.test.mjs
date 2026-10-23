@@ -47,7 +47,7 @@ test('proof UI and Agenda defer upload until the payment is saved and retry only
  assert.match(component,/Será enviado após salvar o pagamento/);
  assert.match(component,/onPendingFileChange/);
  assert.match(billing,/const target\s*=\s*editing\s*===\s*"record"/);
- assert.match(billing,/await uploadFinancialAttachment\(proofFile!,target!\)/);
+ assert.match(billing,/await uploadFinancialAttachment\(proofFile!,\s*target!\)/);
  assert.match(billing,/Tentar novamente/);
  assert.match(agenda,/showProofs=f\.draft\.payment_status==='PAGO'/);
  assert.match(agenda,/f\.proofFile=file/);
