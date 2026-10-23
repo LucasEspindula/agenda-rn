@@ -46,8 +46,8 @@ test('proof UI and Agenda defer upload until the payment is saved and retry only
  const agenda=await readFile('public/legacy-app.js','utf8');
  assert.match(component,/Será enviado após salvar o pagamento/);
  assert.match(component,/onPendingFileChange/);
- assert.match(billing,/const target=editing==='record'/);
- assert.match(billing,/await uploadFinancialAttachment\(proofFile!,target!\)/);
+ assert.match(billing,/const target\s*=\s*editing\s*===\s*"record"/);
+ assert.match(billing,/await uploadFinancialAttachment\(proofFile!,\s*target!\)/);
  assert.match(billing,/Tentar novamente/);
  assert.match(agenda,/showProofs=f\.draft\.payment_status==='PAGO'/);
  assert.match(agenda,/f\.proofFile=file/);
@@ -57,8 +57,8 @@ test('proof UI and Agenda defer upload until the payment is saved and retry only
  assert.match(agenda,/retryNativePaymentProof/);
  const retry=agenda.slice(agenda.indexOf("if($('retryNativePaymentProof'))"),agenda.indexOf('\n}',agenda.indexOf("if($('retryNativePaymentProof'))")));
  assert.doesNotMatch(retry,/fetch\('\/api\/billing'/);
- assert.match(billing,/setMessage\(shouldUpload\?'Pagamento e comprovante salvos\.':'Alteração salva\.'\)/);
- assert.match(billing,/setMessage\('Pagamento salvo\. O comprovante não foi enviado\.'\)/);
+ assert.match(billing,/setMessage\(\s*shouldUpload \? "Pagamento e comprovante salvos\." : "Alteração salva\."/);
+ assert.match(billing,/setMessage\("Pagamento salvo\. O comprovante não foi enviado\."\)/);
 });
 
 test('SQL and API derive anesthetist access from the canonical appointment state',async()=>{

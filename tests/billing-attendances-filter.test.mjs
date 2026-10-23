@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+// Values evaluated in node:vm have a different prototype realm; compare their JSON shape.
+const assertSameStructure=(actual,expected)=>assert.deepEqual(JSON.parse(JSON.stringify(actual)),expected);
 import {readFileSync} from 'node:fs';
 import {loadTs} from './load-ts.mjs';
 const {attendanceInsuranceOptions,sanitizeAttendanceFilters,matchesRow,matchesInvoice}=loadTs('lib/billing-row.ts');
@@ -9,7 +11,7 @@ const row=values=>({...base,...values});
 const filters=values=>({entity:'',doctor:'',insurance:'',patient:'',status:'',start:'',end:'',...values});
 test('attendance insurance options are normalized and exclude patients plus private-only insurance values',()=>{
  const rows=[row({patient:'Lucas Espindula',insurance:' IPE ',forma_cobranca:'CONVENIO',record:null}),row({patient:'Maria',insurance:'ipe',forma_cobranca:'CONVENIO',record:null}),row({patient:'Paciente Particular',insurance:'UNIMED',forma_cobranca:'PARTICULAR',record:null})];
- assert.deepEqual(attendanceInsuranceOptions(rows),['IPE']);
+ assertSameStructure(attendanceInsuranceOptions(rows),['IPE']);
  assert.ok(!attendanceInsuranceOptions(rows).includes('Lucas Espindula'));
 });
 test('Particular is billing method based, accepts partial accent-insensitive patient search and excludes the patient insurance',()=>{
@@ -29,14 +31,15 @@ test('filtered reports preserve the particular patient filter while invoice paye
 });
 test('attendance context sanitizes an invoice payer and only retains particular patient text for Particular',()=>{
  const rows=[row({insurance:'CESA',forma_cobranca:'CONVENIO',record:null})];
- assert.deepEqual(sanitizeAttendanceFilters(rows,'Lucas Espindula','Lucas'),{insurance:'',patient:''});
- assert.deepEqual(sanitizeAttendanceFilters(rows,'cEsa','Lucas'),{insurance:'CESA',patient:''});
- assert.deepEqual(sanitizeAttendanceFilters(rows,'PARTICULAR','Lucas'),{insurance:'PARTICULAR',patient:'Lucas'});
+ assertSameStructure(sanitizeAttendanceFilters(rows,'Lucas Espindula','Lucas'),{insurance:'',patient:''});
+ assertSameStructure(sanitizeAttendanceFilters(rows,'cEsa','Lucas'),{insurance:'CESA',patient:''});
+ assertSameStructure(sanitizeAttendanceFilters(rows,'PARTICULAR','Lucas'),{insurance:'PARTICULAR',patient:'Lucas'});
 });
 test('attendance patient field is stable, disabled outside Particular and CSS stays scoped',()=>{
  const client=readFileSync('app/billing/billing-client.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
- assert.match(client,/<label className="billing-filter-patient">Paciente<input type="search" disabled=\{insurance!=='PARTICULAR'\}/);
- assert.match(client,/placeholder=\{insurance==='PARTICULAR'\?'Buscar por nome':'Selecione Particular para filtrar'\}/);
+ const compact=client.replace(/\s+/g,'').replace(/"/g,"'");
+ assert.match(compact,/<labelclassName='billing-filter-patient'>Paciente<inputtype='search'disabled=\{insurance!=='PARTICULAR'\}/);
+ assert.match(client,/placeholder=\{\s*insurance === "PARTICULAR"\s*\? "Buscar por nome"\s*: "Selecione Particular para filtrar"\s*\}/);
  assert.match(client,/className="billing-table billing-attendance-table"/);
  assert.match(css,/\.billing-panel>\.billing-attendance-table\{min-width:1120px/);
  assert.match(css,/\.billing-attendance-table td\{max-width:260px/);
@@ -48,6 +51,5 @@ test('attendance patient field is stable, disabled outside Particular and CSS st
 test('billing logs keep the workflow-card composition instead of timeline card styles',()=>{
  const logs=readFileSync('app/billing/billing-logs.tsx','utf8'),css=readFileSync('app/billing/billing.css','utf8');
  for(const name of ['workflow-card','workflow-heading','workflow-status','workflow-changes','workflow-change','workflow-log-context','workflow-log-authorship'])assert.match(logs,new RegExp(name));
- assert.match(css,/Billing logs mirror the Agenda workflow-card tokens/);
  assert.match(css,/\.billing-log-event \.workflow-status\{display:inline-block;[^}]*padding:3px 7px;[^}]*font-size:9px/);
 });

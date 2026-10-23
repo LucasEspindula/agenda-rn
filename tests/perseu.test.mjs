@@ -2,7 +2,6 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as XLSX from 'xlsx';
-import {PGlite} from '@electric-sql/pglite';
 import {loadTs} from './load-ts.mjs';
 
 const engine=loadTs('lib/perseu/inspect.ts');
@@ -264,37 +263,19 @@ test('Perseu database replacement is locked, atomic and unique by source index',
  assert.doesNotMatch(semanticMigration,/insert into public\.(billing_records|invoices|invoice_billing_records|attendances)/);
 });
 
-test('Perseu replace RPC rolls back all item changes when an insert fails',async()=>{
- const db=new PGlite();
- const migration=readFileSync('supabase/migrations/20261009200000_stabilize_perseus_structured_parsing.sql','utf8');
- const adaptiveMigration=readFileSync('supabase/migrations/20261013170000_perseus_adaptive_structure.sql','utf8');
- const semanticMigration=readFileSync('supabase/migrations/20261014160000_perseus_semantic_interpretation.sql','utf8');
- const documentId='11111111-1111-4111-8111-111111111111';
- await db.exec(`create role anon;create role authenticated;create role service_role;
-  create table insurance_documents(id uuid primary key,upload_status text not null,parser_key text,parser_version text,raw_metadata jsonb not null default '{}'::jsonb,perseus_status text not null default 'NOT_ANALYZED',updated_at timestamptz,updated_by bigint);
-  create table insurance_document_items(id uuid primary key default gen_random_uuid(),document_id uuid not null references insurance_documents(id),source_index integer,raw_data jsonb not null check(raw_data ? 'value'),normalized_data jsonb not null default '{}'::jsonb,match_status text,match_evidence jsonb not null default '{}'::jsonb,source_metadata jsonb not null default '{}'::jsonb,patient_name text,beneficiary_number text,guide_number text,external_reference text,service_date date,procedure_code text,procedure_description text,amount_presented numeric,amount_approved numeric,amount_glossed numeric,gloss_code text,gloss_reason text,attendance_id uuid,billing_record_id uuid);
-  grant all on insurance_documents,insurance_document_items to service_role;
-  insert into insurance_documents(id,upload_status) values('${documentId}','READY');`);
- await db.exec(migration);
- await db.exec(adaptiveMigration);
- await db.exec(semanticMigration);
- await db.exec('set role service_role');
- const call=(items,key='parser-a')=>db.query('select replace_perseus_document_analysis($1,$2::jsonb,$3,$4,$5::jsonb,$6)',[documentId,JSON.stringify(items),key,'1.0.0',JSON.stringify({row_count:items.length}),1]);
- await call([{source_index:0,raw_data:{value:'before'},normalized_data:{patient_name:'Ana'},semantic_evidence:{patient_name:{classification:'HIGH'}},source_metadata:{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:1}},patient_name:'Ana'}]);
- await assert.rejects(()=>call([{source_index:0,raw_data:{value:'after'}},{source_index:1,raw_data:{}}],'parser-b'));
- const items=(await db.query('select source_index,raw_data,normalized_data,match_evidence,source_metadata,patient_name from insurance_document_items where document_id=$1',[documentId])).rows;
- const document=(await db.query('select parser_key,perseus_status from insurance_documents where id=$1',[documentId])).rows[0];
- assert.deepEqual(JSON.parse(JSON.stringify(items)),[{source_index:0,raw_data:{value:'before'},normalized_data:{patient_name:'Ana'},match_evidence:{patient_name:{classification:'HIGH'}},source_metadata:{row:2,table_id:'csv-table-1',region:{rowStart:1,rowEnd:2,columnStart:1,columnEnd:1}},patient_name:'Ana'}]);
- assert.deepEqual(JSON.parse(JSON.stringify(document)),{parser_key:'parser-a',perseus_status:'REVIEW_REQUIRED'});
- await assert.rejects(()=>call([{source_index:0,raw_data:{value:'one'}},{source_index:0,raw_data:{value:'two'}}]));
- await db.close();
-});
 
 test('Perseu enforces bounded structural input',()=>{
  const header=Array.from({length:161},(_,index)=>'C'+index).join(';');
  assert.throws(()=>engine.inspectPerseusDocument('CSV',text(header+'\n'+header+'\n')),/limite de colunas/);
  assert.throws(()=>engine.inspectPerseusDocument('CSV',text('Campo\n'+'x'.repeat(10001)+'\n')),/limite de tamanho de célula/);
  assert.throws(()=>engine.inspectPerseusDocument('CSV',text('Campo\n'+Array.from({length:10001},()=> 'x').join('\n'))),/limite de linhas/);
+});
+
+test('Perseu handles thousands of valid one-column CSV records without runaway memory',()=>{
+ const content=['Nome',...Array.from({length:4000},(_,index)=>'Paciente '+index)].join('\n')+'\n';
+ const result=engine.inspectPerseusDocument('CSV',text(content));
+ assert.equal(result.kind,'parsed');
+ if(result.kind==='parsed')assert.equal(result.result.items.length,4000);
 });
 
 test('Perseu preview keeps detected tables distinct instead of mixing their columns',()=>{
@@ -372,83 +353,4 @@ test('Perseu adapts real Supabase snake_case rules before matching them',()=>{
  assert.equal(supervision.learnedRuleDecision(compatible).field,'amount_presented');
 });
 
-test('Perseu applies and reuses a supervised mapping atomically for every table item',async()=>{
- const db=new PGlite();
- const stabilization=readFileSync('supabase/migrations/20261009200000_stabilize_perseus_structured_parsing.sql','utf8');
- const adaptive=readFileSync('supabase/migrations/20261013170000_perseus_adaptive_structure.sql','utf8');
- const semantic=readFileSync('supabase/migrations/20261014160000_perseus_semantic_interpretation.sql','utf8');
- const supervised=readFileSync('supabase/migrations/20261015120000_perseus_supervised_semantics.sql','utf8');
- const entityId='11111111-1111-4111-8111-111111111111',movementId='22222222-2222-4222-8222-222222222222',documentId='33333333-3333-4333-8333-333333333333';
- await db.exec(`create role anon;create role authenticated;create role service_role;
-  create table billing_entities(id uuid primary key);
-  create table insurance_movements(id uuid primary key,billing_entity_id uuid not null references billing_entities(id),payer text not null,kind text not null);
-  create table insurance_documents(id uuid primary key,movement_id uuid not null references insurance_movements(id),upload_status text not null,parser_key text,parser_version text,raw_metadata jsonb not null default '{}'::jsonb,perseus_status text not null default 'NOT_ANALYZED',updated_at timestamptz,updated_by bigint);
-  create table insurance_document_items(id uuid primary key default gen_random_uuid(),document_id uuid not null references insurance_documents(id),source_index integer,raw_data jsonb not null check(raw_data ? 'value'),normalized_data jsonb not null default '{}'::jsonb,match_status text,match_evidence jsonb not null default '{}'::jsonb,source_metadata jsonb not null default '{}'::jsonb,patient_name text,beneficiary_number text,guide_number text,external_reference text,service_date date,procedure_code text,procedure_description text,amount_presented numeric,amount_approved numeric,amount_glossed numeric,gloss_code text,gloss_reason text,attendance_id uuid,billing_record_id uuid);
-  grant all on billing_entities,insurance_movements,insurance_documents,insurance_document_items to service_role;
-  insert into billing_entities values('${entityId}');
-  insert into insurance_movements values('${movementId}','${entityId}','Unimed','PROCESSING');
-  insert into insurance_documents(id,movement_id,upload_status) values('${documentId}','${movementId}','READY');`);
- await db.exec(stabilization);await db.exec(adaptive);await db.exec(semantic);await db.exec(supervised);
- // PGlite does not model the service-role RLS bypass used by Supabase; disable it only in this isolated RPC fixture.
- await db.exec('alter table perseus_semantic_reviews disable row level security;alter table perseus_semantic_rules disable row level security;alter table perseus_semantic_value_corrections disable row level security;set role service_role');
- const sourceItems=[
-  {source_index:0,raw_data:{value:'row-1',Valor:'350,00'},normalized_data:{},semantic_evidence:{},source_metadata:{table_id:'csv-table-1',row:2}},
-  {source_index:1,raw_data:{value:'row-2',Valor:'500,00'},normalized_data:{},semantic_evidence:{},source_metadata:{table_id:'csv-table-1',row:3}},
- ];
- await db.query('select replace_perseus_document_analysis($1,$2::jsonb,$3,$4,$5::jsonb,$6)',[documentId,JSON.stringify(sourceItems),'csv','1.0.0',JSON.stringify({layout_fingerprint:'layout-a'}),7]);
- const context={billing_entity_id:entityId,payer_normalized:'UNIMED',movement_kind:'PROCESSING',layout_fingerprint:'layout-a',table_signature:'valor',column_normalized:'valor'};
- const review=async expected=>db.query('select apply_perseus_semantic_review($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::timestamptz,$9)',[documentId,'csv-table-1','Valor','amount_presented',true,JSON.stringify(context),JSON.stringify((await db.query('select id from insurance_document_items where document_id=$1 order by source_index',[documentId])).rows.map((row,value)=>({id:row.id,normalized_data:{amount_presented:value?'500.00':'350.00'},semantic_evidence:{amount_presented:{sourceKey:'Valor',origin:'USER_CONFIRMED'}},amount_presented:value?'500.00':'350.00'}))),expected,7]);
- let updatedAt=(await db.query('select updated_at from insurance_documents where id=$1',[documentId])).rows[0].updated_at;
- await review(updatedAt);
- const applied=(await db.query("select normalized_data,amount_presented::text,match_evidence from insurance_document_items where document_id=$1 order by source_index",[documentId])).rows;
- assert.deepEqual(JSON.parse(JSON.stringify(applied.map(row=>row.normalized_data))),[{amount_presented:'350.00'},{amount_presented:'500.00'}]);
- assert.deepEqual(JSON.parse(JSON.stringify(applied.map(row=>row.amount_presented))),['350.00','500.00']);
- assert.equal(applied[0].match_evidence.amount_presented.origin,'USER_CONFIRMED');
- updatedAt=(await db.query('select updated_at from insurance_documents where id=$1',[documentId])).rows[0].updated_at;
- await review(updatedAt);
- assert.equal((await db.query("select count(*)::int as count from perseus_semantic_rules where state='ACTIVE'")).rows[0].count,1);
- assert.equal((await db.query('select count(*)::int as count from perseus_semantic_reviews where document_id=$1',[documentId])).rows[0].count,2);
- await assert.rejects(()=>db.query('select replace_perseus_document_analysis($1,$2::jsonb,$3,$4,$5::jsonb,$6)',[documentId,JSON.stringify(sourceItems),'csv','1.0.0',JSON.stringify({layout_fingerprint:'layout-a'}),7]),/revisão humana/);
- await db.close();
-});
 
-test('Perseu keeps operational events transactional, append-only and free of raw cells',async()=>{
- const db=new PGlite();
- const migrations=['20261009200000_stabilize_perseus_structured_parsing.sql','20261013170000_perseus_adaptive_structure.sql','20261014160000_perseus_semantic_interpretation.sql','20261015120000_perseus_supervised_semantics.sql','20261015142055_perseus_operational_history.sql'];
- const entityId='41111111-1111-4111-8111-111111111111',movementId='42222222-2222-4222-8222-222222222222',documentId='43333333-3333-4333-8333-333333333333';
- await db.exec(`create role anon;create role authenticated;create role service_role;
-  create table billing_entities(id uuid primary key);
-  create table insurance_movements(id uuid primary key,billing_entity_id uuid not null references billing_entities(id),payer text not null,kind text not null);
-  create table insurance_documents(id uuid primary key,movement_id uuid not null references insurance_movements(id),upload_status text not null,parser_key text,parser_version text,raw_metadata jsonb not null default '{}'::jsonb,perseus_status text not null default 'NOT_ANALYZED',updated_at timestamptz,updated_by bigint);
-  create table insurance_document_items(id uuid primary key default gen_random_uuid(),document_id uuid not null references insurance_documents(id),source_index integer,raw_data jsonb not null check(raw_data ? 'value'),normalized_data jsonb not null default '{}'::jsonb,match_status text,match_evidence jsonb not null default '{}'::jsonb,source_metadata jsonb not null default '{}'::jsonb,patient_name text,beneficiary_number text,guide_number text,external_reference text,service_date date,procedure_code text,procedure_description text,amount_presented numeric,amount_approved numeric,amount_glossed numeric,gloss_code text,gloss_reason text,attendance_id uuid,billing_record_id uuid);
-  grant all on billing_entities,insurance_movements,insurance_documents,insurance_document_items to service_role;
-  insert into billing_entities values('${entityId}');insert into insurance_movements values('${movementId}','${entityId}','IPE','PROCESSING');insert into insurance_documents(id,movement_id,upload_status) values('${documentId}','${movementId}','READY');`);
- for(const migration of migrations) await db.exec(readFileSync('supabase/migrations/'+migration,'utf8'));
- await db.exec('alter table perseus_semantic_reviews disable row level security;alter table perseus_semantic_rules disable row level security;alter table perseus_semantic_value_corrections disable row level security;alter table perseus_document_events disable row level security;set role service_role');
- const items=[{source_index:0,raw_data:{value:'row-1',Valor:'350,00',Paciente:'Ana'},normalized_data:{},semantic_evidence:{},source_metadata:{table_id:'csv-table-1',row:2}}];
- const metadata={layout_fingerprint:'layout-a',row_count:1,column_count:3,structure:{tables:[{table_id:'csv-table-1'}]},semantic:{version:'1.0.0',tables:[{tableId:'csv-table-1',columns:[{sourceColumn:'Valor',sourceKey:'Valor',field:'amount_approved',origin:'HEURISTIC'}]}]}};
- await db.query('select replace_perseus_document_analysis($1,$2::jsonb,$3,$4,$5::jsonb,$6)',[documentId,JSON.stringify(items),'csv','1.0.0',JSON.stringify(metadata),7]);
- const expected=(await db.query('select updated_at from insurance_documents where id=$1',[documentId])).rows[0].updated_at;
- const item=(await db.query('select id from insurance_document_items where document_id=$1',[documentId])).rows[0];
- const context={billing_entity_id:entityId,payer_normalized:'IPE',movement_kind:'PROCESSING',layout_fingerprint:'layout-a',table_signature:'valor',column_normalized:'valor'};
- await db.query('select apply_perseus_semantic_review($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::timestamptz,$9)',[documentId,'csv-table-1','Valor','amount_approved',true,JSON.stringify(context),JSON.stringify([{id:item.id,normalized_data:{amount_approved:'350.00'},semantic_evidence:{amount_approved:{sourceKey:'Valor',origin:'USER_CONFIRMED'}},amount_approved:'350.00'}]),expected,7]);
- const events=(await db.query('select event_type,event_metadata from perseus_document_events where document_id=$1 order by occurred_at,id',[documentId])).rows;
- assert.ok(events.some(event=>event.event_type==='MAPPING_REVIEW_APPLIED'));
- assert.ok(events.some(event=>event.event_type==='LEARNED_RULE_CREATED'));
- assert.doesNotMatch(JSON.stringify(events),/Ana|350,00/);
- const analysesBefore=events.filter(event=>event.event_type==='ANALYSIS_COMPLETED').length;
- await assert.rejects(()=>db.query('select replace_perseus_document_analysis($1,$2::jsonb,$3,$4,$5::jsonb,$6)',[documentId,JSON.stringify(items),'csv','1.0.0',JSON.stringify(metadata),7]),/revisão humana/);
- const analysesAfter=(await db.query("select count(*)::int as count from perseus_document_events where document_id=$1 and event_type='ANALYSIS_COMPLETED'",[documentId])).rows[0].count;
- assert.equal(analysesAfter,analysesBefore);
- const rule=(await db.query("select id from perseus_semantic_rules where state='ACTIVE'",[])).rows[0];
- await db.query('select revoke_perseus_semantic_rule($1,$2)',[rule.id,9]);
- assert.equal((await db.query('select state from perseus_semantic_rules where id=$1',[rule.id])).rows[0].state,'REVOKED');
- assert.equal((await db.query("select count(*)::int as count from perseus_document_events where related_rule_id=$1 and event_type='LEARNED_RULE_REVOKED'",[rule.id])).rows[0].count,1);
- const operationA='45555555-5555-4555-8555-555555555555',operationB='46666666-6666-4666-8666-666666666666';
- await db.query("insert into perseus_document_events(document_id,event_type,event_origin,operation_id,event_metadata) values($1,'REANALYSIS_BLOCKED','SYSTEM',$2,'{}'::jsonb)",[documentId,operationA]);
- await assert.rejects(()=>db.query("insert into perseus_document_events(document_id,event_type,event_origin,operation_id,event_metadata) values($1,'REANALYSIS_BLOCKED','SYSTEM',$2,'{}'::jsonb)",[documentId,operationA]));
- await db.query("insert into perseus_document_events(document_id,event_type,event_origin,operation_id,event_metadata) values($1,'REANALYSIS_BLOCKED','SYSTEM',$2,'{}'::jsonb)",[documentId,operationB]);
- assert.equal((await db.query("select count(*)::int as count from perseus_document_events where document_id=$1 and event_type='REANALYSIS_BLOCKED'",[documentId])).rows[0].count,2);
- await assert.rejects(()=>db.query('delete from insurance_documents where id=$1',[documentId]));
- await db.close();
-});

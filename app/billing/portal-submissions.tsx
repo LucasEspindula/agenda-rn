@@ -22,6 +22,12 @@ const statuses:Record<DeadlineState,string>={
  NO_DATE:"Data indisponível",OVERDUE:"Prazo vencido",ALERT:"Em alerta",ON_TIME:"Dentro do prazo"
 };
 const fmt=(value:string|null)=>value?formatDateBR(value):"—";
+async function fetchPortal():Promise<PanelData>{
+ const response=await fetch("/api/billing/portal",{cache:"no-store"});
+ const next=await response.json();
+ if(!response.ok)throw Error(next.error||"Não foi possível consultar as guias.");
+ return next;
+}
 export default function PortalSubmissions(){
  const [data,setData]=useState<PanelData|null>(null);
  const [editingGuide,setEditingGuide]=useState<PortalItem|null>(null);
@@ -33,15 +39,17 @@ export default function PortalSubmissions(){
  const [entity,setEntity]=useState("");
  const [professional,setProfessional]=useState("");
  async function refresh(){
-  try{
-   const response=await fetch("/api/billing/portal",{cache:"no-store"});
-   const next=await response.json();
-   if(!response.ok)throw Error(next.error||"Não foi possível consultar as guias.");
-   setData(next);setError("");
-  }catch(cause){setError(cause instanceof Error?cause.message:"Falha ao consultar as guias.");}
+  try{setData(await fetchPortal());setError("");}
+  catch(cause){setError(cause instanceof Error?cause.message:"Falha ao consultar as guias.");}
   finally{setLoading(false);}
  }
- useEffect(()=>{void refresh();},[]);
+ useEffect(()=>{
+  let active=true;
+  void fetchPortal().then(next=>{if(active){setData(next);setError("");}})
+   .catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"Falha ao consultar as guias.");})
+   .finally(()=>{if(active)setLoading(false);});
+  return ()=>{active=false;};
+ },[]);
  const rows=(data?.items||[]).filter(row=>
   (!filter||(filter==="PENDENTE"?row.status!=="FATURADO":
     filter==="FATURADO"?row.status==="FATURADO":row.deadline.state===filter))&&

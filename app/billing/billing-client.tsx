@@ -1,8 +1,7 @@
-// @ts-nocheck
 "use client";
 import InsurancePending from "./insurance-pending";
 import PortalSubmissions from "./portal-submissions";
-import BillingSubnav from "./billing-subnav";
+import BillingSubnav, {type BillingNavigationView} from "./billing-subnav";
 import ProfessionalChargeDialog from "./professional-charge-dialog";
 import ProfessionalInvoiceDialog from "./professional-invoice-dialog";
 import { filterPendingRows, pendingAction } from "@/lib/insurance-pending";
@@ -89,6 +88,7 @@ export default function BillingClient({
   portalSubmissionsEnabled = false,
   denialsEnabled = false,
   closingEnabled = false,
+  perseusEnabled = false,
 }: {
   appointmentId?: string;
   initialView?: string;
@@ -96,6 +96,7 @@ export default function BillingClient({
   portalSubmissionsEnabled?: boolean;
   denialsEnabled?: boolean;
   closingEnabled?: boolean;
+  perseusEnabled?: boolean;
 }) {
   const [pendingSearch, setPendingSearch] = useState("");
   const [pendingSource, setPendingSource] = useState<BillingRow | null>(null),
@@ -129,7 +130,7 @@ export default function BillingClient({
   const [professionalInvoice, setProfessionalInvoice] = useState<Invoice | true | null>(null);
   const deepLinkHandled = useRef(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
-  const initialTab =
+  const initialTab: BillingNavigationView =
     initialView === "invoices" ||
     initialView === "insurance" ||
     initialView === "expenses" ||
@@ -138,7 +139,7 @@ export default function BillingClient({
       ? initialView
       : "records";
   const [data, setData] = useState<BillingData>(empty),
-    [tab, setTab] = useState(initialTab),
+    [tab, setTab] = useState<BillingNavigationView>(initialTab),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
@@ -1305,7 +1306,7 @@ export default function BillingClient({
               if (tab === "records") {
                 setPrintError("");
                 setPrintMenu(true);
-              } else if (insurancePendingActive) setPrintPending(true);
+              } else if (insurancePendingActive) generateReport("pending");
               else generateReport("invoices");
             }}
           >
@@ -1323,6 +1324,7 @@ export default function BillingClient({
           insurancePendingCount={insurancePendingCount}
           denialsEnabled={denialsEnabled}
           closingEnabled={closingEnabled}
+          perseusEnabled={perseusEnabled}
         />
       )}
       <main

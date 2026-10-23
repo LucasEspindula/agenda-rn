@@ -1,0 +1,44 @@
+name: Resolve patched dependency lock
+on:
+  push:
+    branches:
+      - audit/rn-integra-full-review-20261022
+    paths:
+      - .github/workflows/audit-dependency-resolution.yml
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Resolve patched dependencies
+        run: |
+          npm install --package-lock-only --ignore-scripts --save-exact next@16.4.2 eslint-config-next@16.4.2 fast-xml-parser@5.11.2 sharp@0.35.5
+          npm audit fix --package-lock-only --ignore-scripts || true
+          npm audit --omit=dev --audit-level=high
+      - name: Commit patched dependency manifests to audit branch
+        run: |
+          git config user.name "rn-integra-audit"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(security): update vulnerable npm dependencies and lockfile"
+            git push origin HEAD:audit/rn-integra-full-review-20261022
+          fi
+      - name: Output only changed npm lock entries
+        run: |
+          node -e '
+          const fs=require("fs"),cp=require("child_process");
+          const old=JSON.parse(cp.execFileSync("git",["show","HEAD~1:package-lock.json"],{encoding:"utf8"}));
+          const updated=JSON.parse(fs.readFileSync("package-lock.json","utf8"));
+          const items=Object.entries(updated.packages).filter(([id,val])=>JSON.stringify(val)!==JSON.stringify(old.packages[id]));
+          const removed=Object.keys(old.packages).filter(id=>!(id in updated.packages));
+          console.log("RN_LOCK_PATCH_START"+JSON.stringify({items,removed})+"RN_LOCK_PATCH_END");
+          console.log("RN_RESOLVED_VERSIONS "+JSON.stringify(Object.fromEntries(["next","fast-xml-parser","sharp","source-map-js","eslint-config-next"].map(id=>[id,updated.packages["node_modules/"+id]?.version]))));
+          '

@@ -47,13 +47,13 @@ test('NF actions preserve historical adjustment on edit and reset it on replacem
  const client=await readFile('app/billing/billing-client.tsx','utf8');
  const css=await readFile('app/billing/billing.css','utf8');
  const legacy=await readFile('public/legacy-app.js','utf8');
- assert.match(client,/setExpectedRecordVersion\(kind==='record'\?captureFinancialVersion\(value\.updated_at\):null\)/);
- assert.match(client,/withExpectedFinancialVersion\(\{\.\.\.draft,/);
+ assert.match(client,/setExpectedRecordVersion\([\s\S]{0,100}captureFinancialVersion\(value\.updated_at\)/);
+ assert.match(client,/withExpectedFinancialVersion\(\s*\{\s*\.\.\.draft,/);
  assert.match(client,/billing-history.*Histórico/s);
- assert.match(client,/closing_adjustment:0,closing_adjustment_reason:''/);
+ assert.match(client,/closing_adjustment:\s*0,\s*closing_adjustment_reason:\s*""/);
  assert.match(css,/invoice-row-cancelled:hover>\.billing-actions-cell\{background:#fff7f7\}/);
  assert.match(css,/invoice-row-replaced:hover>\.billing-actions-cell\{background:#fffbed\}/);
- assert.match(legacy,/label:\"Adicionar:\"/);
+ assert.match(legacy,/<span class="workflow-change-label">Adicionar:/);
  assert.match(legacy,/workflow-change-label\">Adicionar:/);
  assert.doesNotMatch(legacy,/ADICIONADO/);
 });

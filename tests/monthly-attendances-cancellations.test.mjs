@@ -26,7 +26,7 @@ test("tela apresenta realizados e cancelados sem duplicar cobrança ou misturar 
  assert.match(ui,/Atendimentos cancelados/);
  assert.match(ui,/a\.attendance_id/);
  assert.match(ui,/cancellation_reason/);
- assert.match(ui,/fora dos totais financeiros/);
+ assert.match(ui,/Cancelamentos não entram na produção realizada nem nos recebimentos/);
 });
 
 test("impressão mensal preserva gráfico e adiciona listagem clínica separada",()=>{
@@ -45,7 +45,7 @@ test("PDF alternativo e fechamentos antigos respeitam a origem do snapshot",()=>
  assert.match(pdf,/snap\.attendance_overview/);
  assert.match(pdf,/Atendimentos cancelados/);
  assert.match(pdf,/if\(cancelled\.length\)/);
- assert.match(print,/const legacyOverview=/);
+ assert.match(pdf,/const overview=snap\.attendance_overview/);
  assert.match(ui,/registros já fechados não são recalculados/);
 });
 

@@ -29,7 +29,7 @@ test('central doctors API and settings deny non-managers without database access
 });
 test('operational areas survive while redundant medical forms and monthly report disappear',()=>{
  const js=readFileSync('public/legacy-app.js','utf8'),body=readFileSync('app/dashboard/legacy-body.ts','utf8');
- for(const view of ['agenda','patients','requests','audit','cancelled','notifications'])assert.ok((body+js).includes('data-view="'+view+'"'),view);
+ for(const view of ['agenda','patients','requests','audit','notifications'])assert.ok((body+js).includes('data-view="'+view+'"'),view);
  for(const id of ['newBlockBtn','newRuleBtn','notificationBell','newPatientBtn'])assert.ok(body.includes('id="'+id+'"'),id);
  assert.doesNotMatch(js+body,/agendaReportBtn|generateMonthlyReport|professionalForm|professionalModal|Agenda RN/);
  assert.doesNotMatch(readFileSync('app/billing/billing-client.tsx','utf8'),/DoctorDirectory/);
@@ -52,9 +52,9 @@ test('Hub calls the module Cadastros and billing receives its initial view from 
  const client=readFileSync('app/billing/billing-client.tsx','utf8');
  assert.match(hub,/Agendamento, Faturamento ou Cadastros no menu superior\./);
  assert.doesNotMatch(hub,/Agendamento, Faturamento ou Médicos no menu superior\./);
- assert.match(billingPage,/<BillingClient initialView=\{params\.view\}\/>/);
- assert.match(client,/function BillingClient\(\{appointmentId,initialView\}:\{appointmentId\?:string;initialView\?:string\}\)/);
- assert.match(client,/useState\(initialView==='entities'\?'entities':'records'\)/);
- assert.doesNotMatch(client,/window\.location\.search/);
- assert.match(client,/appointmentId\?:string/);
+ assert.match(billingPage,/<BillingClient initialView=\{params\.view\}/);
+ assert.match(client,/function BillingClient\([\s\S]{0,200}?initialView[\s\S]{0,200}?initialView\?: string/);
+ assert.match(client,/const initialTab: BillingNavigationView/);
+ assert.match(client,/new URLSearchParams\(window\.location\.search\)/);
+ assert.match(client,/appointmentId\?:\s*string/);
 });

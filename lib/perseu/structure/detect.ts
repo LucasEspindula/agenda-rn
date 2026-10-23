@@ -32,14 +32,14 @@ function headerScore(span:Span){
  return values.length*4+words*3+(new Set(values.map(text)).size===values.length?2:0);
 }
 function candidate(rows:StructuralMatrixRow[],index:number,span:Span):Candidate|null{
- const records:StructuralMatrixRow[]=[];const recordSpans:Span[]=[];let blankGap=0;
+ const records:StructuralMatrixRow[]=[];const recordSpans:Span[]=[];let blankGap=0;let unmatchedBeforeData=0;
  for(let next=index+1;next<rows.length;next++){
   const nextSpans=spans(rows[next].cells);
   if(!nextSpans.length){if(!records.length||++blankGap>1)break;continue;}
   const hadGap=blankGap>0;
   blankGap=0;
   const match=nextSpans.find(value=>compatible(span,value));
-  if(!match){if(records.length)break;continue;}
+  if(!match){if(records.length||++unmatchedBeforeData>4)break;continue;}
   if(summary(match)||(hadGap&&headerLike(match)))break;
   records.push(rows[next]);recordSpans.push(match);
   if(records.length>=PERSEUS_LIMITS.maxItems)break;
@@ -64,7 +64,24 @@ function overlaps(candidate:Candidate,selected:Candidate){
 
 export function detectTabularStructures(rows:StructuralMatrixRow[],source:StructuralSource,tablePrefix:string):DetectedTable[]{
  const candidates:Candidate[]=[];
- for(let index=0;index<rows.length;index++)for(const span of spans(rows[index].cells)){const next=candidate(rows,index,span);if(next)candidates.push(next);}
+ // A confirmed table already owns its record rows in the same columns.
+ // Avoid treating every data row as another header (quadratic memory growth).
+ const coveredThrough=new Map<number,number>();
+ for(let index=0;index<rows.length;index++)for(const span of spans(rows[index].cells)){
+  let covered=true;
+  for(let column=span.start;column<=span.end;column++){
+   if((coveredThrough.get(column)||0)<rows[index].row){covered=false;break;}
+  }
+  if(covered)continue;
+  const next=candidate(rows,index,span);
+  if(!next)continue;
+  candidates.push(next);
+  if(next.evidence.classification==='clear'){
+   const lastRow=next.records.at(-1)!.row;
+   for(let column=span.start;column<=span.end;column++)
+    coveredThrough.set(column,Math.max(coveredThrough.get(column)||0,lastRow));
+  }
+ }
  const selected:Candidate[]=[],hasClear=candidates.some(item=>item.evidence.classification==='clear');
  for(const next of [...candidates].sort((a,b)=>b.score-a.score||a.header.row-b.header.row||a.span.start-b.span.start)){
   if(hasClear&&next.evidence.classification!=='clear'&&next.span.values.filter(nonEmpty).length===1)continue;

@@ -13,6 +13,12 @@ const stateColors:Record<string,string>={OPEN:"open",APPEALED:"appeal",DECIDED:"
  PARTIAL:"partial",RECOVERED:"recovered",CLOSED:"closed"};
 const eventLabels:Record<string,string>={OPENED:"Glosa registrada",APPEAL_FILED:"Recurso apresentado",
  APPEAL_DECIDED:"Decisão recebida",RECOVERY_RECORDED:"Recuperação informada",CLOSED:"Glosa encerrada"};
+async function fetchDenials():Promise<DenialData>{
+ const response=await fetch("/api/billing/denials",{cache:"no-store"});
+ const result=await response.json();
+ if(!response.ok)throw Error(result.error||"Não foi possível consultar glosas.");
+ return result;
+}
 export default function DenialManager(){
  const [data,setData]=useState<DenialData>(empty);
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
@@ -22,15 +28,17 @@ export default function DenialManager(){
  const [action,setAction]=useState<DenialAction|null>(null);
  const [expanded,setExpanded]=useState<string|null>(null);
  const refresh=useCallback(async()=>{
-  try{
-   const response=await fetch("/api/billing/denials",{cache:"no-store"});
-   const result=await response.json();
-   if(!response.ok)throw Error(result.error||"Não foi possível consultar glosas.");
-   setData(result);setError("");
-  }catch(cause){setError(cause instanceof Error?cause.message:"Falha na consulta de glosas.");}
+  try{setData(await fetchDenials());setError("");}
+  catch(cause){setError(cause instanceof Error?cause.message:"Falha na consulta de glosas.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{void refresh();},[refresh]);
+ useEffect(()=>{
+  let active=true;
+  void fetchDenials().then(result=>{if(active){setData(result);setError("");}})
+   .catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"Falha na consulta de glosas.");})
+   .finally(()=>{if(active)setLoading(false);});
+  return ()=>{active=false;};
+ },[]);
  const all=data.cases;
  const filtered=useMemo(()=>all.filter(c=>
   (!status||c.status===status)&&(!entity||c.billing_entity_id===entity)&&

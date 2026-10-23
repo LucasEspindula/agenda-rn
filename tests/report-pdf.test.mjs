@@ -45,12 +45,17 @@ test('native PDF routes keep server-side authorization and report guarantees',()
 });
 
 test('monthly deep link only opens an explicit report menu, never a report window',()=>{
- const billing=read('app/billing/billing-client.tsx'),deepLink=billing.match(/useEffect\(\(\)=>\{if\(loading\|\|!data\.doctors\.length\|\|deepLinkHandled\.current\)return;[\s\S]{0,400}?\},\[loading,data\]\);/);
- assert.ok(deepLink);
- assert.match(deepLink[0],/q\.get\('view'\)==='monthly'\)setPrintMenu\(true\)/);
- assert.doesNotMatch(deepLink[0],/window\.open|openBillingReport/);
- assert.match(billing,/function generateReport\(kind:ReportScope\['kind'\]\)/);
- assert.match(billing,/window\.open\('\/api\/reports\/billing\?'/);
+ const billing=read('app/billing/billing-client.tsx');
+ const index=billing.indexOf('if (loading || !data.doctors.length || deepLinkHandled.current) return;');
+ assert.ok(index>=0,'the monthly link is processed after loading the doctors');
+ const deepLink=billing.slice(index,index+260);
+ assert.match(deepLink,/q\.get\("view"\) === "monthly"\) setPrintMenu\(true\)/);
+ assert.doesNotMatch(deepLink,/window\.open|openBillingReport/);
+ assert.match(billing,/function generateReport\(kind: ReportScope\["kind"\]\)/);
+ assert.match(billing,/window\.open\(\s*"\/api\/reports\/billing\?"/);
  const doctor=read('app/billing/doctor-billing.tsx'),pending=read('app/billing/insurance-pending.tsx'),legacy=read('public/legacy-app.js');
- assert.match(doctor,/window\.open\('\/api\/reports\/billing\?'/);assert.match(pending,/reportUrl\(\{entity:company\.id,insurance:payer\.name\}\)/);assert.match(legacy,/window\.open\("\/api\/reports\/agenda\?"/);assert.equal(existsSync('components/report-preview.tsx'),false);
+ assert.match(doctor,/window\.open\(\s*["']\/api\/reports\/billing\?/);
+ assert.match(pending,/reportUrl\(\{entity:company\.id,insurance:payer\.name\}\)/);
+ assert.match(legacy,/window\.open\("\/api\/reports\/agenda\?"/);
+ assert.equal(existsSync('components/report-preview.tsx'),false);
 });

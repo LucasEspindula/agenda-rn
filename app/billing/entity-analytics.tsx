@@ -6,6 +6,7 @@ import {Bar,BarChart,CartesianGrid,Cell,LabelList,Legend,Pie,PieChart,
  ResponsiveContainer,Tooltip,XAxis,YAxis} from "recharts";
 
 type Bucket={year:number;month:number;source:string;amount:number;operations:number};
+const emptyBuckets:Bucket[]=[];
 type Entity={id:string;name:string;trade_name:string|null;tax_id:string;person_type:string};
 type ResponseData={entity:Entity;buckets:Bucket[]};
 const months=["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
@@ -32,13 +33,13 @@ function EmptyChart(){
  return <div className="entity-analytics-empty">Nenhum recebimento registrado para este período.</div>;
 }
 export default function EntityAnalytics({entityId}:{entityId:string}){
- const [response,setResponse]=useState<ResponseData|null>(null);
- const [error,setError]=useState("");
- const [loading,setLoading]=useState(true);
+ const [result,setResult]=useState<{entityId:string;data:ResponseData|null;error:string}|null>(null);
  const [pickedYear,setPickedYear]=useState<number|null>(null);
+ const response=result?.entityId===entityId?result.data:null;
+ const error=result?.entityId===entityId?result.error:"";
+ const loading=result?.entityId!==entityId;
  useEffect(()=>{
   const controller=new AbortController();
-  setLoading(true);setError("");
   fetch("/api/billing/entity-analytics?entity="+encodeURIComponent(entityId),
    {cache:"no-store",signal:controller.signal})
    .then(async res=>{
@@ -46,11 +47,12 @@ export default function EntityAnalytics({entityId}:{entityId:string}){
     if(!res.ok)throw Error(body.error||"Não foi possível carregar os indicadores.");
     return body as ResponseData;
    })
-   .then(d=>{setResponse(d);setLoading(false);})
-   .catch(err=>{if(!controller.signal.aborted){setError(err instanceof Error?err.message:"Erro ao carregar os dados.");setLoading(false);}});
+   .then(data=>{if(!controller.signal.aborted)setResult({entityId,data,error:""});})
+   .catch(err=>{if(!controller.signal.aborted)setResult({entityId,data:null,
+    error:err instanceof Error?err.message:"Erro ao carregar os dados."});});
   return ()=>controller.abort();
  },[entityId]);
- const buckets=response?.buckets||[];
+ const buckets=response?.buckets||emptyBuckets;
  const years=useMemo(()=>[...new Set(buckets.map(b=>b.year))].sort((a,b)=>a-b),[buckets]);
  const initialYear=years.includes(new Date().getFullYear())?new Date().getFullYear():
    years.at(-1)||new Date().getFullYear();
@@ -87,7 +89,7 @@ export default function EntityAnalytics({entityId}:{entityId:string}){
    const k=String(b.year);item[k]=numberValue(item[k])+b.amount;
   }
   return item;
- }),[buckets,yearsForMonthly.join(",")]);
+ }),[buckets,yearsForMonthly]);
  const noYearData=byOrigin.length===0;
  const previous=annual.find(y=>Number(y.year)===year-1)?.amount||0;
  const yoy=previous?((grandTotal-previous)/previous):null;

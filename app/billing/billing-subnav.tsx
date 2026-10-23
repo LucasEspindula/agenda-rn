@@ -62,6 +62,13 @@ export default function BillingSubnav({
             <NavIcon kind="entities" />Entidades recebedoras
           </a>
         </div>
+        {perseusEnabled && (
+          <div className="billing-subnav-perseus">
+            <a href="/perseu" aria-current={active === "perseu" ? "page" : undefined}>
+              <NavIcon kind="insurance" />Perseu
+            </a>
+          </div>
+        )}
         <div className="billing-subnav-fixed">
           {closingEnabled && (
             <a href="/billing/fechamento" aria-current={active === "closing" ? "page" : undefined}>

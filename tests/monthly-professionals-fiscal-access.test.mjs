@@ -13,9 +13,11 @@ test("PDF mensal agrupa médicos, convênios e notas sem vínculo",()=>{
  for(const term of ["professional_attendances","professional_invoice_rows","Atendimentos — ","Notas fiscais — ","sem vínculo individual"])
   assert.ok(src.includes(term),term);
 });
-test("API fiscal verifica meses antigos no servidor",()=>{
+test("API fiscal exige senha de gerente em todas as competências e valida o estado da NF",()=>{
  const src=readFileSync("app/api/billing/route.ts","utf8");
- assert.ok(src.includes("isInvoiceFromEarlierMonth(invoice.issue_date)"));
- assert.ok(src.includes("verifyPassword(manager_password"));
- assert.ok(src.includes("p_data:data"));
+ assert.match(src,/const fiscalActions=\['cancel_invoice','replace_invoice','undo_invoice','restore_invoice'\]/);
+ assert.match(src,/if\(fiscalActions\.includes\(kind\)\)/);
+ assert.match(src,/\.select\('id,status,voided_at'\)/);
+ assert.match(src,/verifyPassword\(manager_password/);
+ assert.match(src,/p_data:data/);
 });

@@ -1,15 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
-import React from 'react';
-import {renderToStaticMarkup} from 'react-dom/server';
 import {readFileSync} from 'node:fs';
 
 const {historicalInvoice,compareInvoiceNumbersDesc}=loadTs('lib/fiscal-document.ts');
 const {doctorInvoiceProcedure,doctorInvoiceProcedureDate,doctorInvoiceProof,doctorInvoiceStatusClass,visibleDoctorInvoices}=loadTs('app/billing/doctor-billing.tsx');
 const {INVOICE_STATUSES}=loadTs('lib/billing-row.ts');
 const {buildReport,companyCash}=loadTs('lib/billing-reports.ts');
-const Report=loadTs('app/billing/billing-report.tsx').default;
 const invoice=(id,invoice_number,status='ACTIVE',extra={})=>({id,invoice_number,status,voided_at:null,billing_entity_id:'e1',payer:'Pagador '+invoice_number,issue_date:'2026-10-01',paid_at:'2026-10-02',total_amount:100,net_amount:100,...extra});
 const scope={kind:'invoices',doctor:'',entity:'',start:'',end:''};
 
@@ -37,10 +34,14 @@ test('invoice relation states remain explicit in the report and replacements res
  const replacement=invoice('121','121','ACTIVE',{net_amount:100});
  const cancelled=invoice('119','119','CANCELLED',{net_amount:200});
  const data={doctors:[],entities:[{id:'e1',name:'Empresa',tax_id:'1'}],rows:[],links:[],items:[],invoices:[replaced,replacement,cancelled],expenses:[]};
- const html=renderToStaticMarkup(React.createElement(Report,{data,scope,onClose(){}}));
- assert.match(html,/Substituída por NF 121/);
- assert.match(html,/Cancelada/);
- assert.match(html,/Total líquido válido \(NFs ativas\): R\$ 100,00/);
+ const report=buildReport(data,scope);
+ assert.deepEqual(report.invoices.map(i=>i.invoice_number),['121','120','119']);
+ assert.equal(report.invoices.find(i=>i.id==='120')?.replaced_by_invoice_id,'121');
+ assert.equal(report.invoices.find(i=>i.id==='119')?.status,'CANCELLED');
+ const pdfRoute=readFileSync('app/api/reports/billing/route.ts','utf8');
+ assert.match(pdfRoute,/Substituída por NF/);
+ assert.match(pdfRoute,/Total líquido válido \(NFs ativas\)/);
+ assert.match(pdfRoute,/report\.invoices\.filter\(activeInvoice\)/);
 });
 
 

@@ -32,6 +32,10 @@ export function parseCsv(bytes:Uint8Array):PerseusParseResult{
  const decoded=decode(bytes),delimiter=delimiterFor(decoded.text),csvRows=rowsOf(decoded.text,delimiter);
  if(!csvRows.some(useful))throw new PerseusParseError('CSV sem linhas utilizáveis.');
  if(csvRows.length>PERSEUS_LIMITS.maxRows)throw new PerseusParseError('CSV excede o limite de linhas analisáveis.');
+ // Headers and footers need some headroom, but do not scan thousands more
+ // populated lines than can ever be persisted as document items.
+ if(csvRows.filter(useful).length>PERSEUS_LIMITS.maxItems+PERSEUS_LIMITS.maxColumns)
+  throw new PerseusParseError('CSV excede o limite de linhas analisáveis.');
  const maxColumns=Math.max(...csvRows.map(row=>row.cells.length));if(maxColumns>PERSEUS_LIMITS.maxColumns)throw new PerseusParseError('CSV excede o limite de colunas.');
  for(const row of csvRows)for(const cell of row.cells)boundedCell(cell,PERSEUS_LIMITS.maxCellLength);
  const tables=detectTabularStructures(csvRows as StructuralMatrixRow[],{},'csv');
