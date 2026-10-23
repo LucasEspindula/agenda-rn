@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import InsurancePending from "./insurance-pending";
 import PortalSubmissions from "./portal-submissions";
