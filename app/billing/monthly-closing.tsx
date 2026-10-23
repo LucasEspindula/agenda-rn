@@ -62,6 +62,19 @@ const previousMonth=()=>{
  return prior.getFullYear()+"-"+String(prior.getMonth()+1).padStart(2,"0");
 };
 
+async function fetchClosingOptions():Promise<{entities:Entity[];closings:History[]}>{
+ const response=await fetch("/api/billing/closing",{cache:"no-store"});
+ const result=await response.json();
+ if(!response.ok)throw Error(result.error||"Não foi possível carregar entidades.");
+ return result;
+}
+async function fetchClosingPreview(id:string,competence:string):Promise<Preview>{
+ const response=await fetch("/api/billing/closing?entity_id="+encodeURIComponent(id)+
+  "&month="+encodeURIComponent(competence),{cache:"no-store"});
+ const result=await response.json();
+ if(!response.ok)throw Error(result.error||"Não foi possível calcular o fechamento.");
+ return result;
+}
 export default function MonthlyClosing(){
  const [entities,setEntities]=useState<Entity[]>([]);
  const [history,setHistory]=useState<History[]>([]);
@@ -81,9 +94,7 @@ export default function MonthlyClosing(){
  const [notes,setNotes]=useState("");
  const [loadedKey,setLoadedKey]=useState("");
  const reloadOptions=useCallback(async()=>{
-  const response=await fetch("/api/billing/closing",{cache:"no-store"});
-  const result=await response.json();
-  if(!response.ok)throw Error(result.error||"Não foi possível carregar entidades.");
+  const result=await fetchClosingOptions();
   setEntities(result.entities);setHistory(result.closings);
   setEntity(current=>current||result.entities[0]?.id||"");
  },[]);
@@ -91,18 +102,30 @@ export default function MonthlyClosing(){
   setPreview(null);setLoadedKey("");if(!id||!competence)return;
   setLoading(true);
   try{
-   const response=await fetch("/api/billing/closing?entity_id="+encodeURIComponent(id)+
-     "&month="+encodeURIComponent(competence),{cache:"no-store"});
-   const result=await response.json();
-   if(!response.ok)throw Error(result.error||"Não foi possível calcular o fechamento.");
+   const result=await fetchClosingPreview(id,competence);
    setPreview(result);setLoadedKey(id+"|"+competence);setError("");setShowCurrent(false);
   }catch(cause){setError(cause instanceof Error?cause.message:"Falha ao consultar fechamento.");}
   finally{setLoading(false);}
  },[]);
- useEffect(()=>{void reloadOptions().catch(cause=>{
-  setError(cause instanceof Error?cause.message:"Falha ao consultar fechamento.");setLoading(false);
- });},[reloadOptions]);
- useEffect(()=>{void loadPreview(entity,month);},[entity,month,loadPreview]);
+ useEffect(()=>{
+  let active=true;
+  void fetchClosingOptions().then(result=>{if(active){
+   setEntities(result.entities);setHistory(result.closings);
+   setEntity(current=>current||result.entities[0]?.id||"");
+  }}).catch(cause=>{if(active){
+   setError(cause instanceof Error?cause.message:"Falha ao consultar fechamento.");setLoading(false);
+  }});
+  return ()=>{active=false;};
+ },[]);
+ useEffect(()=>{
+  if(!entity||!month)return;
+  let active=true;
+  void fetchClosingPreview(entity,month).then(result=>{if(active){
+   setPreview(result);setLoadedKey(entity+"|"+month);setError("");setShowCurrent(false);
+  }}).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"Falha ao consultar fechamento.");})
+   .finally(()=>{if(active)setLoading(false);});
+  return ()=>{active=false;};
+ },[entity,month]);
  const valid=!!preview&&loadedKey===entity+"|"+month;
  const data=valid?(preview!.closed&&!showCurrent?preview!.closing?.snapshot||preview!.current:preview!.current):null;
  const summary=data?monthlyCash(data.cash,data.expenses):null;
@@ -190,14 +213,14 @@ export default function MonthlyClosing(){
   </header>
   <div className="monthly-filters no-print">
    <label>Entidade recebedora
-    <select value={entity} onChange={e=>{setEntity(e.target.value);setNotice("");}}>
+    <select value={entity} onChange={e=>{setLoading(true);setPreview(null);setLoadedKey("");setEntity(e.target.value);setNotice("");}}>
      <option value="">Selecione</option>
      {entities.map(e=><option value={e.id} key={e.id}>
       {e.trade_name||e.name} — {e.tax_id}</option>)}
     </select>
    </label>
    <label>Competência
-    <input type="month" value={month} onChange={e=>{setMonth(e.target.value);setNotice("");}}/>
+    <input type="month" value={month} onChange={e=>{setLoading(true);setPreview(null);setLoadedKey("");setMonth(e.target.value);setNotice("");}}/>
    </label>
    <button type="button" className="billing-secondary" disabled={!entity||!month||loading}
     onClick={()=>void loadPreview(entity,month)}>Atualizar prévia</button>
@@ -416,7 +439,7 @@ export default function MonthlyClosing(){
    {!priorHistory.length?<p>Nenhuma competência encerrada para esta PJ/PF.</p>:
     <div className="monthly-history-list">
      {priorHistory.map(h=><button type="button" className="billing-secondary" key={h.id}
-       onClick={()=>{setMonth(h.competence_month.slice(0,7));setShowCurrent(false);}}>
+       onClick={()=>{setLoading(true);setPreview(null);setLoadedKey("");setMonth(h.competence_month.slice(0,7));setShowCurrent(false);}}>
        {h.competence_month.slice(0,7)} · Fechado em {new Date(h.closed_at).toLocaleDateString("pt-BR")}
      </button>)}
     </div>}

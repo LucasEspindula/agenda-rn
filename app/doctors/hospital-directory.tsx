@@ -4,17 +4,27 @@ import {Pencil,Trash2} from 'lucide-react';
 import AppDialog from '@/components/app-dialog';
 import {duplicateHospital,hospitalAbbreviation,hospitalIsInUse,normalizeHospitalAbbreviation,hospitalsFrom,withHospitals,type Hospital,type HospitalState} from '@/lib/hospital-directory';
 
+async function fetchHospitals():Promise<{state?:HospitalState;revision?:string}>{
+ const response=await fetch('/api/state',{cache:'no-store'}),payload=await response.json();
+ if(!response.ok)throw Error(payload.error||'Não foi possível carregar hospitais.');
+ return payload;
+}
 export default function HospitalDirectory(){
  const [state,setState]=useState<HospitalState|null>(null),[revision,setRevision]=useState<string|null>(null);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [dialogOpen,setDialogOpen]=useState(false),[draft,setDraft]=useState<Hospital|null>(null),[draftName,setDraftName]=useState(''),[draftAbbreviation,setDraftAbbreviation]=useState(''),[modalError,setModalError]=useState(''),[removing,setRemoving]=useState<Hospital|null>(null);
 
  const load=useCallback(async()=>{setLoading(true);try{
-  const response=await fetch('/api/state',{cache:'no-store'}),payload=await response.json();
-  if(!response.ok)throw Error(payload.error||'Não foi possível carregar hospitais.');
+  const payload=await fetchHospitals();
   setState(payload.state||null);setRevision(payload.revision||null);setError('');
  }catch(reason){setError(reason instanceof Error?reason.message:'Não foi possível carregar hospitais.')}finally{setLoading(false)}},[]);
- useEffect(()=>{void load()},[load]);
+ useEffect(()=>{
+  let active=true;
+  void fetchHospitals().then(payload=>{if(active){setState(payload.state||null);setRevision(payload.revision||null);setError('')}})
+   .catch(reason=>{if(active)setError(reason instanceof Error?reason.message:'Não foi possível carregar hospitais.')})
+   .finally(()=>{if(active)setLoading(false)});
+  return ()=>{active=false};
+ },[]);
 
  async function persist(next:HospitalState){
   const response=await fetch('/api/state',{method:'PUT',headers:{'content-type':'application/json','If-Match':revision||'new'},body:JSON.stringify(next)}),payload=await response.json();
