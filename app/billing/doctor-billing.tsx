@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 import {invoiceRows} from '@/lib/billing-row';
 import {formatBRL as money} from '@/lib/money';

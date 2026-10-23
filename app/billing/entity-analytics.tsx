@@ -79,7 +79,7 @@ export default function EntityAnalytics({entityId}:{entityId:string}){
   return [...sums].map(([y,amount])=>({year:String(y),amount}))
    .sort((a,b)=>Number(b.year)-Number(a.year));
  },[buckets]);
- const yearsForMonthly=useMemo(()=>years.slice(-7),[years]);
+ const yearsForMonthly=years.slice(-7);
  const monthly=useMemo(()=>months.map((label,i)=>{
   const item:Record<string,number|string>={month:label};
   for(const y of yearsForMonthly)item[String(y)]=0;
@@ -87,7 +87,7 @@ export default function EntityAnalytics({entityId}:{entityId:string}){
    const k=String(b.year);item[k]=numberValue(item[k])+b.amount;
   }
   return item;
- }),[buckets,yearsForMonthly.join(",")]);
+ }),[buckets,yearsForMonthly]);
  const noYearData=byOrigin.length===0;
  const previous=annual.find(y=>Number(y.year)===year-1)?.amount||0;
  const yoy=previous?((grandTotal-previous)/previous):null;
