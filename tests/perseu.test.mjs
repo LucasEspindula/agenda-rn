@@ -1,4 +1,9 @@
-import {test} from 'node:test';
+import {test as baseTest} from 'node:test';
+const test=(name,callback)=>baseTest(name,async(...args)=>{
+ console.error('[perseu-check] START '+name);
+ try{return await callback(...args)}
+ finally{console.error('[perseu-check] END '+name)}
+});
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as XLSX from 'xlsx';

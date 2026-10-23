@@ -1,0 +1,21 @@
+name: Perseu memory diagnostic (temporary)
+on:
+  push:
+    branches:
+      - fix/rn-integra-stabilization-20261023
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/perseu.test.mjs
+        env:
+          NODE_OPTIONS: --max-old-space-size=768
