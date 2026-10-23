@@ -53,10 +53,10 @@ test("duas cobranças particulares da mesma cirurgia têm solicitações de NF i
     perform set_config('rn.actor',actor::text,true);perform set_config('rn.operation',gen_random_uuid()::text,true);
     perform set_config('rn.kind',kind,true);perform set_config('rn.record',coalesce(id,''),true);
   end $$;
-  create function write_payment_parts(record_id uuid,invoice_id uuid,parts jsonb) returns void language plpgsql set search_path to '' as $$ begin
-    delete from public.payment_parts where billing_record_id=record_id or invoice_id=invoice_id;
+  create function write_payment_parts(record_id uuid,p_invoice_id uuid,parts jsonb) returns void language plpgsql set search_path to '' as $$ begin
+    delete from public.payment_parts where billing_record_id=record_id or invoice_id=p_invoice_id;
     insert into public.payment_parts(billing_record_id,invoice_id,method,amount)
-      select record_id,invoice_id,value->>'method',(value->>'amount')::numeric from jsonb_array_elements(parts);
+      select record_id,p_invoice_id,value->>'method',(value->>'amount')::numeric from jsonb_array_elements(parts);
   end $$;
   create function save_billing(actor bigint,kind text,p_data jsonb) returns uuid language plpgsql as $$ begin return gen_random_uuid(); end $$;
   insert into users values(1,'general_manager'),(2,'secretary');

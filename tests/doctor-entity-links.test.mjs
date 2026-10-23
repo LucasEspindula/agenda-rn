@@ -1,5 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+// Values evaluated in node:vm have a different prototype realm; compare their JSON shape.
+const assertSameStructure=(actual,expected)=>assert.deepEqual(JSON.parse(JSON.stringify(actual)),expected);
 import {readFileSync} from 'node:fs';
 import {loadTs} from './load-ts.mjs';
 
@@ -16,12 +18,12 @@ const links=[
 ];
 
 test('doctor entity mutation creates, deactivates and reactivates without delete_link',()=>{
- assert.deepEqual(buildDoctorEntityLinkMutation([], 'd1','e1',true),{doctor_id:'d1',billing_entity_id:'e1',active:true});
- assert.deepEqual(buildDoctorEntityLinkMutation(links,'d1','e1',false),{id:'l1',doctor_id:'d1',billing_entity_id:'e1',updated_at:'2026-10-01T10:00:00Z',active:false});
- assert.deepEqual(buildDoctorEntityLinkMutation(links,'d1','e3',true),{id:'l2',doctor_id:'d1',billing_entity_id:'e3',updated_at:'2026-10-03T10:00:00Z',active:true});
- assert.deepEqual(activeBillingEntities(entities).map(entity=>entity.id),['e1','e2']);
+ assertSameStructure(buildDoctorEntityLinkMutation([], 'd1','e1',true),{doctor_id:'d1',billing_entity_id:'e1',active:true});
+ assertSameStructure(buildDoctorEntityLinkMutation(links,'d1','e1',false),{id:'l1',doctor_id:'d1',billing_entity_id:'e1',updated_at:'2026-10-01T10:00:00Z',active:false});
+ assertSameStructure(buildDoctorEntityLinkMutation(links,'d1','e3',true),{id:'l2',doctor_id:'d1',billing_entity_id:'e3',updated_at:'2026-10-03T10:00:00Z',active:true});
+ assertSameStructure(activeBillingEntities(entities).map(entity=>entity.id),['e1','e2']);
  assert.equal(doctorEntityLink(links,'d1','e1')?.active,true);
- assert.deepEqual(inactiveEntityHistory({entities,links},'d1').map(({entity})=>entity.id),['e3']);
+ assertSameStructure(inactiveEntityHistory({entities,links},'d1').map(({entity})=>entity.id),['e3']);
 });
 
 test('doctor modal owns auto-saved entity links and preserves failures after reload',()=>{
@@ -50,10 +52,10 @@ test('focused doctor entities endpoint only serves managers and returns no finan
   '@/lib/supabase-admin':{getSupabaseAdmin:()=>({from(table){queried.push(table);return {select:async()=>({data:table==='billing_entities'?[{id:'e1'}]:[{id:'l1'}],error:null})}}})}
  });
  const response=await endpoint.GET(),payload=await response.json();
- assert.deepEqual(queried,['billing_entities','billing_doctor_entities']);
- assert.deepEqual(Object.keys(payload).sort(),['entities','links']);
- assert.deepEqual(payload.entities,[{id:'e1'}]);
- assert.deepEqual(payload.links,[{id:'l1'}]);
+ assertSameStructure(queried,['billing_entities','billing_doctor_entities']);
+ assertSameStructure(Object.keys(payload).sort(),['entities','links']);
+ assertSameStructure(payload.entities,[{id:'e1'}]);
+ assertSameStructure(payload.links,[{id:'l1'}]);
 });
 
 test('billing retains entity registration but no longer renders the old links administration',()=>{
