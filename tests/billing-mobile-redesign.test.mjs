@@ -67,7 +67,7 @@ test('monthly closing buttons align to the right; Logs remains unmodified',()=>{
  const monthly=read('app/billing/monthly-closing.tsx');
  const main=read('app/billing/billing-client.tsx');
  assert.match(css,/\.rn-hub \.monthly-header-actions\{[\s\S]*?justify-content:flex-end;[\s\S]*?margin-left:auto;/);
- assert.match(monthly,/className="monthly-preview-button"/);
+ assert.match(monthly,/className="billing-secondary monthly-preview-button"/);
  assert.match(monthly,/className="billing-primary monthly-final-button"/);
  assert.match(main,/tab === "logs" \? " billing-mobile-no-cards" : ""/);
  assert.match(main,/data-billing-mobile-skip><BillingLogs/);
