@@ -1287,7 +1287,7 @@ export default function BillingClient({
           )}
           {!insurancePendingActive && (
             <button
-              className={"billing-icon-action billing-add"+(tab === "invoices" ? " billing-existing-invoice-add" : "")}
+              className={"billing-icon-action billing-add"+(tab === "invoices" ? " billing-existing-invoice-add" : "")+(tab === "records" ? " billing-mobile-fab" : "")}
               aria-label={
                 tab === "invoices" ? "Nova NF / lote" : "Novo atendimento"
               }
@@ -1296,7 +1296,8 @@ export default function BillingClient({
                 tab === "invoices" ? editInvoice() : setManual(true)
               }
             >
-              +
+              <span className="billing-fab-icon" aria-hidden="true"><Plus size={27}/></span>
+              <span className="billing-fab-label">+</span>
             </button>
           )}
           <button
