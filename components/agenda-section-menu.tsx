@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useRef, useState} from "react";
-import {CalendarDays, ClipboardList, FileClock, History, Menu, ScrollText, Users} from "lucide-react";
+import {CalendarDays, ClipboardList, History, Menu, ScrollText, Users} from "lucide-react";
 
 type AgendaView = "agenda" | "patients" | "requests" | "notifications" | "audit";
 type AgendaItem = {view: AgendaView; label: string};
@@ -70,7 +70,7 @@ export default function AgendaSectionMenu({role}:{role:string}){
   };
 
   return <details className="agenda-header-sections" ref={menuRef} onKeyDown={event=>{
-    if(event.key==="Escape"){menuRef.current!.open=false;event.stopPropagation();}
+    if(event.key==="Escape"&&menuRef.current){menuRef.current.open=false;event.stopPropagation();}
   }}>
     <summary title="Áreas da Agenda" aria-label="Abrir menu de seções da Agenda">
       <Menu size={23} aria-hidden="true"/>
