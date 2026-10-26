@@ -3,6 +3,7 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {formatBRL} from "@/lib/money";
 import {summarizeDenials} from "@/lib/denial-totals";
 import {formatDateBR} from "@/lib/date-format";
+import MobileRowActions from "@/components/mobile-row-actions";
 import DenialActionDialog,{type DenialAction} from "./denial-action-dialog";
 import {denialStatuses,appealDecisions,type DenialData,type DenialCase} from "@/lib/billing-denials";
 import "./denials.css";
@@ -107,6 +108,7 @@ export default function DenialManager(){
        <td><span className={"denial-status "+stateColors[c.status]}>{denialStatuses[c.status]}</span>
         <small>{appeals.length} {appeals.length===1?"recurso":"recursos"}</small></td>
        <td>
+        <MobileRowActions label={"Ações de glosa para "+c.patient}>
         <div className="denial-actions">
          <button type="button" className="billing-secondary" onClick={()=>setExpanded(x=>x===c.id?null:c.id)}>
           {expanded===c.id?"Ocultar histórico":"Ver histórico"}</button>
@@ -117,6 +119,7 @@ export default function DenialManager(){
           {!pending&&<button type="button" className="billing-secondary" onClick={()=>open("CLOSE_CASE",c)}>Encerrar</button>}
          </>}
         </div>
+        </MobileRowActions>
         {expanded===c.id&&<div className="denial-history">
          <strong>Recursos e decisões</strong>
          {appeals.map(a=><p key={a.id}>
