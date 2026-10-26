@@ -21,6 +21,7 @@ export default function MobileNavigation({ links, active, name, role }: {
   const [open, setOpen] = useState(false);
   const isManager = role === "general_manager";
   const tabs = links.slice(0, 3);
+  const overflowLinks = links.filter(link => !tabs.some(tab => tab.id === link.id));
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +69,7 @@ export default function MobileNavigation({ links, active, name, role }: {
         </div>
         <nav className="mobile-app-menu-links" aria-label="Todas as áreas autorizadas">
           {isManager && <a href="/hub"><House size={20} aria-hidden="true"/><span>Início</span><ChevronRight size={17} aria-hidden="true"/></a>}
-          {links.map(link => {
+          {overflowLinks.map(link => {
             const Icon = icons[link.id];
             return <a key={link.id} href={link.href} aria-current={active === link.id ? "page" : undefined}>
               <Icon size={20} aria-hidden="true"/><span>{link.label}</span><ChevronRight size={17} aria-hidden="true"/>
