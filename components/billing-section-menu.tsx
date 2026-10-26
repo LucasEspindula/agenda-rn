@@ -27,7 +27,7 @@ export default function BillingSectionMenu(){
    const elements=nav?.querySelectorAll<HTMLAnchorElement|HTMLButtonElement>("a, button");
    const found=Array.from(elements||[]).filter(el=>el.getAttribute("aria-hidden")!=="true").map((el,i)=>({
     id:el instanceof HTMLAnchorElement?el.getAttribute("href")||String(i):String(i),
-    label:(el.textContent||"").replace(/\s+/g," ").trim(),
+    label:Array.from(el.childNodes).filter(node=>node.nodeType===Node.TEXT_NODE).map(node=>node.textContent||"").join(" ").replace(/\s+/g," ").trim(),
     href:el instanceof HTMLAnchorElement?el.getAttribute("href")||undefined:undefined,
     button:el instanceof HTMLButtonElement?el:undefined,
     current:el.getAttribute("aria-current")==="page",
