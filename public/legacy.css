@@ -490,3 +490,11 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
     z-index:40;
   }
 }
+
+
+/* On phones, the Agenda submenu is in the blue header's hamburger dropdown.
+   The legacy buttons remain mounted for role restrictions and view switching,
+   but must not reserve an empty white strip above the calendar. */
+@media screen and (max-width:900px){
+ .rn-agenda .agenda-shell>.agenda-subnav{display:none!important}
+}
