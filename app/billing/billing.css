@@ -350,7 +350,8 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
     overscroll-behavior-y:contain;
     -webkit-overflow-scrolling:touch;
   }
-  .rn-hub .billing-subnav nav.billing-mobile-menu-links>a {
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links>a,
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links>button {
     box-sizing:border-box;
     display:flex;
     flex:0 0 auto;
@@ -366,8 +367,12 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
     overflow-wrap:anywhere;
     color:#305265;
     font-size:14px;
+    background:transparent;
+    border:0;
+    cursor:pointer;
   }
-  .rn-hub .billing-subnav nav.billing-mobile-menu-links>a[aria-current=page]{
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links>a[aria-current=page],
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links>button[aria-current=page]{
     background:#e6f6f3;
     color:#087972;
     box-shadow:none;
