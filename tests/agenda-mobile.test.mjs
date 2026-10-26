@@ -175,3 +175,44 @@ test('mobile block markers and cards only include the selected professional',()=
  assert.match(html,/data-mobile-date="2026-09-12"[^>]*com horário bloqueado/);
  assert.match(html,/class="mobile-date-block-dot"/);
 });
+
+test('blocked-day marker is separate from the green marker and duplicate time is absent',()=>{
+ const {context:c,appointment:a}=fixture();
+ c.state.scheduleBlocks=[{id:'block-1',professionalId:'d',date:a.date,start:'10:00',end:'11:00',reason:'Reunião'}];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ const day=html.match(/<button class="mobile-date [^"]*" data-mobile-date="2026-09-11"[^>]*>(.*?)<\/button>/)?.[1]||'';
+ assert.match(day,/<span>11<\/span><i class="mobile-date-block-dot" aria-hidden="true"><\/i><em class="mobile-date-dots" aria-hidden="true"><i class="mobile-date-appointment-dot"><\/i><\/em>/);
+ const card=html.match(/<button type="button" class="mobile-appointment mobile-block"[^>]*>(.*?)<\/button>/)?.[1]||'';
+ assert.match(card,/<strong>10:00<\/strong><small>até 11:00<\/small>/);
+ assert.match(card,/class="mobile-block-reason">Reunião<\/span>/);
+ assert.doesNotMatch(card,/mobile-block-range|10:00\s*[–-]\s*11:00/);
+});
+
+test('blocked-only calendar day retains a red top marker and no green marker',()=>{
+ const {context:c}=fixture();
+ c.state.appointments=[];
+ c.state.scheduleBlocks=[{id:'only',professionalId:'d',date:'2026-09-11',start:'10:00',end:'11:00',reason:'Bloqueado'}];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ const day=html.match(/<button class="mobile-date [^"]*" data-mobile-date="2026-09-11"[^>]*>(.*?)<\/button>/)?.[1]||'';
+ assert.match(day,/<i class="mobile-date-block-dot" aria-hidden="true"><\/i>/);
+ assert.doesNotMatch(day,/mobile-date-appointment-dot|mobile-date-dots/);
+});
+
+test('appointment 08:00, block 09:00 and appointment 10:00 render in chronological sequence',()=>{
+ const {context:c,appointment:a}=fixture();
+ c.state.appointments=[
+  {...a,id:'at-eight',time:'08:00'},
+  {...a,id:'at-ten',time:'10:00'}
+ ];
+ c.state.scheduleBlocks=[
+  {id:'at-nine-block',professionalId:'d',date:a.date,start:'09:00',end:'09:30',reason:'Indisponível'}
+ ];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ const eight=html.indexOf('data-mobile-appointment="at-eight"');
+ const nine=html.indexOf('data-mobile-block="at-nine-block"');
+ const ten=html.indexOf('data-mobile-appointment="at-ten"');
+ assert.ok(eight>=0&&nine>eight&&ten>nine, 'a ordem deve ser 08h agendamento, 09h bloqueio, 10h agendamento');
+});

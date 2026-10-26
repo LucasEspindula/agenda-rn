@@ -525,7 +525,22 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
    box-shadow:0 0 0 1px #ffffffb8;
  }
  .rn-agenda .mobile-date .mobile-date-appointment-dot{background:#159976}
- .rn-agenda .mobile-date .mobile-date-block-dot{background:#dc404d}
+ .rn-agenda .mobile-date>.mobile-date-block-dot{
+   position:absolute;
+   top:-2px;
+   bottom:auto;
+   left:50%;
+   z-index:2;
+   display:block;
+   width:6px;
+   height:6px;
+   margin:0;
+   transform:translateX(-50%);
+   border-radius:50%;
+   background:#dc404d;
+   box-shadow:0 0 0 1px #ffffffb8;
+   pointer-events:none;
+ }
  .rn-agenda .mobile-day-list .mobile-appointment.mobile-block{
    box-sizing:border-box;
    display:grid;
@@ -578,10 +593,6 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
    color:#314c5e;
    overflow-wrap:anywhere;
  }
- .rn-agenda .mobile-block .mobile-block-range{
-   font-size:11px;
-   color:#6b7b85;
- }
 
  /* Fixed notification action sits above the app's bottom navigation bar. */
  .rn-agenda #agendaNotifications:not(.hidden){
@@ -602,9 +613,9 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
    min-width:56px;
    min-height:56px;
    padding:0;
-   border:1px solid #0a6472;
+   border:1px solid #102f44;
    border-radius:50%;
-   background:#126f7d;
+   background:linear-gradient(180deg,#123d57,#102f44);
    color:#fff;
    font-size:25px;
    line-height:1;
@@ -613,8 +624,8 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  }
  .rn-agenda #notificationBell:hover,
  .rn-agenda #notificationBell[aria-expanded="true"]{
-   background:#0b5665;
-   border-color:#08515c;
+   background:linear-gradient(180deg,#0f344b,#0b283a);
+   border-color:#0b283a;
  }
  .rn-agenda #notificationBell:focus-visible{
    outline:3px solid #6bd2d2;
@@ -636,5 +647,32 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  body:has(.rn-agenda .modal:not(.hidden)) .rn-agenda #agendaNotifications,
  body:has(dialog[open]) .rn-agenda #agendaNotifications{
    visibility:hidden;
+ }
+}
+
+
+/* Calendar timeline: appointments and blocking slots form one chronological list,
+   without horizontal dividing rules between consecutive items. */
+@media screen and (max-width:900px){
+ .rn-agenda .mobile-day-list{
+   display:flex;
+   flex-direction:column;
+   gap:8px;
+ }
+ .rn-agenda .mobile-day-list>.mobile-appointment{
+   box-sizing:border-box;
+   margin:0;
+   padding:12px 4px;
+   border:0;
+   border-bottom:0;
+   border-radius:10px;
+ }
+ .rn-agenda .mobile-day-list>.mobile-appointment.mobile-block{
+   margin:0;
+   padding:12px 10px;
+   border:0;
+   border-bottom:0;
+   border-left:0;
+   box-shadow:none;
  }
 }
