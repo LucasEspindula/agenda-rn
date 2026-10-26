@@ -416,3 +416,60 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 #appointmentModal .native-finance-view-summary strong{font-size:15px;color:#183449}
 #appointmentModal .native-finance>details.native-proof-history{margin:10px 0}
 @media(max-width:450px){#appointmentModal .native-finance-view-summary{grid-template-columns:1fr}}
+
+
+/* Mobile agenda chrome and forms: deliberately leave .mobile-calendar and procedure cards unchanged. */
+@media(max-width:900px){
+  .rn-agenda .agenda-subnav{position:relative;top:auto;display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:12px;padding:14px 14px 12px;background:#fff}
+  .rn-agenda .agenda-owner{box-sizing:border-box;min-width:0;width:100%;flex:none}
+  .rn-agenda .agenda-owner select{box-sizing:border-box;width:100%;min-height:44px;margin-top:5px}
+  .rn-agenda .agenda-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;min-width:0;overflow:visible;padding:4px;border-radius:12px;background:#edf3f5}
+  .rn-agenda .agenda-nav-item{box-sizing:border-box;justify-content:center;min-width:0;min-height:46px;padding:10px 6px;gap:7px;border-radius:9px;font-size:13px;font-weight:700}
+  .rn-agenda .agenda-nav-item.active{color:#0a736f;background:#fff;box-shadow:0 2px 8px #173e4a17}
+  .rn-agenda .agenda-nav-item svg{flex-shrink:0}
+  .rn-agenda .agenda-shell .main{max-width:100%;min-width:0;padding:12px}
+  .rn-agenda .content-card{max-width:100%;min-width:0;padding:16px;border-radius:13px}
+  .rn-agenda .section-head{display:flex;flex-wrap:wrap;align-items:start;gap:12px}
+  .rn-agenda .section-head button{min-height:44px}
+  .rn-agenda .toolbar .filters{display:flex;align-items:stretch;flex-wrap:wrap;width:100%;gap:8px}
+  .rn-agenda .toolbar .filters>button{min-height:44px;font-size:13px}
+  .rn-agenda .toolbar .filters #newAppointmentBtn{flex:1 1 180px}
+  .rn-agenda .toolbar .filters #newBlockBtn{flex:1 1 140px;order:6}
+  .rn-agenda .toolbar .filters #agendaNotifications{flex:0 0 auto}
+  .rn-agenda .toolbar .agenda-owner-select-card{max-width:100%;min-width:0}
+  .rn-agenda :is(input,select,textarea){max-width:100%}
+
+  /* Patient records become readable cards; do not hide the Edit control on phones. */
+  #patientsTableWrap{max-width:100%;min-width:0;overflow:visible}
+  #patientsTableWrap .table,#patientsTableWrap .table tbody,#patientsTableWrap .table tr{display:block;width:100%;min-width:0}
+  #patientsTableWrap .table thead{display:none}
+  #patientsTableWrap .table tbody{display:grid;gap:10px}
+  #patientsTableWrap .table tr{box-sizing:border-box;margin:0;padding:11px 12px;border:1px solid #dce7eb;border-radius:12px;background:#fff}
+  #patientsTableWrap .table td{box-sizing:border-box;display:flex!important;align-items:center;justify-content:space-between;gap:10px;width:100%;min-width:0;min-height:39px;padding:5px 2px;border:0;text-align:right!important;font-size:13px;white-space:normal;overflow-wrap:anywhere}
+  #patientsTableWrap .table td:first-child{justify-content:flex-start;min-height:42px;border-bottom:1px solid #edf1f4;text-align:left!important;font-size:15px}
+  #patientsTableWrap .table td:nth-child(2),#patientsTableWrap .table td:nth-child(4),#patientsTableWrap .table td:nth-child(6){display:none!important}
+  #patientsTableWrap .table td:nth-child(3)::before{content:"Convênio";flex:0 0 auto;color:#627c88;font-size:11px;font-weight:800;text-transform:uppercase}
+  #patientsTableWrap .table td:nth-child(5)::before{content:"Telefone";flex:0 0 auto;color:#627c88;font-size:11px;font-weight:800;text-transform:uppercase}
+  #patientsTableWrap .table td:last-child:has([data-patient]){display:flex!important;justify-content:flex-end;padding-top:10px}
+  #patientsTableWrap .table td:last-child:has([data-patient]) button{min-width:110px;min-height:44px;padding:9px 16px;border-radius:9px;background:#e8f8f7;color:#087a73;font-weight:750}
+  #patientsTableWrap .patient-name-btn{font-size:15px;font-weight:750;white-space:normal}
+  #patientsTableWrap .phone-action{overflow-wrap:anywhere;text-align:right}
+
+  /* Long clinical forms open as scrollable sheets, not narrow desktop dialogs. */
+  .rn-agenda .modal:not(#systemDialog){padding:0;place-items:end center}
+  .rn-agenda .modal:not(#systemDialog)>.modal-panel,.rn-agenda .modal:not(#systemDialog)>.modal-panel.small,.rn-agenda .modal:not(#systemDialog)>.modal-panel.medium{box-sizing:border-box;width:100%;max-width:none;max-height:calc(96dvh - env(safe-area-inset-top,0px));margin:0;border-radius:20px 20px 0 0;overscroll-behavior:contain}
+  .rn-agenda #appointmentModal{padding:0}
+  .rn-agenda #appointmentModal .modal-panel{width:100%;max-height:calc(96dvh - env(safe-area-inset-top,0px))}
+  .rn-agenda .modal-head{padding:16px 16px 10px;gap:10px}
+  .rn-agenda .modal-head h3{font-size:18px;line-height:1.3}
+  .rn-agenda .modal-close{flex:0 0 44px;min-width:44px;min-height:44px}
+  .rn-agenda #patientModal form{padding-inline:16px!important;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))!important}
+  .rn-agenda .form-grid.two,.rn-agenda .form-grid.three,.rn-agenda .appointment-detail-grid{grid-template-columns:minmax(0,1fr)}
+  .rn-agenda :is(#appointmentModal,#patientModal,#patientDetailModal) :is(input:not([type=checkbox]):not([type=radio]),select,textarea){font-size:16px}
+  .rn-agenda .modal-actions{display:flex;flex-wrap:wrap;gap:9px}
+  .rn-agenda .modal-actions button{min-height:44px;flex:1 1 130px}
+}
+@media(max-width:400px){
+  .rn-agenda .agenda-nav-item{font-size:12px}
+  .rn-agenda .toolbar .filters>button{flex:1 1 130px}
+}
