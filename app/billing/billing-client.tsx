@@ -1,6 +1,7 @@
 "use client";
 import InsurancePending from "./insurance-pending";
 import PortalSubmissions from "./portal-submissions";
+import MobileRowActions from "@/components/mobile-row-actions";
 import BillingSubnav, {type BillingNavigationView} from "./billing-subnav";
 import ProfessionalChargeDialog from "./professional-charge-dialog";
 import ProfessionalInvoiceDialog from "./professional-invoice-dialog";
@@ -1011,7 +1012,7 @@ export default function BillingClient({
               {!report && (
                 <>
                   <td>{userName(r.created_by)}</td>
-                  <td className="no-print">
+                  <td className="no-print"><MobileRowActions label={"Ações de "+r.patient}>
                     {r.status_atendimento !== "cancelled" && <button
                       className="billing-icon-action"
                       aria-label="Abrir financeiro"
@@ -1060,7 +1061,7 @@ export default function BillingClient({
                           <TrashIcon />
                         </button>
                       )}
-                  </td>
+                  </MobileRowActions></td>
                 </>
               )}
             </tr>
@@ -1361,9 +1362,9 @@ export default function BillingClient({
         {tab === "insurance" && portalSubmissionsEnabled && (
           <nav className="billing-tabs" aria-label="Convênios">
             <button type="button" aria-current={insuranceView === "payments" ? "page" : undefined}
-              onClick={() => setInsuranceView("payments")}>Pendências de pagamento</button>
+              onClick={() => setInsuranceView("payments")}><NavIcon kind="requests" /> Pendências de pagamento</button>
             <button type="button" aria-current={insuranceView === "portal" ? "page" : undefined}
-              onClick={() => setInsuranceView("portal")}>Guias e faturamento no portal</button>
+              onClick={() => setInsuranceView("portal")}><NavIcon kind="insurance" /> Guias e faturamento no portal</button>
           </nav>
         )}
         {tab !== "insurance" && filterBar}
@@ -1410,7 +1411,7 @@ export default function BillingClient({
             {tab === "expenses" && (
               <CompanyFinance data={data} onChanged={() => void load()} />
             )}
-            {tab === "logs" && <BillingLogs data={data} />}
+            {tab === "logs" && <div data-billing-mobile-skip><BillingLogs data={data} /></div>}
             {tab === "invoices" && (
               <>
                 {invoiceView === "requests" ? (
@@ -1491,7 +1492,7 @@ export default function BillingClient({
                             <td>{userName(i.created_by)}</td>
                             <td className="no-print billing-actions-cell">
                               {activeInvoice(i) ? (
-                                <div className="billing-row-actions">
+                                <MobileRowActions label={"Ações da NF " + i.invoice_number}><div className="billing-row-actions">
                                   <button
                                     className="billing-icon-action billing-edit"
                                     title="Editar NF"
@@ -1564,9 +1565,9 @@ export default function BillingClient({
                                   >
                                     <ReplaceInvoiceIcon />
                                   </button>
-                                </div>
+                                </div></MobileRowActions>
                               ) : (
-                                <div className="billing-row-actions">
+                                <MobileRowActions label={"Ações da NF " + i.invoice_number}><div className="billing-row-actions">
                                   <button className="billing-icon-action billing-history"
                                    title="Histórico" aria-label={"Histórico da NF "+i.invoice_number}
                                    onClick={()=>setHistoryInvoice(i)}><HistoryIcon/></button>
@@ -1577,7 +1578,7 @@ export default function BillingClient({
                                     onClick={()=>askFiscal("restore_invoice",i.id,i.updated_at,"Reativar NF "+i.invoice_number)}>
                                     <RotateCcw size={18}/>
                                    </button>}
-                                </div>
+                                </div></MobileRowActions>
                               )}
                             </td>
                           </tr>
@@ -1636,7 +1637,7 @@ export default function BillingClient({
                           <td>{e.tax_id}</td>
                           <td>{status(e.active)}</td>
                           <td>
-                            <div className="billing-row-actions">
+                            <MobileRowActions label={"Ações de " + e.name}><div className="billing-row-actions">
                               <a href={"/billing/entidades/"+encodeURIComponent(e.id)+"/indicadores"}
                                 className="billing-icon-action"
                                 title={"Indicadores financeiros de "+(e.trade_name||e.name)}
@@ -1658,7 +1659,7 @@ export default function BillingClient({
                               >
                                 <TrashIcon />
                               </button>
-                            </div>
+                            </div></MobileRowActions>
                           </td>
                         </tr>
                       ))}
