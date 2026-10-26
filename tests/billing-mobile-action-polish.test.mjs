@@ -66,7 +66,7 @@ test("new notes plus is mobile-only and doesn't create notes until workflow is d
  const s=read("app/billing/billing-client.tsx");
  const css=read("app/billing/billing.css");
  assert.match(s,/className="billing-mobile-fab billing-invoice-future-add"/);
- assert.match(s,/onClick=\{\(\)=>setMobileInvoiceAddInfo\(true\)\}/);
+ assert.match(s,/onClick=\{\(\)\s*=>\s*setMobileInvoiceAddInfo\(true\)\}/);
  assert.match(s,/Nenhuma nota foi criada ou alterada/);
  assert.match(css,/@media screen and \(min-width:901px\)\{\s*\.rn-hub \.billing-invoice-future-add\{display:none!important\}/);
  assert.match(css,/\.billing-filter-action \.billing-existing-invoice-add\{display:none!important\}/);
