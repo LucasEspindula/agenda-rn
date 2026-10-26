@@ -7,7 +7,7 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../public/legacy-app.js', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowAuthorship', 'workflowRoleLabel', 'workflowDate', 'renderMobileCalendar', 'assignCalendarLanes']);
+const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowAuthorship', 'workflowRoleLabel', 'workflowDate', 'renderMobileCalendar', 'mobileCalendarCard', 'assignCalendarLanes']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
   const doctor = { id: 'd', name: 'Rosa', specialty: 'Ortopedia e Traumatologia' }, anesthetist = { id: 'a', name: 'Dr. Lima', specialty: 'Anestesiologia' };
@@ -128,4 +128,50 @@ test('calendar lanes keep adjacent intervals together and transitive overlaps co
   assert.equal(lanes.get('a').total, 2);
   assert.notEqual(lanes.get('a').lane, lanes.get('b').lane);
   assert.equal(lanes.get('a').lane, lanes.get('c').lane);
+});
+
+
+test('blocked slots show gray appointment-style cards in chronological order, with red and green dots together',()=>{
+ const {context:c,appointment:a}=fixture();
+ const earlier={id:'early',professionalId:'d',date:a.date,start:'08:00',end:'08:30',reason:'Reunião clínica'};
+ const later={id:'late',professionalId:'d',date:a.date,start:'10:00',end:'11:30',reason:'Bloqueio reservado'};
+ c.state.scheduleBlocks=[later,earlier];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ const early=html.indexOf('data-mobile-block="early"'),ap=html.indexOf('data-mobile-appointment="one"'),late=html.indexOf('data-mobile-block="late"');
+ assert.ok(early>=0&&ap>=0&&late>=0&&early<ap&&ap<late,'Atendimentos e bloqueios devem respeitar horário');
+ assert.match(html,/class="mobile-appointment mobile-block"/);
+ assert.match(html,/class="mobile-block-reason">Reunião clínica/);
+ assert.match(html,/class="mobile-date-appointment-dot"/);
+ assert.match(html,/class="mobile-date-block-dot"/);
+ const cell=html.match(/<button class="mobile-date [^"]*" data-mobile-date="2026-09-11"[^>]*>(.*?)<\/button>/)?.[1]||'';
+ assert.match(cell,/mobile-date-appointment-dot/);
+ assert.match(cell,/mobile-date-block-dot/);
+});
+
+test('calendar displays a red dot and block card for a day with only a block, without false empty state',()=>{
+ const {context:c}=fixture();
+ c.state.appointments=[];
+ c.state.scheduleBlocks=[{id:'only',professionalId:'d',date:'2026-09-11',start:'12:00',end:'13:00',reason:'Recesso <especial>'}];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ assert.match(html,/data-mobile-block="only"/);
+ assert.match(html,/Recesso &lt;especial>/);
+ assert.doesNotMatch(html,/class="mobile-date-appointment-dot"/);
+ assert.match(html,/class="mobile-date-block-dot"/);
+ assert.doesNotMatch(html,/Nenhum atendimento ou bloqueio neste dia/);
+});
+
+test('mobile block markers and cards only include the selected professional',()=>{
+ const {context:c}=fixture();
+ c.state.scheduleBlocks=[
+  {id:'other',professionalId:'other-doctor',date:'2026-09-11',start:'08:00',end:'09:00',reason:'Privado'},
+  {id:'ours',professionalId:'d',date:'2026-09-12',start:'14:00',end:'15:00',reason:'Bloqueio da agenda'}
+ ];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ assert.doesNotMatch(html,/data-mobile-block="other"|Privado/);
+ assert.doesNotMatch(html,/data-mobile-block="ours"/);
+ assert.match(html,/data-mobile-date="2026-09-12"[^>]*com horário bloqueado/);
+ assert.match(html,/class="mobile-date-block-dot"/);
 });

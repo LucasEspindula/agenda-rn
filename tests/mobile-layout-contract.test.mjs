@@ -38,3 +38,19 @@ test("patient edit action is visible on phones while mobile agenda remains the l
   assert.match(runtime, /class="mobile-day-list"/);
   assert.match(runtime, /appointmentCardContent\(a,owner\)/);
 });
+
+
+test("mobile notifications float above bottom tabs, retain permissions and close behind dialogs", () => {
+  const css = file("public/legacy.css");
+  const body = file("app/dashboard/legacy-body.ts");
+  const runtime = file("public/legacy-app.js");
+  assert.match(css, /\.rn-agenda #agendaNotifications:not\(\.hidden\)\{[\s\S]*?position:fixed;[\s\S]*?bottom:calc\(86px \+ env\(safe-area-inset-bottom,0px\)\);[\s\S]*?right:16px;/);
+  assert.match(css, /\.rn-agenda #notificationBell\{[\s\S]*?border-radius:50%;/);
+  assert.match(css, /\.rn-agenda #notificationPanel\{[\s\S]*?position:fixed;[\s\S]*?bottom:calc\(158px \+ env\(safe-area-inset-bottom,0px\)\);/);
+  assert.match(css, /body:has\(dialog\[open\]\) \.rn-agenda #agendaNotifications/);
+  assert.match(body, /id="notificationBell"[^>]*aria-expanded="false"/);
+  assert.match(body, /id="notificationCount"/);
+  assert.match(runtime, /role==="doctor"\)\{\$\("agendaNotifications"\)\.classList\.add\("hidden"\)/);
+  assert.match(runtime, /\$\("agendaNotifications"\)\.classList\.toggle\("hidden",!onAgenda/);
+  assert.match(runtime, /\$\("notificationBell"\)\.onclick=e=>\{e\.stopPropagation\(\);toggleNotificationPanel\(\)\}/);
+});

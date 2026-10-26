@@ -498,3 +498,143 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 @media screen and (max-width:900px){
  .rn-agenda .agenda-shell>.agenda-subnav{display:none!important}
 }
+
+
+/* Mobile Agenda: blocked slots share the appointment-card composition, with a calm gray state.
+   Existing appointments keep their current design and interactive behavior. */
+@media screen and (max-width:900px){
+ .rn-agenda .mobile-date .mobile-date-dots{
+   position:absolute;
+   inset:auto 0 1px;
+   display:flex;
+   align-items:center;
+   justify-content:center;
+   gap:4px;
+   height:7px;
+   font-style:normal;
+   pointer-events:none;
+ }
+ .rn-agenda .mobile-date .mobile-date-dots i{
+   position:static;
+   display:block;
+   flex:0 0 6px;
+   width:6px;
+   height:6px;
+   border:0;
+   border-radius:50%;
+   box-shadow:0 0 0 1px #ffffffb8;
+ }
+ .rn-agenda .mobile-date .mobile-date-appointment-dot{background:#159976}
+ .rn-agenda .mobile-date .mobile-date-block-dot{background:#dc404d}
+ .rn-agenda .mobile-day-list .mobile-appointment.mobile-block{
+   box-sizing:border-box;
+   display:grid;
+   grid-template-columns:64px minmax(0,1fr) 12px;
+   align-items:center;
+   gap:12px;
+   width:100%;
+   min-width:0;
+   margin:9px 0;
+   padding:12px 10px;
+   border:1px solid #d5dfe5;
+   border-left:4px solid #a0afb9;
+   border-radius:12px;
+   background:#edf1f4;
+   color:#354957;
+   text-align:left;
+   white-space:normal;
+   box-shadow:0 2px 8px #253d4b0b;
+   cursor:pointer;
+ }
+ .rn-agenda .mobile-day-list .mobile-appointment.mobile-block:hover{
+   background:#e5ebef;
+   border-color:#b5c5cd;
+ }
+ .rn-agenda .mobile-day-list .mobile-appointment.mobile-block:focus-visible{
+   outline:3px solid #157d86;
+   outline-offset:2px;
+ }
+ .rn-agenda .mobile-block .mobile-time{
+   background:#f8fafb;
+   border-color:#b2c0c9;
+   color:#405768;
+   padding:9px 3px;
+ }
+ .rn-agenda .mobile-block .mobile-time small{
+   color:#607682;
+   font-size:10px;
+   font-weight:650;
+ }
+ .rn-agenda .mobile-block .mobile-block-label{
+   font-size:10px;
+   font-weight:850;
+   color:#576c79;
+   letter-spacing:.045em;
+ }
+ .rn-agenda .mobile-block .mobile-block-reason{
+   font-size:14px;
+   font-weight:720;
+   line-height:1.4;
+   color:#314c5e;
+   overflow-wrap:anywhere;
+ }
+ .rn-agenda .mobile-block .mobile-block-range{
+   font-size:11px;
+   color:#6b7b85;
+ }
+
+ /* Fixed notification action sits above the app's bottom navigation bar. */
+ .rn-agenda #agendaNotifications:not(.hidden){
+   position:fixed;
+   bottom:calc(86px + env(safe-area-inset-bottom,0px));
+   right:16px;
+   z-index:56;
+   width:56px;
+   height:56px;
+   display:block;
+   flex:none;
+ }
+ .rn-agenda #notificationBell{
+   display:grid;
+   place-items:center;
+   width:56px;
+   height:56px;
+   min-width:56px;
+   min-height:56px;
+   padding:0;
+   border:1px solid #0a6472;
+   border-radius:50%;
+   background:#126f7d;
+   color:#fff;
+   font-size:25px;
+   line-height:1;
+   box-shadow:0 7px 22px #133b4c4d;
+   cursor:pointer;
+ }
+ .rn-agenda #notificationBell:hover,
+ .rn-agenda #notificationBell[aria-expanded="true"]{
+   background:#0b5665;
+   border-color:#08515c;
+ }
+ .rn-agenda #notificationBell:focus-visible{
+   outline:3px solid #6bd2d2;
+   outline-offset:3px;
+ }
+ .rn-agenda #notificationPanel{
+   position:fixed;
+   top:calc(68px + env(safe-area-inset-top,0px));
+   bottom:calc(158px + env(safe-area-inset-bottom,0px));
+   left:12px;
+   right:12px;
+   width:auto;
+   max-width:none;
+   max-height:none;
+   overflow-y:auto;
+   overscroll-behavior:contain;
+   z-index:57;
+ }
+ body:has(.rn-agenda .modal:not(.hidden)) .rn-agenda #agendaNotifications,
+ body:has(dialog[open]) .rn-agenda #agendaNotifications{
+   visibility:hidden;
+ }
+}
