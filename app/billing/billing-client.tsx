@@ -30,7 +30,7 @@ import { confirmFiscalPayment } from "@/components/confirm-fiscal-payment";
 import type { InvoiceRequest } from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
 import { useCallback, useEffect, useState, useRef } from "react";
-import { RotateCcw, BarChart3 } from "lucide-react";
+import { RotateCcw, BarChart3, Plus } from "lucide-react";
 import { eligibleForInvoice, payerKey } from "@/lib/billing-eligibility";
 import {
   attendanceInsuranceOptions,
@@ -1342,8 +1342,8 @@ export default function BillingClient({
         {!appointmentId && tab === "invoices" && <>
           <button type="button" className="billing-mobile-fab billing-invoice-future-add"
             aria-label="Nova operação de Nota Fiscal" title="Nova operação de Nota Fiscal"
-            onClick={() => setMobileInvoiceAddInfo(true)}>+</button>
-          {mobileInvoiceAddInfo && <AppDialog label="Nova operação de Nota Fiscal" compact
+            onClick={() => setMobileInvoiceAddInfo(true)}><span className="billing-fab-icon" aria-hidden="true"><Plus size={27}/></span><span className="billing-fab-label">+</span></button>
+          {mobileInvoiceAddInfo && <AppDialog label="Nova operação de Nota Fiscal" compact className="billing-mobile-actions-dialog billing-invoice-info-dialog"
             onClose={() => setMobileInvoiceAddInfo(false)}>
             <h2>Nova operação de Nota Fiscal</h2>
             <p>Este botão está reservado para o novo fluxo de notas fiscais. Nenhuma nota foi criada ou alterada.</p>
@@ -1628,7 +1628,7 @@ export default function BillingClient({
                       })
                     }
                   >
-                    + Cadastrar entidade
+                    <span className="billing-fab-icon" aria-hidden="true"><Plus size={27}/></span><span className="billing-fab-label">+ Cadastrar entidade</span>
                   </button>
                 </div>
                 <div className="billing-panel">
