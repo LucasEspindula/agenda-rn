@@ -4,6 +4,7 @@ import {formatBRL} from "@/lib/money";
 import {summarizeDenials} from "@/lib/denial-totals";
 import {formatDateBR} from "@/lib/date-format";
 import MobileRowActions from "@/components/mobile-row-actions";
+import {Plus} from "lucide-react";
 import DenialActionDialog,{type DenialAction} from "./denial-action-dialog";
 import {denialStatuses,appealDecisions,type DenialData,type DenialCase} from "@/lib/billing-denials";
 import "./denials.css";
@@ -59,7 +60,7 @@ export default function DenialManager(){
     <p>Controle de glosas por cobrança profissional, com recursos, decisões e recuperações.
       O saldo não altera automaticamente o pagamento da NF.</p></div>
    <button type="button" className="billing-primary billing-mobile-fab" aria-label="Registrar glosa" disabled={loading||!data.charges.length}
-    onClick={()=>open("OPEN_CASE")}>+ Registrar glosa</button>
+    onClick={()=>open("OPEN_CASE")}><span className="billing-fab-icon" aria-hidden="true"><Plus size={27}/></span><span className="billing-fab-label">+ Registrar glosa</span></button>
   </header>
   {error&&<p role="alert" className="billing-error">{error} <button type="button" onClick={()=>void refresh()}>Tentar novamente</button></p>}
   {notice&&<p role="status" className="billing-message">{notice}</p>}
