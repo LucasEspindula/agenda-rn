@@ -50,3 +50,9 @@ test('mobile calendar and procedure list are not reimplemented', () => {
   assert.match(agenda, /mobile-day-list/);
   assert.match(agenda, /appointmentCardContent\(a,owner\)/);
 });
+
+test('new mobile appointments inherit selected calendar date without changing desktop behavior', () => {
+  const runtime = source('public/legacy-app.js');
+  assert.match(runtime, /\$\("newAppointmentBtn"\)\.onclick=\(\)=>openAppointment\(null,window\.matchMedia\("\(max-width:900px\)"\)\.matches\?\{date:mobileSelectedDate\}:\{\}\)/);
+  assert.match(runtime, /mobileSelectedDate=b\.dataset\.mobileDate;currentDate=parseDate\(mobileSelectedDate\);mobileMonth=new Date\(currentDate\.getFullYear\(\),currentDate\.getMonth\(\),1\);renderCalendar\(\)/);
+});
