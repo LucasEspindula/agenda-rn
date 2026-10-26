@@ -199,3 +199,20 @@ test('blocked-only calendar day retains a red top marker and no green marker',()
  assert.match(day,/<i class="mobile-date-block-dot" aria-hidden="true"><\/i>/);
  assert.doesNotMatch(day,/mobile-date-appointment-dot|mobile-date-dots/);
 });
+
+test('appointment 08:00, block 09:00 and appointment 10:00 render in chronological sequence',()=>{
+ const {context:c,appointment:a}=fixture();
+ c.state.appointments=[
+  {...a,id:'at-eight',time:'08:00'},
+  {...a,id:'at-ten',time:'10:00'}
+ ];
+ c.state.scheduleBlocks=[
+  {id:'at-nine-block',professionalId:'d',date:a.date,start:'09:00',end:'09:30',reason:'Indisponível'}
+ ];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ const eight=html.indexOf('data-mobile-appointment="at-eight"');
+ const nine=html.indexOf('data-mobile-block="at-nine-block"');
+ const ten=html.indexOf('data-mobile-appointment="at-ten"');
+ assert.ok(eight>=0&&nine>eight&&ten>nine, 'a ordem deve ser 08h agendamento, 09h bloqueio, 10h agendamento');
+});
