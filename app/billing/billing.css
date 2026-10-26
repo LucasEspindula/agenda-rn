@@ -576,3 +576,107 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
  .rn-hub table.billing-mobile-card-table>tbody>tr>td{grid-template-columns:minmax(78px,37%) minmax(0,1fr);font-size:12px}
  .rn-hub .monthly-header-actions button{font-size:12px;padding:8px}
 }
+
+
+/* Mobile finance refinements: real bottom sheet for native dialog,
+   right-anchored actions, and compact floating create actions. */
+@media screen and (max-width:900px){
+  .rn-hub dialog.billing-modal.billing-mobile-actions-dialog,
+  dialog.billing-modal.billing-mobile-actions-dialog{
+    box-sizing:border-box;
+    position:fixed;
+    inset:auto 0 0;
+    margin:0 auto;
+    width:100%;
+    max-width:100%;
+    max-height:min(78dvh,640px);
+    min-height:0;
+    padding:22px 18px calc(22px + env(safe-area-inset-bottom,0px));
+    border-radius:20px 20px 0 0;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  dialog.billing-mobile-actions-dialog::backdrop{background:#102f4488}
+  .rn-hub table.billing-mobile-card-table>tbody>tr>td.billing-mobile-actions-cell{
+    display:flex!important;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:flex-start;
+    width:100%;
+    text-align:right!important;
+  }
+  .rn-hub table.billing-mobile-card-table>tbody>tr>td.billing-mobile-actions-cell>.billing-mobile-row-actions,
+  .rn-hub .billing-mobile-row-actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    width:100%;
+  }
+  .rn-hub table.billing-mobile-card-table>tbody>tr>td.billing-mobile-actions-cell>.denial-history{
+    box-sizing:border-box;
+    width:100%;
+    min-width:0;
+    text-align:left;
+  }
+  .rn-hub table.billing-mobile-card-table>tbody>tr>td.billing-mobile-actions-cell>button{
+    align-self:flex-end;
+    justify-self:end;
+    margin-left:auto;
+  }
+  .rn-hub .billing-main button.billing-mobile-fab,
+  .rn-hub .denial-manager button.billing-mobile-fab{
+    box-sizing:border-box;
+    position:fixed;
+    right:16px;
+    bottom:calc(86px + env(safe-area-inset-bottom,0px));
+    z-index:58;
+    display:grid;
+    place-items:center;
+    flex:none;
+    width:56px;
+    height:56px;
+    min-width:56px;
+    min-height:56px;
+    max-width:56px;
+    max-height:56px;
+    margin:0;
+    padding:0;
+    border:1px solid #102f44;
+    border-radius:50%;
+    background:linear-gradient(180deg,#123d57,#102f44);
+    color:#fff;
+    box-shadow:0 7px 22px #133b4c4d;
+    line-height:1;
+    font-size:30px;
+    font-weight:450;
+    text-align:center;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .rn-hub .billing-main button.billing-mobile-fab:not(.billing-invoice-future-add){
+    font-size:0!important;
+  }
+  .rn-hub .billing-main button.billing-mobile-fab:not(.billing-invoice-future-add)::before{
+    content:"+";
+    font-size:30px;
+    font-weight:450;
+    line-height:1;
+  }
+  .rn-hub .billing-main button.billing-mobile-fab:hover:not(:disabled),
+  .rn-hub .denial-manager button.billing-mobile-fab:hover:not(:disabled){
+    background:linear-gradient(180deg,#0f344b,#0b283a);
+  }
+  .rn-hub .billing-main button.billing-mobile-fab:focus-visible{outline:3px solid #6bd2d2;outline-offset:3px}
+  .rn-hub .billing-main button.billing-mobile-fab:disabled{
+    opacity:.52;
+    cursor:not-allowed;
+  }
+  .rn-hub .billing-filter-action .billing-existing-invoice-add{display:none!important}
+  body:has(dialog[open]) .rn-hub button.billing-mobile-fab{
+    visibility:hidden;
+  }
+}
+@media screen and (min-width:901px){
+ .rn-hub .billing-invoice-future-add{display:none!important}
+}
