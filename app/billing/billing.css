@@ -315,3 +315,93 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 @media(max-width:360px){
   .billing-main .report-summary,.billing-main .billing-summary{grid-template-columns:1fr}
 }
+
+/* Mobile correction: legacy flex navigation must not override the finance dropdown.
+   Keep links in the document flow so every option remains reachable on narrow screens. */
+@media screen and (max-width:900px){
+  .rn-hub .billing-subnav:has(.billing-mobile-menu) {
+    top:60px;
+    width:100%;
+    max-width:100%;
+    box-sizing:border-box;
+    overflow:visible;
+    margin:0;
+  }
+  .rn-hub .billing-subnav:has(.billing-mobile-menu[open]){position:relative;top:0}
+  .rn-hub .billing-subnav .billing-mobile-menu{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links{
+    position:static;
+    inset:auto;
+    display:flex;
+    flex:0 1 auto;
+    flex-direction:column;
+    align-items:stretch;
+    flex-wrap:nowrap;
+    box-sizing:border-box;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    max-height:min(54dvh,460px);
+    gap:3px;
+    padding:8px;
+    margin-top:6px;
+    overflow-x:hidden;
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links>a {
+    box-sizing:border-box;
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    min-height:46px;
+    padding:10px 13px;
+    border-radius:8px;
+    text-align:left;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    color:#305265;
+    font-size:14px;
+  }
+  .rn-hub .billing-subnav nav.billing-mobile-menu-links>a[aria-current=page]{
+    background:#e6f6f3;
+    color:#087972;
+    box-shadow:none;
+  }
+  /* Cadastros: remove the 82px legacy sticky offset under the 60px mobile header. */
+  .rn-hub .billing-subnav.cadastros-subnav {
+    box-sizing:border-box;
+    position:sticky;
+    top:60px;
+    z-index:20;
+    margin:0;
+    min-height:0;
+    padding:7px 12px;
+    overflow:visible;
+    background:#fff;
+  }
+  .rn-hub .billing-subnav.cadastros-subnav nav{
+    box-sizing:border-box;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:stretch;
+    min-width:0;
+    width:100%;
+    gap:6px;
+  }
+  .rn-hub .billing-subnav.cadastros-subnav nav>a{
+    display:flex;
+    justify-content:center;
+    min-width:0;
+    min-height:44px;
+    padding:10px 8px;
+    text-align:center;
+    white-space:normal;
+    font-size:13px;
+    border-radius:9px;
+  }
+}
