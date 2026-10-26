@@ -654,15 +654,7 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
     cursor:pointer;
     -webkit-tap-highlight-color:transparent;
   }
-  .rn-hub .billing-main button.billing-mobile-fab:not(.billing-invoice-future-add){
-    font-size:0!important;
-  }
-  .rn-hub .billing-main button.billing-mobile-fab:not(.billing-invoice-future-add)::before{
-    content:"+";
-    font-size:30px;
-    font-weight:450;
-    line-height:1;
-  }
+
   .rn-hub .billing-main button.billing-mobile-fab:hover:not(:disabled),
   .rn-hub .denial-manager button.billing-mobile-fab:hover:not(:disabled){
     background:linear-gradient(180deg,#0f344b,#0b283a);
@@ -679,4 +671,33 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 }
 @media screen and (min-width:901px){
  .rn-hub .billing-invoice-future-add{display:none!important}
+}
+
+
+/* FABs have a real vector + icon.  Avoid masking labels and generating pseudo-text,
+   which rendered as an arrow on some mobile fonts / browser combinations. */
+.rn-hub .billing-fab-icon{display:none}
+@media screen and (max-width:900px){
+  .rn-hub button.billing-mobile-fab .billing-fab-icon{
+    display:grid!important;
+    place-items:center;
+    width:28px;
+    height:28px;
+  }
+  .rn-hub button.billing-mobile-fab .billing-fab-icon svg{
+    display:block;
+    width:27px;
+    height:27px;
+    stroke-width:2.5;
+  }
+  .rn-hub button.billing-mobile-fab .billing-fab-label{display:none!important}
+  .rn-hub .billing-main button.billing-mobile-fab{
+    font-size:28px;
+    line-height:1;
+  }
+  /* The last cards and their action buttons must scroll completely above
+     the fixed 56px button and the bottom app navigation. */
+  .rn-hub main.billing-main:has(button.billing-mobile-fab){
+    padding-bottom:calc(178px + env(safe-area-inset-bottom,0px))!important;
+  }
 }
