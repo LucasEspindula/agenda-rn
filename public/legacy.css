@@ -525,22 +525,7 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
    box-shadow:0 0 0 1px #ffffffb8;
  }
  .rn-agenda .mobile-date .mobile-date-appointment-dot{background:#159976}
- .rn-agenda .mobile-date>.mobile-date-block-dot{
-   position:absolute;
-   top:-2px;
-   bottom:auto;
-   left:50%;
-   z-index:2;
-   display:block;
-   width:6px;
-   height:6px;
-   margin:0;
-   transform:translateX(-50%);
-   border-radius:50%;
-   background:#dc404d;
-   box-shadow:0 0 0 1px #ffffffb8;
-   pointer-events:none;
- }
+ .rn-agenda .mobile-date .mobile-date-block-dot{background:#dc404d}
  .rn-agenda .mobile-day-list .mobile-appointment.mobile-block{
    box-sizing:border-box;
    display:grid;
@@ -675,4 +660,12 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
    border-left:0;
    box-shadow:none;
  }
+}
+
+
+/* Agenda mobile: remove doubled top breathing room from main padding + toolbar gap.
+   Leave patient and administrative pages and the calendar layout unchanged. */
+@media screen and (max-width:900px){
+ .rn-agenda .agenda-shell .main:has(#agendaView.active){padding-top:6px}
+ .rn-agenda #agendaView>.toolbar{gap:6px}
 }
