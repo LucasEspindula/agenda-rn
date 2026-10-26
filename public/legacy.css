@@ -473,3 +473,20 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
   .rn-agenda .agenda-nav-item{font-size:12px}
   .rn-agenda .toolbar .filters>button{flex:1 1 130px}
 }
+
+/* Functional mobile check: keep the agenda notification list above bottom navigation. */
+@media screen and (max-width:900px){
+  .rn-agenda .notification-panel{
+    position:fixed;
+    top:68px;
+    bottom:calc(80px + env(safe-area-inset-bottom,0px));
+    left:12px;
+    right:12px;
+    width:auto;
+    max-width:none;
+    max-height:none;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    z-index:40;
+  }
+}
