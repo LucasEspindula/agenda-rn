@@ -144,3 +144,22 @@
 
 /* Closed native details never display their popover, even with author-level display rules. */
 .agenda-header-sections:not([open])>.agenda-header-sections-list{display:none}
+
+
+/* Billing uses the identical blue-header sandwich layout as the Agenda. */
+@media screen and (max-width:900px){
+ .rn-hub .hub-header .billing-header-sections{display:block;position:relative;margin-left:auto;flex:0 0 auto}
+ .rn-hub .billing-header-sections .billing-header-link{
+   box-sizing:border-box;display:flex;align-items:center;gap:11px;
+   width:100%;min-height:47px;padding:10px 12px;border:0;border-radius:10px;
+   background:transparent;color:#315368;text-decoration:none;text-align:left;
+   font:650 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;
+   overflow-wrap:anywhere;
+ }
+ .rn-hub .billing-header-sections .billing-header-link:hover{background:#f0f7f7}
+ .rn-hub .billing-header-sections .billing-header-link[aria-current=page]{background:#e7f7f4;color:#087871;font-weight:780}
+ .rn-hub .billing-header-sections .billing-header-link svg{flex:0 0 19px}
+ .rn-hub .billing-header-sections .billing-header-link span{flex:1;min-width:0}
+ .rn-hub .billing-header-sections .billing-header-link:focus-visible{outline:3px solid #72e0d8;outline-offset:2px}
+ .rn-hub .billing-header-loading{font-size:12px;padding:9px;color:#657b86}
+}
