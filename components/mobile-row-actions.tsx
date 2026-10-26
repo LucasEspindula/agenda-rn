@@ -1,7 +1,7 @@
 "use client";
 
 import {useState,type ReactNode} from "react";
-import {Ellipsis} from "lucide-react";
+import {ListFilter} from "lucide-react";
 import AppDialog from "@/components/app-dialog";
 
 export default function MobileRowActions({label,children}:{label:string;children:ReactNode}){
@@ -10,7 +10,7 @@ export default function MobileRowActions({label,children}:{label:string;children
   <div className="billing-desktop-row-actions">{children}</div>
   <div className="billing-mobile-row-actions">
    <button type="button" className="billing-mobile-actions-trigger" aria-label={"Abrir "+label}
-    onClick={()=>setOpen(true)}><Ellipsis size={20} aria-hidden="true"/> Ações</button>
+    onClick={()=>setOpen(true)}><ListFilter size={18} aria-hidden="true"/> Ações</button>
    {open&&<AppDialog label={label} onClose={()=>setOpen(false)} compact className="billing-mobile-actions-dialog">
     <h2>{label}</h2>
     <p>Selecione a operação desejada.</p>
