@@ -27,7 +27,7 @@
   .mobile-app-tabs .mobile-app-tab span{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .mobile-app-tabs .mobile-app-tab[aria-current=page]{background:#e8f7f4;color:#117972;font-weight:750}
   .mobile-app-tabs .mobile-app-tab:focus-visible,.mobile-app-menu button:focus-visible,.mobile-app-menu a:focus-visible{outline:3px solid #1b9990;outline-offset:2px}
-  body:has(.modal:not(.hidden)) .mobile-app-tabs,body:has(.billing-modal-backdrop) .mobile-app-tabs,body:has(dialog[open]) .mobile-app-tabs{visibility:hidden}
+  body:has(.modal:not(.hidden)) .mobile-app-tabs,body:has(.billing-modal-backdrop:not(.hidden):not([hidden])) .mobile-app-tabs,body:has(dialog[open]) .mobile-app-tabs{visibility:hidden}
   .mobile-app-menu{position:fixed;inset:auto 0 0;box-sizing:border-box;width:100%;max-width:none;max-height:min(88dvh,800px);margin:0;padding:0;border:0;border-radius:22px 22px 0 0;background:#fff;color:#213b49;box-shadow:0 -16px 50px #071c2f50}
   .mobile-app-menu[open]{display:block}
   .mobile-app-menu::backdrop{background:#071b2ac0}
