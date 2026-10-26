@@ -63,7 +63,7 @@ export default function MobileNavigation({ links, active, name, role }: {
           <button className="mobile-app-menu-close" type="button" onClick={closeMenu} aria-label="Fechar menu"><X size={22}/></button>
         </header>
         <div className="mobile-app-account">
-          <span className="mobile-app-account-avatar" aria-hidden="true">{name.replace(/^Dr\\.?\\s*/i, "").slice(0, 1).toUpperCase() || "U"}</span>
+          <span className="mobile-app-account-avatar" aria-hidden="true">{name.replace(/^Dr[.]? */i, "").slice(0, 1).toUpperCase() || "U"}</span>
           <div><strong>{name}</strong><small>{role === "general_manager" ? "Gerente geral" : role === "doctor" ? "Médico" : role === "secretary" ? "Secretaria" : "Usuário"}</small></div>
         </div>
         <nav className="mobile-app-menu-links" aria-label="Todas as áreas autorizadas">
