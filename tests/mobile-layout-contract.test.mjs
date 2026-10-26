@@ -64,3 +64,11 @@ test("floating bell matches the blue header and red blocked-day marker sits abov
  assert.match(css,/\.rn-agenda \.mobile-date \.mobile-date-dots\{[\s\S]*?inset:auto 0 1px/);
  assert.doesNotMatch(css,/\.rn-agenda \.mobile-block \.mobile-block-range\{/);
 });
+
+test("mobile agenda items have no separator lines and keep gray blocked-card fill",()=>{
+ const css=file("public/legacy.css");
+ assert.match(css,/\.rn-agenda \.mobile-day-list\{[\s\S]*?flex-direction:column;[\s\S]*?gap:8px;/);
+ assert.match(css,/\.rn-agenda \.mobile-day-list>\.mobile-appointment\{[\s\S]*?border:0;[\s\S]*?border-bottom:0;/);
+ assert.match(css,/\.rn-agenda \.mobile-day-list>\.mobile-appointment\.mobile-block\{[\s\S]*?border:0;[\s\S]*?border-bottom:0;/);
+ assert.match(css,/\.rn-agenda \.mobile-day-list \.mobile-appointment\.mobile-block\{[\s\S]*?background:#edf1f4;/);
+});
