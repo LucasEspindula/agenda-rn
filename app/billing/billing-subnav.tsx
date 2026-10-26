@@ -11,6 +11,12 @@ export type BillingNavigationView =
   | "logs"
   | "perseu";
 
+const activeLabels: Record<BillingNavigationView, string> = {
+  records: "Atendimentos", invoices: "Notas Fiscais", insurance: "Convênios",
+  denials: "Glosas", closing: "Fechamento mensal", expenses: "Despesas",
+  entities: "Entidades recebedoras", logs: "Logs Faturamento", perseu: "Perseu",
+};
+
 const items: [Exclude<BillingNavigationView, "perseu">, string, string][] = [
   ["records", "Atendimentos", "/billing"],
   ["invoices", "Notas Fiscais", "/billing?view=invoices"],
@@ -35,6 +41,20 @@ export default function BillingSubnav({
 }) {
   return (
     <div className="billing-subnav no-print">
+      <details className="billing-mobile-menu">
+        <summary aria-label={"Selecionar área do faturamento, atual: " + activeLabels[active]}>
+          <span><small>FATURAMENTO</small><strong>{activeLabels[active]}</strong></span>
+          <span className="billing-mobile-menu-chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <nav className="billing-mobile-menu-links" aria-label="Áreas financeiras">
+          {items.map(([id,label,href])=><a key={id} href={href} aria-current={active===id?"page":undefined}>{label}</a>)}
+          {denialsEnabled&&<a href="/billing/glosas" aria-current={active==="denials"?"page":undefined}>Glosas</a>}
+          <a href="/billing?view=entities" aria-current={active==="entities"?"page":undefined}>Entidades recebedoras</a>
+          {closingEnabled&&<a href="/billing/fechamento" aria-current={active==="closing"?"page":undefined}>Fechamento mensal</a>}
+          <a href="/billing?view=logs" aria-current={active==="logs"?"page":undefined}>Logs Faturamento</a>
+          {perseusEnabled&&<a href="/perseu" aria-current={active==="perseu"?"page":undefined}>Perseu</a>}
+        </nav>
+      </details>
       <nav className="billing-subnav-nav" aria-label="Visões de faturamento">
         <div className="billing-subnav-financial">
           {items.map(([id, label, href]) => (
