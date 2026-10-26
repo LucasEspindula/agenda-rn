@@ -141,3 +141,6 @@
   }
   .agenda-header-current{color:#168e85;font-size:10px}
 }
+
+/* Closed native details never display their popover, even with author-level display rules. */
+.agenda-header-sections:not([open])>.agenda-header-sections-list{display:none}
