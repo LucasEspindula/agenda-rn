@@ -55,12 +55,13 @@ test("mobile notifications float above bottom tabs, retain permissions and close
   assert.match(runtime, /\$\("notificationBell"\)\.onclick=e=>\{e\.stopPropagation\(\);toggleNotificationPanel\(\)\}/);
 });
 
-test("floating bell matches the blue header and red blocked-day marker sits above the day number",()=>{
+test("floating bell matches the header and both date markers align below the day number",()=>{
  const css=file("public/legacy.css");
  const header=file("app/hub/hub.css");
  assert.match(header,/background:linear-gradient\(180deg,#123d57,#102f44\)/);
  assert.match(css,/\.rn-agenda #notificationBell\{[\s\S]*?background:linear-gradient\(180deg,#123d57,#102f44\)/);
- assert.match(css,/\.rn-agenda \.mobile-date>\.mobile-date-block-dot\{[\s\S]*?position:absolute;[\s\S]*?top:-2px;[\s\S]*?bottom:auto;/);
+ assert.match(css,/\.rn-agenda \.mobile-date \.mobile-date-block-dot\{background:#dc404d\}/);
+ assert.doesNotMatch(css,/\.rn-agenda \.mobile-date>\.mobile-date-block-dot\{/);
  assert.match(css,/\.rn-agenda \.mobile-date \.mobile-date-dots\{[\s\S]*?inset:auto 0 1px/);
  assert.doesNotMatch(css,/\.rn-agenda \.mobile-block \.mobile-block-range\{/);
 });
@@ -71,4 +72,13 @@ test("mobile agenda items have no separator lines and keep gray blocked-card fil
  assert.match(css,/\.rn-agenda \.mobile-day-list>\.mobile-appointment\{[\s\S]*?border:0;[\s\S]*?border-bottom:0;/);
  assert.match(css,/\.rn-agenda \.mobile-day-list>\.mobile-appointment\.mobile-block\{[\s\S]*?border:0;[\s\S]*?border-bottom:0;/);
  assert.match(css,/\.rn-agenda \.mobile-day-list \.mobile-appointment\.mobile-block\{[\s\S]*?background:#edf1f4;/);
+});
+
+test("mobile Agenda top spacing is compact without altering the calendar's composition",()=>{
+ const css=file("public/legacy.css");
+ const app=file("public/legacy-app.js");
+ assert.match(css,/\.rn-agenda \.agenda-shell \.main:has\(#agendaView\.active\)\{padding-top:6px\}/);
+ assert.match(css,/\.rn-agenda #agendaView>\.toolbar\{gap:6px\}/);
+ assert.match(app,/class="mobile-month-grid"/);
+ assert.match(app,/class="mobile-day-list"/);
 });
