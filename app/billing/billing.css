@@ -256,3 +256,62 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 .billing-log-approval{margin:11px 0 9px;padding:10px 13px;border:1px solid #dfe8ed;
  border-radius:8px;background:#f5f8fa;color:#456174;font-size:12px;line-height:1.55}
 .billing-log-approval strong{color:#184357;font-weight:700}
+
+
+/* RN Integra mobile: one deliberate navigation level, full-width controls, usable finance data. */
+.billing-mobile-menu{display:none}
+@media(max-width:900px){
+  .rn-hub .billing-subnav:has(.billing-mobile-menu){position:sticky;top:60px;z-index:35;display:block;min-height:0;padding:9px 12px;border-bottom:1px solid #dce8ec;background:#f7fafb;overflow:visible}
+  .rn-hub .billing-subnav:has(.billing-mobile-menu)>.billing-subnav-nav{display:none!important}
+  .billing-mobile-menu{display:block;position:relative;width:100%}
+  .billing-mobile-menu>summary{box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:54px;padding:9px 14px;border:1px solid #d6e4e8;border-radius:12px;background:#fff;color:#244b5c;cursor:pointer;list-style:none;box-shadow:0 2px 7px #12374f0b}
+  .billing-mobile-menu>summary::-webkit-details-marker{display:none}
+  .billing-mobile-menu>summary span:first-child{display:grid;gap:3px;min-width:0}
+  .billing-mobile-menu>summary small{color:#6c828b;font-size:10px;font-weight:800;letter-spacing:.09em}
+  .billing-mobile-menu>summary strong{overflow:hidden;font-size:15px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
+  .billing-mobile-menu-chevron{flex:0 0 auto;color:#2c7978;font-size:25px;line-height:1;transition:transform .15s}
+  .billing-mobile-menu[open] .billing-mobile-menu-chevron{transform:rotate(180deg)}
+  .billing-mobile-menu-links{position:absolute;inset:calc(100% + 5px) 0 auto;z-index:40;display:grid;max-height:min(58dvh,480px);overflow-y:auto;overscroll-behavior:contain;padding:8px;border:1px solid #d7e6ea;border-radius:14px;background:#fff;box-shadow:0 14px 35px #12374f36}
+  .billing-mobile-menu-links a{display:flex;align-items:center;min-height:47px;padding:10px 13px;border-radius:9px;color:#305265;font-size:14px;font-weight:650;text-decoration:none}
+  .billing-mobile-menu-links a[aria-current=page]{background:#e6f6f3;color:#087972}
+  .billing-mobile-menu:focus-visible,.billing-mobile-menu-links a:focus-visible{outline:3px solid #168d87;outline-offset:2px}
+
+  .rn-hub .billing-main{box-sizing:border-box;width:100%;max-width:100%;min-width:0;overflow-x:clip;padding:16px 14px 26px}
+  .billing-heading,.billing-section-head{gap:10px;align-items:flex-start;flex-wrap:wrap}
+  .billing-heading>div,.billing-heading>section,.billing-section-head>div{min-width:0}
+  .billing-heading h1,.billing-main .billing-title{font-size:22px;line-height:1.25;overflow-wrap:anywhere}
+  .billing-heading p,.billing-section-head p{line-height:1.5}
+  .billing-tabs{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+  .billing-tabs button{min-height:44px;white-space:nowrap}
+  .billing-filter-bar{display:block;padding:12px;border-radius:13px}
+  .billing-filter-bar .billing-filters{box-sizing:border-box;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0}
+  .billing-filter-bar .billing-filters label{min-width:0;max-width:none;flex:none;overflow-wrap:anywhere}
+  .billing-filter-bar .billing-filter-action{display:flex;align-items:center;justify-content:flex-end;gap:10px;width:100%;margin:12px 0 0;padding:0}
+  .billing-main :is(input,select,textarea){box-sizing:border-box;max-width:100%;min-width:0}
+  .billing-main :is(button,a){-webkit-tap-highlight-color:transparent}
+  .billing-main button:not(.billing-icon-action){touch-action:manipulation}
+  .billing-main .billing-row-actions{display:flex;flex-wrap:wrap;min-width:0;gap:8px}
+  .billing-main .billing-row-actions button{min-height:42px}
+  .billing-panel,.billing-table-wrap,.billing-report-block,.billing-report-document,.denial-table-wrap,.portal-table-wrap,.monthly-scroll,.pending-table-scroll{max-width:100%;min-width:0;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+  .billing-panel,.billing-table-wrap,.denial-table-wrap,.portal-table-wrap,.monthly-scroll,.pending-table-scroll{overflow-x:auto}
+  .billing-panel table,.billing-table-wrap table,.denial-table-wrap table,.portal-table-wrap table,.monthly-scroll table,.pending-table-scroll table{border-collapse:separate;border-spacing:0}
+  .billing-table th,.billing-table td{vertical-align:middle}
+  .billing-table :is(button,a){min-height:38px}
+  .billing-main .billing-modal-actions{display:flex;flex-wrap:wrap;gap:9px}
+  .billing-main .billing-modal-actions>button{min-height:44px;flex:1 1 135px}
+
+  /* Standalone finance dialogs behave like native mobile bottom sheets. */
+  .billing-modal-backdrop{z-index:90;place-items:end center;padding:0}
+  .billing-modal{box-sizing:border-box;width:100%;max-width:none;max-height:calc(94dvh - env(safe-area-inset-top,0px));overflow:auto;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+  .billing-modal .billing-form-grid{grid-template-columns:1fr}
+  .billing-modal :is(input,select,textarea){width:100%;min-width:0;max-width:100%}
+}
+@media(max-width:560px){
+  .billing-filter-bar .billing-filters{grid-template-columns:1fr}
+  .billing-main .report-summary,.billing-main .billing-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .billing-main .billing-modal-actions>button{flex-basis:100%}
+  .billing-main .billing-title{font-size:20px}
+}
+@media(max-width:360px){
+  .billing-main .report-summary,.billing-main .billing-summary{grid-template-columns:1fr}
+}

@@ -1,0 +1,40 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const file = (path) => readFileSync(new URL("../" + path, import.meta.url), "utf8");
+
+test("mobile navigation reuses authorized module links and native menu controls", () => {
+  const header = file("components/site-header.tsx");
+  const mobile = file("components/mobile-navigation.tsx");
+  assert.match(header, /MobileNavigation links=\{moduleLinks\(session\)\}/);
+  assert.match(mobile, /links\.slice\(0, 3\)/);
+  assert.match(mobile, /<dialog /);
+  assert.match(mobile, /\.showModal\(\)/);
+  assert.match(mobile, /aria-haspopup="dialog"/);
+  assert.match(mobile, /role === "general_manager"/);
+});
+
+test("finance remains available on mobile with role-gated links and a compact section picker", () => {
+  const css = file("app/billing/billing.css");
+  const nav = file("app/billing/billing-subnav.tsx");
+  const shell = file("app/hub/hub.css");
+  assert.match(css, /\.billing-mobile-menu>summary/);
+  assert.match(css, /\.billing-panel[^}]*overflow-x:auto|\.billing-panel[^}]*overflow-x:clip|\.billing-panel[^}]*max-width:100%/);
+  assert.match(nav, /denialsEnabled&&<a href="\/billing\/glosas"/);
+  assert.match(nav, /closingEnabled&&<a href="\/billing\/fechamento"/);
+  assert.match(shell, /\.mobile-app-tabs/);
+  assert.match(shell, /safe-area-inset-bottom/);
+  assert.doesNotMatch(shell, /\.mobile-app-tabs\{display:none!important/);
+});
+
+test("patient edit action is visible on phones while mobile agenda remains the large calendar plus procedures", () => {
+  const css = file("public/legacy.css");
+  const runtime = file("public/legacy-app.js");
+  assert.match(css, /#patientsTableWrap \.table td:last-child:has\(\[data-patient\]\)/);
+  assert.match(css, /\.rn-agenda \.agenda-nav\{display:grid/);
+  assert.match(runtime, /function renderMobileCalendar\(\)/);
+  assert.match(runtime, /class="mobile-month-grid"/);
+  assert.match(runtime, /class="mobile-day-list"/);
+  assert.match(runtime, /appointmentCardContent\(a,owner\)/);
+});
