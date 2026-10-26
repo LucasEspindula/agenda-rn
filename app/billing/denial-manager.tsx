@@ -57,7 +57,7 @@ export default function DenialManager(){
    <div><h1>Glosas e recursos</h1>
     <p>Controle de glosas por cobrança profissional, com recursos, decisões e recuperações.
       O saldo não altera automaticamente o pagamento da NF.</p></div>
-   <button type="button" className="billing-primary" disabled={loading||!data.charges.length}
+   <button type="button" className="billing-primary billing-mobile-fab" aria-label="Registrar glosa" disabled={loading||!data.charges.length}
     onClick={()=>open("OPEN_CASE")}>+ Registrar glosa</button>
   </header>
   {error&&<p role="alert" className="billing-error">{error} <button type="button" onClick={()=>void refresh()}>Tentar novamente</button></p>}
