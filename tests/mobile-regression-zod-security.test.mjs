@@ -56,3 +56,8 @@ test('new mobile appointments inherit selected calendar date without changing de
   assert.match(runtime, /\$\("newAppointmentBtn"\)\.onclick=\(\)=>openAppointment\(null,window\.matchMedia\("\(max-width:900px\)"\)\.matches\?\{date:mobileSelectedDate\}:\{\}\)/);
   assert.match(runtime, /mobileSelectedDate=b\.dataset\.mobileDate;currentDate=parseDate\(mobileSelectedDate\);mobileMonth=new Date\(currentDate\.getFullYear\(\),currentDate\.getMonth\(\),1\);renderCalendar\(\)/);
 });
+
+test('agenda notifications remain accessible above the mobile bottom bar', () => {
+  const styles = source('public/legacy.css');
+  assert.match(styles, /\.rn-agenda \.notification-panel\{[\s\S]*?bottom:calc\(80px \+ env\(safe-area-inset-bottom,0px\)\);[\s\S]*?overflow-y:auto;/);
+});
