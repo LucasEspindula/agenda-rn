@@ -54,3 +54,13 @@ test("mobile notifications float above bottom tabs, retain permissions and close
   assert.match(runtime, /\$\("agendaNotifications"\)\.classList\.toggle\("hidden",!onAgenda/);
   assert.match(runtime, /\$\("notificationBell"\)\.onclick=e=>\{e\.stopPropagation\(\);toggleNotificationPanel\(\)\}/);
 });
+
+test("floating bell matches the blue header and red blocked-day marker sits above the day number",()=>{
+ const css=file("public/legacy.css");
+ const header=file("app/hub/hub.css");
+ assert.match(header,/background:linear-gradient\(180deg,#123d57,#102f44\)/);
+ assert.match(css,/\.rn-agenda #notificationBell\{[\s\S]*?background:linear-gradient\(180deg,#123d57,#102f44\)/);
+ assert.match(css,/\.rn-agenda \.mobile-date>\.mobile-date-block-dot\{[\s\S]*?position:absolute;[\s\S]*?top:-2px;[\s\S]*?bottom:auto;/);
+ assert.match(css,/\.rn-agenda \.mobile-date \.mobile-date-dots\{[\s\S]*?inset:auto 0 1px/);
+ assert.doesNotMatch(css,/\.rn-agenda \.mobile-block \.mobile-block-range\{/);
+});
