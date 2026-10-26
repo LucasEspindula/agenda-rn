@@ -1330,7 +1330,7 @@ export default function BillingClient({
       )}
       <main
         className={
-          "billing-main" + (tab === "insurance" ? " insurance-main" : "")
+          "billing-main" + (tab === "insurance" ? " insurance-main" : "") + (tab === "logs" ? " billing-mobile-no-cards" : "")
         }
       >
         {appointmentId && (
