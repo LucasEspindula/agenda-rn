@@ -417,8 +417,8 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
 .billing-mobile-row-actions{display:none}
 @media screen and (max-width:900px){
  .rn-hub .billing-subnav{display:none!important}
- .rn-hub .billing-main{padding:12px;max-width:100%;min-width:0;overflow-x:clip}
- .rn-hub .billing-panel{max-width:100%;min-width:0;overflow:visible}
+ .rn-hub .billing-main:not(.billing-mobile-no-cards){padding:12px;max-width:100%;min-width:0;overflow-x:clip}
+ .rn-hub .billing-main:not(.billing-mobile-no-cards) .billing-panel{max-width:100%;min-width:0;overflow:visible}
  .rn-hub :is(.billing-panel,.pending-table-scroll,.denial-table-wrap,.portal-table-wrap,.monthly-scroll):has(>table.billing-mobile-card-table){
    max-width:100%;min-width:0;overflow:visible!important;
  }
@@ -560,8 +560,8 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
    overflow-wrap:anywhere;
  }
  .rn-hub .billing-tabs button svg{flex:0 0 17px;width:17px;height:17px}
- .rn-hub .billing-heading{max-width:100%;min-width:0}
- .rn-hub .billing-filter-bar{max-width:100%;min-width:0}
+ .rn-hub .billing-main:not(.billing-mobile-no-cards) .billing-heading{max-width:100%;min-width:0}
+ .rn-hub .billing-main:not(.billing-mobile-no-cards) .billing-filter-bar{max-width:100%;min-width:0}
  .rn-hub .monthly-heading{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
  .rn-hub .monthly-header-actions{
    display:flex;justify-content:flex-end;align-items:center;
