@@ -54,3 +54,90 @@
   .mobile-app-tabs{padding-inline:4px;gap:1px}
   .mobile-app-tabs .mobile-app-tab{font-size:10px;padding-inline:2px}
 }
+
+
+/* Agenda section navigation: mobile-only hamburger at the right side of the blue header. */
+.agenda-header-sections{display:none}
+@media screen and (max-width:900px){
+  .rn-hub .hub-header .agenda-header-sections{
+    display:block;
+    position:relative;
+    margin-left:auto;
+    flex:0 0 auto;
+  }
+  .agenda-header-sections>summary{
+    box-sizing:border-box;
+    display:grid;
+    place-items:center;
+    width:46px;
+    height:46px;
+    border:1px solid #ffffff38;
+    border-radius:12px;
+    background:#ffffff17;
+    color:#fff;
+    cursor:pointer;
+    list-style:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .agenda-header-sections>summary::-webkit-details-marker{display:none}
+  .agenda-header-sections[open]>summary{background:#ffffff2b;border-color:#87d8d0}
+  .agenda-header-sections>summary:focus-visible,
+  .agenda-header-sections-list button:focus-visible{
+    outline:3px solid #72e0d8;
+    outline-offset:2px;
+  }
+  .agenda-header-sections-list{
+    box-sizing:border-box;
+    position:absolute;
+    top:calc(100% + 9px);
+    right:0;
+    z-index:75;
+    display:grid;
+    gap:4px;
+    width:min(325px,calc(100vw - 24px));
+    max-height:min(68dvh,460px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    padding:11px;
+    border:1px solid #dbe7ea;
+    border-radius:15px;
+    background:#fff;
+    color:#244657;
+    box-shadow:0 16px 44px #102b3d44;
+  }
+  .agenda-header-menu-caption{
+    padding:5px 9px 7px;
+    color:#778b96;
+    font-size:10px;
+    font-weight:850;
+    letter-spacing:.08em;
+  }
+  .agenda-header-sections-list button{
+    box-sizing:border-box;
+    display:flex;
+    align-items:center;
+    gap:11px;
+    width:100%;
+    min-height:47px;
+    padding:10px 12px;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    color:#315368;
+    text-align:left;
+    font:650 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;
+    cursor:pointer;
+  }
+  .agenda-header-sections-list button:hover{background:#f0f7f7}
+  .agenda-header-sections-list button[aria-current=page]{
+    background:#e7f7f4;
+    color:#087871;
+    font-weight:780;
+  }
+  .agenda-header-sections-list button span:nth-child(2){
+    flex:1;
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+  .agenda-header-current{color:#168e85;font-size:10px}
+}
