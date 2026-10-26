@@ -125,6 +125,7 @@ export default function BillingClient({
     InvoiceRequest | Invoice | true | null
   >(null);
   const [printMenu, setPrintMenu] = useState(false);
+  const [mobileInvoiceAddInfo, setMobileInvoiceAddInfo] = useState(false);
   const [manual, setManual] = useState<BillingRow | true | null>(null);
   const [professionalSource, setProfessionalSource] = useState<BillingRow | null>(null);
   const [professionalEdit, setProfessionalEdit] = useState(false);
@@ -1286,7 +1287,7 @@ export default function BillingClient({
           )}
           {!insurancePendingActive && (
             <button
-              className="billing-icon-action billing-add"
+              className={"billing-icon-action billing-add"+(tab === "invoices" ? " billing-existing-invoice-add" : "")}
               aria-label={
                 tab === "invoices" ? "Nova NF / lote" : "Novo atendimento"
               }
@@ -1338,6 +1339,19 @@ export default function BillingClient({
             <h1 className="billing-title">Financeiro do atendimento</h1>
           </div>
         )}
+        {!appointmentId && tab === "invoices" && <>
+          <button type="button" className="billing-mobile-fab billing-invoice-future-add"
+            aria-label="Nova operação de Nota Fiscal" title="Nova operação de Nota Fiscal"
+            onClick={() => setMobileInvoiceAddInfo(true)}>+</button>
+          {mobileInvoiceAddInfo && <AppDialog label="Nova operação de Nota Fiscal" compact
+            onClose={() => setMobileInvoiceAddInfo(false)}>
+            <h2>Nova operação de Nota Fiscal</h2>
+            <p>Este botão está reservado para o novo fluxo de notas fiscais. Nenhuma nota foi criada ou alterada.</p>
+            <div className="billing-modal-actions">
+              <button type="button" className="billing-secondary" onClick={() => setMobileInvoiceAddInfo(false)}>Entendi</button>
+            </div>
+          </AppDialog>}
+        </>}
         {tab === "invoices" && (
           <nav className="billing-tabs" aria-label="Notas Fiscais">
             <button
@@ -1362,9 +1376,9 @@ export default function BillingClient({
         {tab === "insurance" && portalSubmissionsEnabled && (
           <nav className="billing-tabs" aria-label="Convênios">
             <button type="button" aria-current={insuranceView === "payments" ? "page" : undefined}
-              onClick={() => setInsuranceView("payments")}><NavIcon kind="requests" /> Pendências de pagamento</button>
+              onClick={() => setInsuranceView("payments")}><NavIcon kind="requests" /> Pendências</button>
             <button type="button" aria-current={insuranceView === "portal" ? "page" : undefined}
-              onClick={() => setInsuranceView("portal")}><NavIcon kind="insurance" /> Guias e faturamento no portal</button>
+              onClick={() => setInsuranceView("portal")}><NavIcon kind="insurance" /> Registro de Guias</button>
           </nav>
         )}
         {tab !== "insurance" && filterBar}
@@ -1602,7 +1616,8 @@ export default function BillingClient({
                     emitir notas fiscais.
                   </p>
                   <button
-                    className="billing-primary"
+                    className="billing-primary billing-mobile-fab"
+                    aria-label="Cadastrar entidade recebedora"
                     onClick={() =>
                       open("entity", {
                         person_type: "PJ",
