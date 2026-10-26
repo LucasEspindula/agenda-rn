@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronRight, ClipboardList, LogOut, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X, House } from "lucide-react";
+import { CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X, House } from "lucide-react";
 import HubLogout from "@/app/hub/hub-logout";
 import type { ModuleName } from "@/lib/navigation";
 
