@@ -92,7 +92,7 @@ test("all floating billing create buttons use real Plus vector icons instead of 
   assert.match(source,/className="billing-fab-label"/,path);
  }
  const count=paths.reduce((total,path)=>total+(read(path).match(/<Plus size=\{27\}\/>/g)||[]).length,0);
- assert.equal(count,4,"plus icons for expenses, denials, entities and fiscal additions");
+ assert.equal(count,5,"plus icons for expenses, denials, entities, attendance and fiscal additions");
  assert.match(css,/\.rn-hub button\.billing-mobile-fab \.billing-fab-icon\{[\s\S]*?display:grid!important;/);
  assert.match(css,/\.rn-hub button\.billing-mobile-fab \.billing-fab-label\{display:none!important\}/);
  assert.doesNotMatch(css,/button\.billing-mobile-fab:not\(\.billing-invoice-future-add\)::before/);
@@ -112,4 +112,36 @@ test("mobile invoice placeholder reuses the native bottom-anchored action sheet"
  assert.match(client,/Nenhuma nota foi criada ou alterada/);
  assert.match(css,/dialog\.billing-modal\.billing-mobile-actions-dialog\{[\s\S]*?position:fixed;[\s\S]*?inset:auto 0 0;/);
  assert.match(client,/onClick=\{\(\)\s*=>\s*setMobileInvoiceAddInfo\(true\)\}/);
+});
+
+
+test("Atendimentos uses the shared bottom-right Plus only on the mobile records tab",()=>{
+ const source=read("app/billing/billing-client.tsx");
+ const css=read("app/billing/billing.css");
+ assert.match(source,/className=\{"billing-icon-action billing-add"\+\(tab === "invoices" \? " billing-existing-invoice-add" : ""\)\+\(tab === "records" \? " billing-mobile-fab" : ""\)\}/);
+ assert.match(source,/title=\{tab === "invoices" \? "Nova NF \/ lote" : "Novo atendimento"\}/);
+ assert.match(source,/tab === "invoices" \? editInvoice\(\) : setManual\(true\)/);
+ assert.match(source,/<span className="billing-fab-icon" aria-hidden="true"><Plus size=\{27\}\/><\/span>/);
+ assert.match(source,/<span className="billing-fab-label">\+<\/span>/);
+ assert.match(css,/\.rn-hub \.billing-main button\.billing-mobile-fab,[\s\S]*?position:fixed;[\s\S]*?right:16px;[\s\S]*?bottom:calc\(86px \+ env\(safe-area-inset-bottom,0px\)\)/);
+});
+
+test("Cadastros doctor and hospital create buttons float on mobile without changing their handlers",()=>{
+ const doctors=read("app/doctors/doctor-directory.tsx");
+ const hospitals=read("app/doctors/hospital-directory.tsx");
+ const css=read("app/billing/billing.css");
+ assert.match(doctors,/className="billing-primary billing-mobile-fab" aria-label="Cadastrar médico"/);
+ assert.match(doctors,/onClick=\{\(\)=>open\('doctor',\{name:''/);
+ assert.match(doctors,/className="billing-fab-label">Cadastrar médico<\/span>/);
+ assert.match(hospitals,/className="billing-primary billing-mobile-fab" aria-label="Cadastrar hospital"/);
+ assert.match(hospitals,/disabled=\{loading\|\|busy\} onClick=\{\(\)=>open\(\)\}/);
+ assert.match(hospitals,/className="billing-fab-label">\+ Cadastrar hospital<\/span>/);
+ for(const source of [doctors,hospitals]){
+  assert.match(source,/import \{[^}]*Plus[^}]*\} from ['"]lucide-react['"]/);
+  assert.match(source,/<Plus size=\{27\}\/>/);
+  assert.match(source,/<main className="billing-main">/);
+ }
+ assert.match(css,/main\.billing-main:has\(button\.billing-mobile-fab\)\{\s*padding-bottom:calc\(178px \+ env\(safe-area-inset-bottom,0px\)\)!important;/);
+ assert.match(css,/\.rn-hub button\.billing-mobile-fab \.billing-fab-label\{display:none!important\}/);
+ assert.match(css,/\.rn-hub \.billing-fab-icon\{display:none\}/);
 });
