@@ -1,4 +1,5 @@
 import {canUseAgenda} from "@/lib/doctor-services";
+import {changedAppointmentIssues,type AvailabilityState} from "@/lib/agenda-availability";
 import { canReadAppointment, withoutLegacyFinance, validateAppointment, validId } from "@/lib/security/state";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { readJson, secureMutation } from "@/lib/security/http";
@@ -156,6 +157,10 @@ async function handlePATCH(request: Request) {
     else if (row.action === "update") state.appointments = current.map((a) => a.id === row.appointment_id ? proposed! : a);
     else state.appointments = [...current, proposed!];
   }
+  if(body.decision==="accepted"){
+    const unavailable=changedAppointmentIssues(stateRow.payload as AvailabilityState,state as AvailabilityState);
+    if(unavailable.length)return Response.json({error:"Horário indisponível: "+unavailable[0].problem},{status:409});
+  }
   const actor = session.account.name || session.account.email;
   const patient = personName(state, "patients", (proposed || previous)?.patientId) || "paciente";
   const accepted = body.decision === "accepted";
@@ -166,6 +171,7 @@ async function handlePATCH(request: Request) {
     p_notification: { id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` },
     p_audit: [{ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: (proposed || previous)?.patientId || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null } }],
   });
+  if(result.error?.code==='P0001'&&result.error.message?.includes('Horário indisponível'))return Response.json({error:result.error.message},{status:409});
   if(result.error?.code==='P0001'&&result.error.message?.includes('Nota Fiscal emitida'))return Response.json({error:result.error.message},{status:409});
   dbError(result.error,"Commit workflow decision");
   if (!result.data) return Response.json({error:"Agenda ou solicitação mudou. Atualize e tente novamente."},{status:409});
