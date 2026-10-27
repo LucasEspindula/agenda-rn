@@ -86,8 +86,8 @@ test("gravação genérica e aprovação de sugestões não contornam autentica�
   const state=readFileSync("app/api/state/route.ts","utf8");
   const workflow=readFileSync("app/api/workflow/route.ts","utf8");
   assert.match(state,/hasUnverifiedAttendedTransition\(/);
-  assert.match(workflow,/body\.action !== "delete" && touchesAttendedStatus\(previous, proposed\)/);
-  assert.match(workflow,/row\.action !== "delete" && touchesAttendedStatus\(previous, proposed\)/);
+  assert.match(workflow,/body\.action !== "delete" && proposed\.status === "realized" && previous\?\.status !== "realized"/);
+  assert.match(workflow,/row\.action !== "delete" && proposed\.status === "realized" && previous\?\.status !== "realized"/);
 });
 
 test("interface do médico reposiciona os botões e exige senha mascarada",()=>{
