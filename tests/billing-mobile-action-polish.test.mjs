@@ -62,15 +62,17 @@ test("mobile floating additions reuse real actions for expenses, denials and rec
  assert.match(billing,/aria-label="Cadastrar entidade recebedora"/);
 });
 
-test("new notes plus is mobile-only and doesn't create notes until workflow is defined",()=>{
+test("notes plus provides mobile Solicitar NF menu without emitting NF directly",()=>{
  const s=read("app/billing/billing-client.tsx");
  const css=read("app/billing/billing.css");
- assert.match(s,/className="billing-mobile-fab billing-invoice-future-add"/);
- assert.match(s,/onClick=\{\(\)\s*=>\s*setMobileInvoiceAddInfo\(true\)\}/);
- assert.match(s,/Nenhuma nota foi criada ou alterada/);
- assert.match(css,/@media screen and \(min-width:901px\)\{\s*\.rn-hub \.billing-invoice-future-add\{display:none!important\}/);
+ assert.match(s,/className="billing-mobile-fab billing-invoice-request-fab"/);
+ assert.match(s,/onClick=\{\(\) => setInvoiceRequestStep\("menu"\)\}/);
+ assert.match(s,/onClick=\{\(\) => setInvoiceRequestStep\("picker"\)\}/);
+ assert.match(s,/chooseInvoiceRequest\(row\)/);
+ assert.match(s,/<FilePlus2 size=\{19\} aria-hidden="true"\/> Solicitar NF/);
+ assert.match(css,/@media screen and \(min-width:901px\)\{\s*\.rn-hub \.billing-invoice-request-fab\{display:none!important\}/);
  assert.match(css,/\.billing-filter-action \.billing-existing-invoice-add\{display:none!important\}/);
- assert.match(s,/editInvoice\(\)/); // existing desktop creation flow remains intact
+ assert.match(s,/editInvoice\(\)/); // Original creation of CONVENIO invoices remains separate.
 });
 
 test("Logs Faturamento and monthly closing operations remain unchanged",()=>{
@@ -105,15 +107,14 @@ test("billing mobile screens with floating add reserve space below the final car
  assert.match(read("app/hub/hub.css"),/padding-bottom:calc\(76px \+ env\(safe-area-inset-bottom,0px\)\)/);
 });
 
-test("mobile invoice placeholder reuses the native bottom-anchored action sheet",()=>{
+test("mobile invoice request menu reuses the native bottom-anchored action sheet",()=>{
  const client=read("app/billing/billing-client.tsx");
  const css=read("app/billing/billing.css");
- assert.match(client,/AppDialog label="Nova operação de Nota Fiscal" compact className="billing-mobile-actions-dialog billing-invoice-info-dialog"/);
- assert.match(client,/Nenhuma nota foi criada ou alterada/);
+ assert.match(client,/AppDialog label=\{invoiceRequestStep==="menu"\?"Ações de Nota Fiscal":"Solicitar NF"\} compact/);
+ assert.match(client,/className="billing-mobile-actions-dialog billing-invoice-request-dialog"/);
  assert.match(css,/dialog\.billing-modal\.billing-mobile-actions-dialog\{[\s\S]*?position:fixed;[\s\S]*?inset:auto 0 0;/);
- assert.match(client,/onClick=\{\(\)\s*=>\s*setMobileInvoiceAddInfo\(true\)\}/);
+ assert.match(client,/onClick=\{\(\) => setInvoiceRequestStep\("menu"\)\}/);
 });
-
 
 test("Atendimentos uses the shared bottom-right Plus only on the mobile records tab",()=>{
  const source=read("app/billing/billing-client.tsx");

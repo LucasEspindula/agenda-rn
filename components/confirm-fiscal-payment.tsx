@@ -10,7 +10,7 @@ import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
 
 export type FiscalRecipient={taker_kind:'PATIENT'|'OTHER';taker_name:string;taker_tax_id:string;taker_address:string;notes:string;payment_parts?:PaymentPart[];no_invoice?:boolean};
 export type FiscalPatient={id:string;name:string;cpf?:string;address?:string};
-type Context={patient:FiscalPatient;amount:number|null;paidAt:string;noInvoice?:boolean};
+type Context={patient:FiscalPatient;amount:number|null;paidAt:string;noInvoice?:boolean;initialParts?:PaymentPart[]};
 
 export function patientRecipient(patient:FiscalPatient):FiscalRecipient{
  return {taker_kind:'PATIENT',taker_name:patient.name,taker_tax_id:patient.cpf||'',
@@ -18,7 +18,7 @@ export function patientRecipient(patient:FiscalPatient):FiscalRecipient{
 }
 
 function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipient|null)=>void}){
- const [parts,setParts]=useState<PaymentPart[]>([]);
+ const [parts,setParts]=useState<PaymentPart[]>(()=>context.initialParts?.map(part=>({...part}))??[]);
  const [noInvoice,setNoInvoice]=useState(!!context.noInvoice);
  const [value,setValue]=useState<FiscalRecipient>(()=>patientRecipient(context.patient));
  const [error,setError]=useState('');
