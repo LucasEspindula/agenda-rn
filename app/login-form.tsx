@@ -27,7 +27,7 @@ export function LoginForm() {
         return;
       }
 
-      window.location.assign("/dashboard");
+      window.location.assign("/");
     } catch {
       setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
     } finally {

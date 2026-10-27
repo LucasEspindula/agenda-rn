@@ -9,8 +9,8 @@ const {visibleState,withoutLegacyFinance}=loadTs('lib/security/state.ts');
 const services=(s,b,i)=>({scheduling_enabled:s,billing_enabled:b,invoice_enabled:i});
 const principal=(flags,id='d1')=>({account:{id:3,role:'doctor',doctorId:id},agendaIds:['d1','d2'],services:flags});
 for(const [name,flags,home,agenda,billing] of [
- ['complete',services(true,true,true),'/dashboard',true,false],
- ['agenda only',services(true,false,false),'/dashboard',true,false],
+ ['complete',services(true,true,true),'/dashboard?agenda=1',true,false],
+ ['agenda only',services(true,false,false),'/dashboard?agenda=1',true,false],
  ['direct finance',services(false,true,false),'/billing',false,true],
  ['invoice only',services(false,false,true),'/billing?view=invoices',false,true],
  ['no service',services(false,false,false),'/no-services',false,false],
