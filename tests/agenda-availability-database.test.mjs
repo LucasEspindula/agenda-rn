@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const migration=readFileSync('supabase/migrations/20261027150000_guard_agenda_appointment_availability.sql','utf8');
+const migration=readFileSync('supabase/migrations/20261027131422_guard_agenda_appointment_availability.sql','utf8');
 const original={professionals:[{id:'d1',agendaSettings:{workStart:'07:00',workEnd:'19:00'}},{id:'a1'}],
  settings:{workStart:'07:00',workEnd:'19:00'},schedulingRules:[],scheduleBlocks:[],
  appointments:[{id:'existing',doctorId:'d1',anesthetistId:'a1',hospitalId:'h1',date:'2026-09-11',time:'12:00',duration:60,procedure:'Atendimento',status:'scheduled'}]};
