@@ -14,8 +14,8 @@ function fixture() {
   const appointment = { id: 'one', doctorId: 'd', anesthetistId: 'a', patientId: 'p', hospitalId: 'h', date: '2026-09-11', time: '09:00', duration: 60, status: 'scheduled', procedure: 'Joelho' };
   const elements = new Map();
   const context = {
-    state: { professionals: [doctor, anesthetist], appointments: [appointment], cancelledAppointments: [], scheduleBlocks: [] },
-    owner: doctor, window: { AgendaAuth: { role: 'doctor' } }, workflowData: { requests: [] },
+    state: { professionals: [doctor, anesthetist], appointments: [appointment], cancelledAppointments: [], scheduleBlocks: [], schedulingRules: [], settings: {workStart:'07:00',workEnd:'19:00'} },
+    owner: doctor, window: { AgendaAuth: { role: 'doctor' }, RNAvailability:loadTs('lib/agenda-availability.ts'), matchMedia:()=>({matches:true}) }, workflowData: { requests: [] },
     selectedProf: () => context.owner, prof: id => ({ d: doctor, a: anesthetist })[id],
     patient: id => id === 'p' ? { name: 'Paciente teste', insurance: 'Convênio teste' } : null,
     hospital: () => ({ name: 'Hospital teste' }), hospitalAcronym: v => v,
@@ -215,4 +215,33 @@ test('appointment 08:00, block 09:00 and appointment 10:00 render in chronologic
  const nine=html.indexOf('data-mobile-block="at-nine-block"');
  const ten=html.indexOf('data-mobile-appointment="at-ten"');
  assert.ok(eight>=0&&nine>eight&&ten>nine, 'a ordem deve ser 08h agendamento, 09h bloqueio, 10h agendamento');
+});
+
+test('mobile displays full-day recurring closure while preserving historical appointments',()=>{
+ const {context:c,appointment:a}=fixture();
+ c.state.schedulingRules=[{id:'r1',professionalId:'d',name:'Recesso',blockAllDay:true,severity:'block',weekday:5,enabled:true}];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ assert.match(html,/Dia totalmente bloqueado/);
+ assert.match(html,/Agenda indisponível nesta data/);
+ assert.match(html,/data-mobile-appointment="one"/);
+ assert.match(html,/com horário bloqueado/);
+ assert.doesNotMatch(html,/Nenhum atendimento ou bloqueio neste dia/);
+});
+test('partial recurring closure is interleaved chronologically with appointments',()=>{
+ const {context:c,appointment:a}=fixture();
+ c.state.appointments=[{...a,id:'before',time:'08:00'},{...a,id:'after',time:'10:00'}];
+ c.state.schedulingRules=[{id:'r2',professionalId:'d',name:'Restrição',weekday:5,severity:'block',start:'09:00',end:'19:00'}];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ const a1=html.indexOf('data-mobile-appointment="before"'),rule=html.indexOf('mobile-rule-block'),a2=html.indexOf('data-mobile-appointment="after"');
+ assert.ok(a1>=0&&rule>a1&&a2>rule);
+ assert.match(html,/HORÁRIO INDISPONÍVEL/);
+ assert.doesNotMatch(html,/Dia totalmente bloqueado/);
+});
+test('recurrent rule for a different professional does not leak into the mobile agenda',()=>{
+ const {context:c}=fixture();
+ c.state.schedulingRules=[{professionalId:'other',name:'Restrição privada',blockAllDay:true,weekday:5,severity:'block'}];
+ c.renderMobileCalendar();
+ assert.doesNotMatch(c.$('mobileCalendar').innerHTML,/Dia totalmente bloqueado|Restrição privada/);
 });
