@@ -61,7 +61,7 @@ test('changing rules never cancels old appointments; reschedules and new booking
 test('HTTP pathways and database trigger enforce availability separately from client',()=>{
  const stateApi=readFileSync('app/api/state/route.ts','utf8'),
    workflow=readFileSync('app/api/workflow/route.ts','utf8'),
-   sql=readFileSync('supabase/migrations/20261027150000_guard_agenda_appointment_availability.sql','utf8'),
+   sql=readFileSync('supabase/migrations/20261027131422_guard_agenda_appointment_availability.sql','utf8'),
    legacy=readFileSync('public/legacy-app.js','utf8');
  assert.match(stateApi,/changedAppointmentIssues\(/);
  assert.match(workflow,/body.decision==="accepted"[\s\S]*?changedAppointmentIssues\(/);
