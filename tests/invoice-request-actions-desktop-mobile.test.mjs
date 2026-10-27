@@ -88,7 +88,7 @@ function confirmationForExistingPayment(){return read('components/confirm-fiscal
 test('NF creation stays on pre-existing billing endpoints and RPC idempotence remains',()=>{
  const api=read('app/api/billing/route.ts');
  const sql=read('supabase/migrations/20261019235000_cash_paid_nonrealized_and_invoice_request_idempotence.sql');
- assert.match(api,/kind==='record'/);
+ assert.match(api,/\['entity','link','record'/);
  assert.match(sql,/r\.status='PENDING' and r\.billing_entity_id=b\.billing_entity_id/);
  const ui=read('app/billing/billing-client.tsx');
  assert.doesNotMatch(ui,/kind:\s*["']new_invoice_request["']/);
