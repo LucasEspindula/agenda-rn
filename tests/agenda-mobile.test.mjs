@@ -231,7 +231,7 @@ test('mobile displays full-day recurring closure while preserving historical app
 test('partial recurring closure is interleaved chronologically with appointments',()=>{
  const {context:c,appointment:a}=fixture();
  c.state.appointments=[{...a,id:'before',time:'08:00'},{...a,id:'after',time:'10:00'}];
- c.state.schedulingRules=[{id:'r2',professionalId:'d',name:'Restrição',weekday:5,severity:'block',start:'09:00',end:'19:00'}];
+ c.state.schedulingRules=[{id:'r2',professionalId:'d',name:'Restrição',weekday:5,severity:'block',start:'07:00',end:'19:00',forbiddenTimes:'09:00'}];
  c.renderMobileCalendar();
  const html=c.$('mobileCalendar').innerHTML;
  const a1=html.indexOf('data-mobile-appointment="before"'),rule=html.indexOf('mobile-rule-block'),a2=html.indexOf('data-mobile-appointment="after"');
