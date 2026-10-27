@@ -64,6 +64,27 @@ export function availabilityIntervals(state:AvailabilityState,professionalId:str
  }
  return out.sort((a,b)=>a.start-b.start||a.end-b.end);
 }
+/**
+ * Mobile-only visual grouping of overlapping rule intervals. The underlying
+ * raw intervals remain unchanged for scheduling and database validation.
+ * Adjacent intervals may form one uninterrupted unavailable period.
+ */
+export function groupedRuleIntervals(intervals:AvailabilityInterval[]):AvailabilityInterval[]{
+ const rules=intervals.filter(interval=>interval.kind==='rule'&&interval.end>interval.start)
+   .sort((a,b)=>a.start-b.start||a.end-b.end);
+ const grouped:AvailabilityInterval[]=[];
+ for(const interval of rules){
+  const previous=grouped[grouped.length-1];
+  if(!previous||interval.start>previous.end){
+   grouped.push({...interval});
+   continue;
+  }
+  previous.end=Math.max(previous.end,interval.end);
+  if(interval.reason&&!previous.reason.split(' · ').includes(interval.reason))
+   previous.reason=previous.reason?previous.reason+' · '+interval.reason:interval.reason;
+ }
+ return grouped;
+}
 export function entirelyUnavailable(state:AvailabilityState,professionalId:string,date:string,includeRules=true){
  const {start,end}=professionalHours(state,professionalId);
  if(end<=start)return false;
