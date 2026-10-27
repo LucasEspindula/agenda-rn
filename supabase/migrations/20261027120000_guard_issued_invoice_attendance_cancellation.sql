@@ -24,9 +24,10 @@ BEGIN
     AND EXISTS (
       SELECT 1
       FROM public.billing_records b
+      JOIN public.attendances a ON a.id=b.attendance_id
       JOIN public.invoice_billing_records item ON item.billing_record_id=b.id
       JOIN public.invoices invoice ON invoice.id=item.invoice_id
-      WHERE b.appointment_id=previous->>'id'
+      WHERE (b.appointment_id=previous->>'id' OR a.appointment_id=previous->>'id')
         AND item.is_active
         AND invoice.status='ACTIVE'
         AND invoice.voided_at IS NULL
