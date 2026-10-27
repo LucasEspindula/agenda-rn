@@ -78,3 +78,21 @@ test('HTTP pathways and database trigger enforce availability separately from cl
  assert.match(legacy,/const unavailable=window\.RNAvailability\.appointmentAvailabilityIssues\(state,updated\);if\(unavailable\.length\)return appNotice\("Horário indisponível"/);
  assert.match(legacy,/availability\.availabilityIntervals\(state,owner.id,date,includeRules\)/);
 });
+
+test('overlapping and adjacent recurring closure bands render once without changing raw validation',()=>{
+ const s=state({schedulingRules:[
+  {id:'morning',professionalId:'d1',severity:'block',weekday:5,name:'Pausa clínica',start:'07:00',end:'13:00'},
+  {id:'afternoon',professionalId:'d1',severity:'block',weekday:5,name:'Reunião',start:'12:00',end:'19:00',forbiddenTimes:'12:30'},
+ ]});
+ const original=availability.availabilityIntervals(s,'d1','2026-09-11');
+ const joined=availability.groupedRuleIntervals(original);
+ assert.ok(original.length>=3);
+ assert.ok(joined.length<original.length);
+ assert.equal(joined[0].start,7*60);
+ assert.equal(joined[0].end,19*60);
+ assert.match(joined[0].reason,/Pausa clínica/);
+ assert.match(joined[0].reason,/Reunião/);
+ assert.equal(availability.entirelyUnavailable(s,'d1','2026-09-11'),true);
+ assert.ok(availability.appointmentAvailabilityIssues(s,{...a,time:'11:30'}).length);
+ assert.equal(original[0].end,13*60,'the renderer does not mutate canonical intervals');
+});
