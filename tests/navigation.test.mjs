@@ -46,12 +46,31 @@ test('Cadastros keeps only Médicos and Hospitais and redirects the former compa
 });
 
 
-test('Hub calls the module Cadastros and billing receives its initial view from the server',()=>{
- const hub=readFileSync('app/hub/page.tsx','utf8');
+test('former Hub URL redirects through the permitted home, including unauthenticated users',async()=>{
+ const {doctorHome}=loadTs('lib/doctor-services.ts');
+ for(const [name,s,target] of [
+  ['manager',session('general_manager'),'/dashboard?agenda=1'],
+  ['secretary',session('secretary'),'/dashboard?agenda=1'],
+  ['doctor agenda',session('doctor',true),'/dashboard?agenda=1'],
+  ['doctor finance only',session('doctor',false,true),'/billing'],
+  ['doctor without services',session('doctor'),'/no-services'],
+  ['not signed in',null,'/']
+ ]){
+  const page=loadTs('app/hub/page.tsx',{
+   '@/app/authz':{getSession:async()=>s},
+   '@/lib/doctor-services':{doctorHome},
+   'next/navigation':{redirect:url=>{throw Error('redirect:'+url)}}
+  });
+  await assert.rejects(()=>page.default(),error=>error.message==='redirect:'+target,name);
+ }
+ const mobile=readFileSync('components/mobile-navigation.tsx','utf8');
+ assert.doesNotMatch(mobile,/href="\/hub"/);
+ assert.doesNotMatch(mobile,/>Início<\/span>/);
+ assert.match(readFileSync('app/login-form.tsx','utf8'),/window\.location\.assign\("\/"\)/);
+});
+test('billing receives its initial view from the server',()=>{
  const billingPage=readFileSync('app/billing/page.tsx','utf8');
  const client=readFileSync('app/billing/billing-client.tsx','utf8');
- assert.match(hub,/Agendamento, Faturamento ou Cadastros no menu superior\./);
- assert.doesNotMatch(hub,/Agendamento, Faturamento ou Médicos no menu superior\./);
  assert.match(billingPage,/<BillingClient initialView=\{params\.view\}/);
  assert.match(client,/function BillingClient\([\s\S]{0,200}?initialView[\s\S]{0,200}?initialView\?: string/);
  assert.match(client,/const initialTab: BillingNavigationView/);

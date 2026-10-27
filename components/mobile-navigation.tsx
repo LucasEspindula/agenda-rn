@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X, House } from "lucide-react";
+import { CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X } from "lucide-react";
 import HubLogout from "@/app/hub/hub-logout";
 import type { ModuleName } from "@/lib/navigation";
 
@@ -68,7 +68,6 @@ export default function MobileNavigation({ links, active, name, role }: {
           <div><strong>{name}</strong><small>{role === "general_manager" ? "Gerente geral" : role === "doctor" ? "Médico" : role === "secretary" ? "Secretaria" : "Usuário"}</small></div>
         </div>
         <nav className="mobile-app-menu-links" aria-label="Todas as áreas autorizadas">
-          {isManager && <a href="/hub"><House size={20} aria-hidden="true"/><span>Início</span><ChevronRight size={17} aria-hidden="true"/></a>}
           {overflowLinks.map(link => {
             const Icon = icons[link.id];
             return <a key={link.id} href={link.href} aria-current={active === link.id ? "page" : undefined}>

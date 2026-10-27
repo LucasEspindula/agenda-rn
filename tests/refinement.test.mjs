@@ -18,7 +18,7 @@ test('specialty canonical list rejects free text and drives anesthesia independe
 test('historical expense payer resolves exact inactive link or legacy name',()=>{assert.equal(expensePayer({...data,links:[{...data.links[0],active:false}]},{paid_by_doctor_entity_link_id:'l'}),'Médico');assert.equal(expensePayer({...data,associates:[{id:'old',name:'Histórico'}]},{paid_by_associate_id:'old'}),'Histórico')});
 for(const billing of [true,false])test('Agenda + NF explicit readonly authorization, billing='+billing,async()=>{
  const session={account:{id:3,role:'doctor',doctorId:'d1'},agendaIds:['d1'],services:{scheduling_enabled:true,billing_enabled:billing,invoice_enabled:true}};
- assert.equal(doctorHome(session),'/dashboard');assert.equal(canOpenBilling(session),false);assert.equal(canOpenInvoices(session),true);
+ assert.equal(doctorHome(session),'/dashboard?agenda=1');assert.equal(canOpenBilling(session),false);assert.equal(canOpenInvoices(session),true);
  const invoice={id:'nf',billing_entity_id:'e',invoice_number:'1058',net_amount:9000,total_amount:10000};
  const rows=[{...row,record:{id:'b1',billing_entity_id:'e'},invoice},{...row,attendance_id:'b',patient:'Outro médico',doctor_id:'d2',record:{id:'b2'},invoice},{...row,attendance_id:'unlinked'}];
  const api=loadTs('app/api/billing/route.ts',{'@/app/authz':{getSession:async()=>session},'@/lib/billing-data':{loadBillingData:async()=>({data:{...data,rows,invoices:[invoice],items:[{invoice_id:'nf',billing_record_id:'b1'},{invoice_id:'nf',billing_record_id:'b2'}]},state:{}})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>{throw new Error('unexpected write')}}});

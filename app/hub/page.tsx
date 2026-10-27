@@ -1,19 +1,13 @@
 import { getSession } from "@/app/authz";
+import { doctorHome } from "@/lib/doctor-services";
 import { redirect } from "next/navigation";
-import SiteHeader from "@/components/site-header";
-import "./hub.css";
 
 export const dynamic = "force-dynamic";
 
+// Keep the former administrative URL as a permission-aware redirect.
+// No hub content is rendered while the separate landing page is disabled.
 export default async function HubPage() {
   const session = await getSession();
   if (!session) redirect("/");
-  if (session.account.role !== "general_manager") redirect("/dashboard");
-  return <div className="rn-hub">
-    <SiteHeader account={session.account}/>
-    <main className="hub-content">
-      <h1>Bem-vindo ao RN Integra</h1>
-      <p>Selecione Agendamento, Faturamento ou Cadastros no menu superior.</p>
-    </main>
-  </div>;
+  redirect(doctorHome(session));
 }
