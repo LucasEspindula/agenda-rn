@@ -96,7 +96,14 @@ export const POST=secureMutation(async request=>{
    {p_approver:approvedManagerId,p_kind:kind}:
    (['attendance','cancel_attendance','edit_invoice_request'].includes(kind)||['professional_charge','professional_invoice'].includes(kind)?{}:{p_kind:kind});
  const {data:id,error}=await getSupabaseAdmin().rpc(rpc,{p_actor:session.account.id,...args,p_data:data});
- if(error){if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');if(error.code==='P0001')throw new HttpError(409,error.message);if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');throw new HttpError(503,'Não foi possível salvar o financeiro.');}
+ if(error){
+  // Diagnóstico sem payload financeiro, CPF ou dados do paciente.
+  console.error("Falha ao salvar operação financeira", {kind,rpc,code:error.code});
+  if(error.code==='23503')throw new HttpError(409,'Registro possui histórico ou vínculo obrigatório. Confira os vínculos ou inative o cadastro.');
+  if(error.code==='P0001')throw new HttpError(409,error.message);
+  if(['23505','23514','23502','22P02','22007','22008'].includes(error.code))throw new HttpError(400,'Confira os campos: valor, data, documento ou número de NF inválido/duplicado.');
+  throw new HttpError(503,'Não foi possível salvar o financeiro.');
+ }
  return Response.json({id});
 });
 
