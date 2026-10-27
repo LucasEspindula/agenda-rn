@@ -23,7 +23,7 @@ test('live PostgreSQL trigger syntax and full transactional blocked availability
    else await db.query(query,[next]);
   }finally{await db.exec('ROLLBACK')}
   const current=(await db.query('SELECT payload FROM public.app_state WHERE id=1')).rows[0].payload;
-  assert.equal(JSON.stringify(current),JSON.stringify(original),'no writes may persist');
+  assert.deepEqual(current,original,'no writes may persist');
  }
  await check({...original,scheduleBlocks:[manual],appointments:[...original.appointments,booking('new')]},true);
  for(const time of ['11:00','14:00'])
