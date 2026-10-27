@@ -762,3 +762,11 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
     max-height:48dvh;
   }
 }
+
+.rn-hub .billing-attendance-request-action{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  white-space:nowrap;
+}
