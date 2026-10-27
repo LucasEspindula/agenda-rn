@@ -670,7 +670,7 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
   }
 }
 @media screen and (min-width:901px){
- .rn-hub .billing-invoice-future-add{display:none!important}
+ .rn-hub .billing-invoice-request-fab{display:none!important}
 }
 
 
@@ -699,5 +699,66 @@ dialog.perseus-import-dialog{box-sizing:border-box;width:min(620px,calc(100vw - 
      the fixed 56px button and the bottom app navigation. */
   .rn-hub main.billing-main:has(button.billing-mobile-fab){
     padding-bottom:calc(178px + env(safe-area-inset-bottom,0px))!important;
+  }
+}
+
+
+/* Solicitação fiscal: a mesma seleção conduz ao formulário existente.
+   O botão da barra é desktop-only; o + abre a ação no bottom sheet mobile. */
+.rn-hub .billing-invoice-request-desktop{
+  display:flex;
+  justify-content:flex-end;
+  margin:0 0 12px;
+}
+.rn-hub .billing-invoice-request-desktop button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:42px;
+}
+.rn-hub .billing-invoice-request-choices{
+  display:grid;
+  gap:9px;
+  margin:14px 0;
+  max-height:min(50vh,420px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.rn-hub .billing-invoice-request-choice{
+  display:grid;
+  gap:5px;
+  min-width:0;
+  width:100%;
+  padding:12px 14px;
+  text-align:left;
+  background:#f7fafc;
+  border:1px solid #dce6eb;
+  border-radius:12px;
+  color:#213d4c;
+  cursor:pointer;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+.rn-hub .billing-invoice-request-choice:hover,
+.rn-hub .billing-invoice-request-choice:focus-visible{
+  border-color:#2e8496;
+  background:#eef7f9;
+}
+.rn-hub .billing-invoice-request-choice span{font-size:13px}
+.rn-hub .billing-invoice-request-choice small{font-size:12px;color:#556f7d}
+.rn-hub .billing-invoice-request-action{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:50px;
+  width:100%;
+  padding:12px 14px;
+  text-align:left;
+}
+@media screen and (max-width:900px){
+  .rn-hub .billing-invoice-request-desktop{display:none!important}
+  .rn-hub .billing-invoice-request-dialog .billing-invoice-request-choices{
+    max-height:48dvh;
   }
 }
