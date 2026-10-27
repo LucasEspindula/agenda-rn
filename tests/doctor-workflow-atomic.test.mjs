@@ -71,4 +71,5 @@ test('the doctor API uses the atomic RPC and the block form prevents duplicates'
  assert.doesNotMatch(route,/Promise\.all\(\[\s*db\.from\("agenda_requests"\)\.insert/);
  assert.match(legacy,/state\.scheduleBlocks\.some\(b=>b\.id!==item\.id/);
  assert.match(legacy,/if\(form\.dataset\.saving\)return/);
+ assert.match(legacy,/Confira se a sugestão já aparece no histórico antes de tentar novamente/);
 });
