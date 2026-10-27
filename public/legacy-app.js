@@ -318,27 +318,66 @@ function updateStandaloneInsuranceField(){const input=$("appointmentInsurance");
 function daysUntil(dateString){
  if(!dateString)return null;const today=parseDate(ds(new Date())),target=parseDate(dateString);return Math.ceil((target-today)/86400000)
 }
+function appointmentPendingFlags(a){
+ const day=daysUntil(a.date),guideDays=daysUntil(a.guideExpiry),today=ds(new Date());
+ return {
+  invoice:a.status==="realized"&&!(Object.hasOwn(financialInvoices,a.id)?financialInvoices[a.id]:a.invoiceNumber)&&day!==null&&day<=-1,
+  missingGuide:a.date>=today&&!a.guideExpiry,
+  confirmation:day!==null&&day>=0&&day<=2&&!["confirmed","authorized","realized"].includes(a.status),
+  guide:guideDays!==null&&guideDays>=0&&guideDays<=5
+ };
+}
+function appointmentPendingReasons(a){
+ const flags=appointmentPendingFlags(a);
+ return [flags.invoice&&"NF não informada",flags.missingGuide&&"Validade da guia não informada",flags.confirmation&&"Atendimento aguardando confirmação",flags.guide&&"Guia próxima do vencimento"].filter(Boolean);
+}
+function pendingMark(reason,place=""){
+ return `<span class="appointment-pending-mark ${place}" role="img" aria-label="Pendência: ${esc(reason)}" title="${esc(reason)}">!</span>`;
+}
+function appointmentPendingBadge(a){
+ if((window.AgendaAuth||{}).role==="doctor")return "";
+ const reasons=appointmentPendingReasons(a);
+ return reasons.length?pendingMark(reasons.join(" · "),"card-pending-mark"):"";
+}
 function renderGuideAlerts(){
  const owner=selectedProf();if(!owner){$("guideAlert").dataset.count="0";$("guideAlert").classList.add("hidden");return}
- const relevant=state.appointments.filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id)&&a.status!=="cancelled"&&a.guideExpiry)
-  .map(a=>({a,days:daysUntil(a.guideExpiry)})).filter(x=>x.days!==null&&x.days>=0&&x.days<=5).sort((x,y)=>x.days-y.days);
+ const relevant=state.appointments.filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id)&&a.status!=="cancelled"&&appointmentPendingFlags(a).guide)
+  .map(a=>({a,days:daysUntil(a.guideExpiry)})).sort((x,y)=>x.days-y.days);
  $("guideAlert").dataset.count=String(relevant.length);if(!relevant.length){$("guideAlert").classList.add("hidden");return}
  $("guideAlertList").innerHTML=relevant.map(({a,days})=>`<button type="button" class="notification-item" data-alert-appointment="${esc(a.id)}">Guia do paciente <strong>${esc(patient(a.patientId)?.name||"Paciente")}</strong> — ${days===0?"vence hoje":`vence em ${days} dia(s)`} (${parseDate(a.guideExpiry).toLocaleDateString("pt-BR")}) · ${esc(a.procedure||"Procedimento")}</button>`).join("");
  $("guideAlert").classList.remove("hidden")
 }
 let financialInvoices={},financialIssuedAppointments=new Set(),financialRefreshAt=0;
-async function refreshFinancialAlerts(){if((window.AgendaAuth||{}).role==="doctor"||Date.now()-financialRefreshAt<15000)return;financialRefreshAt=Date.now();try{const response=await fetch('/api/billing?summary=1',{cache:'no-store'});if(!response.ok)return;const result=await response.json();financialInvoices=Object.fromEntries(result.rows.map(r=>[r.appointment_id,r.invoice_number]));financialIssuedAppointments=new Set(result.rows.filter(r=>r.issued_invoice).map(r=>r.appointment_id));renderOperationalAlerts();updateNotificationCenter()}catch{}}
+function syncAppointmentPendingBadges(){
+ if((window.AgendaAuth||{}).role==="doctor")return;
+ const byId=new Map((state.appointments||[]).map(a=>[a.id,a]));
+ qsa(".appointment[data-id],.mobile-appointment[data-mobile-appointment]").forEach(button=>{
+  const a=byId.get(button.dataset.id||button.dataset.mobileAppointment);
+  if(!a)return;
+  button.querySelector(".card-pending-mark")?.remove();
+  const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
+  if(badge)button.insertAdjacentHTML("afterbegin",badge);
+  button.classList.toggle("has-pending",!!badge);
+ });
+ const finance=$("nativeFinance"),a=byId.get($("appointmentId")?.value);
+ if(finance&&a){
+  const pending=appointmentPendingFlags(a).invoice;
+  finance.classList.toggle("pending-finance",pending);
+  finance.title=pending?"Pendência: NF não informada":"";
+ }
+}
+async function refreshFinancialAlerts(){if((window.AgendaAuth||{}).role==="doctor"||Date.now()-financialRefreshAt<15000)return;financialRefreshAt=Date.now();try{const response=await fetch('/api/billing?summary=1',{cache:'no-store'});if(!response.ok)return;const result=await response.json();financialInvoices=Object.fromEntries(result.rows.map(r=>[r.appointment_id,r.invoice_number]));financialIssuedAppointments=new Set(result.rows.filter(r=>r.issued_invoice).map(r=>r.appointment_id));renderOperationalAlerts();updateNotificationCenter();syncAppointmentPendingBadges()}catch{}}
 window.addEventListener('focus',refreshFinancialAlerts);
 function renderOperationalAlerts(){
  refreshFinancialAlerts();
- const owner=selectedProf(),today=ds(new Date());
+ const owner=selectedProf();
  if(!owner){["invoiceAlert","missingGuideAlert","confirmationAlert"].forEach(id=>$(id).classList.add("hidden"));return}
  const belongs=a=>isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id;
  const rows=state.appointments.filter(belongs),name=a=>patient(a.patientId)?.name||prof(a.doctorId)?.name||"Agendamento",summary=a=>`<strong>${esc(name(a))}</strong> — ${parseDate(a.date).toLocaleDateString("pt-BR")} às ${esc(a.time)} · ${esc(a.procedure||"Procedimento")}`;
  const show=(boxId,listId,items,detail)=>{const box=$(boxId);box.dataset.count=String(items.length);if(!items.length){box.classList.add("hidden");return}$(listId).innerHTML=items.map(a=>`<button type="button" class="notification-item" data-alert-appointment="${esc(a.id)}">${summary(a)}${detail(a)}</button>`).join("");box.classList.remove("hidden")};
- show("invoiceAlert","invoiceAlertList",rows.filter(a=>a.status==="realized"&&!(Object.hasOwn(financialInvoices,a.id)?financialInvoices[a.id]:a.invoiceNumber)&&daysUntil(a.date)<=-1),()=>" · NF não informada");
- show("missingGuideAlert","missingGuideAlertList",rows.filter(a=>a.date>=today&&!a.guideExpiry),()=>" · informe o vencimento da guia");
- show("confirmationAlert","confirmationAlertList",rows.filter(a=>{const days=daysUntil(a.date);return days!==null&&days>=0&&days<=2&&!["confirmed","authorized","realized"].includes(a.status)}),a=>` · atendimento em ${daysUntil(a.date)===0?"hoje":daysUntil(a.date)===1?"1 dia":"2 dias"}`);
+ show("invoiceAlert","invoiceAlertList",rows.filter(a=>appointmentPendingFlags(a).invoice),()=>" · NF não informada");
+ show("missingGuideAlert","missingGuideAlertList",rows.filter(a=>appointmentPendingFlags(a).missingGuide),()=>" · informe o vencimento da guia");
+ show("confirmationAlert","confirmationAlertList",rows.filter(a=>appointmentPendingFlags(a).confirmation),a=>` · atendimento em ${daysUntil(a.date)===0?"hoje":daysUntil(a.date)===1?"1 dia":"2 dias"}`);
 }
 function updateNotificationCenter(){
  if((window.AgendaAuth||{}).role==="doctor"){$("agendaNotifications").classList.add("hidden");closeNotificationPanel();return}
@@ -481,7 +520,8 @@ function appointmentCardContent(a,owner=selectedProf()){
 }
 function appointmentCard(a,hour,extra,conflict){
  const top=Math.max(3,((mins(a.time)-hour)/60)*64+3),height=Math.max(36,(a.duration/60)*64-6);
- return `<button class="appointment ${a.status} ${conflict?"anesthesia-conflict":""}" data-id="${esc(a.id)}" style="top:${top}px;height:${height}px;background:${isAnesthesiologist(selectedProf())?surgeonColor(a.doctorId):""};${extra}">${appointmentCardContent(a)}</button>`;
+ const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
+ return `<button class="appointment ${a.status} ${conflict?"anesthesia-conflict":""} ${badge?"has-pending":""}" data-id="${esc(a.id)}" style="top:${top}px;height:${height}px;background:${isAnesthesiologist(selectedProf())?surgeonColor(a.doctorId):""};${extra}">${badge}${appointmentCardContent(a)}</button>`;
 }
 function renderPatients(){
  const auth=window.AgendaAuth||{},owner=selectedProf(),t=$("patientSearch").value.toLowerCase().trim(),allowed=auth.role==="doctor"?state.patients.filter(p=>(auth.agendaIds||[]).includes(p.doctorId)):(owner&&!isAnesthesiologist(owner))?state.patients.filter(p=>p.doctorId===owner.id):state.patients;
@@ -989,9 +1029,10 @@ async function saveAppointmentDetailChanges(id,button){
 function renderAppointmentDetail(a){
  const p=patient(a.patientId),h=hospital(a.hospitalId),doctor=prof(a.doctorId),anesthetist=prof(a.anesthetistId),end=hhmm(mins(a.time)+Number(a.duration||0));
  const owner=selectedProf(),isDoctor=(window.AgendaAuth||{}).role==="doctor",canAdmin=!isDoctor,relatedLabel=isAnesthesiologist(owner)?"Cirurgião":"Anestesista";
+  const pending=isDoctor?null:appointmentPendingFlags(a);
  const flags=[["OPME",a.opme],["Laudos",a.reports],["Exames",a.exams]].map(([label,on])=>`<span class="detail-flag ${on?"active":""}">${label}: ${on?"Sim":"Não"}</span>`).join("");
  const heroName=p?.name||doctor?.name||"Cirurgião não informado",heroLabel=p?"Paciente":"Cirurgião",heroMeta=p?`${esc(appointmentInsurance(a)||"Sem convênio")}`:`Paciente ainda não informado · ${esc(a.insurance||"Convênio não informado")}`;
- $("appointmentDetailView").innerHTML=`<div class="appointment-detail-hero detail-modern-hero"><div class="detail-avatar">${esc(heroName.charAt(0))}</div><div><span class="detail-eyebrow">${heroLabel}</span><h4>${esc(heroName)}</h4><p>${heroMeta}</p></div><div class="detail-hero-meta"><span>${p?.email?esc(p.email):"Sem e-mail"}</span>${phoneControl(p?.phone)}</div><span class="detail-status ${esc(a.status)}">${appointmentStatusLabel(a.status)}</span></div><div class="detail-appointment-line"><div><span>Agendamento</span><strong>${parseDate(a.date).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})} · ${esc(a.time)} às ${esc(end)}</strong>${isDoctor?`<div class="detail-appointment-actions"><button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>Cancelar</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button><button id="markAttendedBtn" type="button" class="attended-btn" ${a.status==="realized"?'disabled title="Atendimento já marcado como Atendido"':""}>Atendido</button></div>`:""}</div>${canAdmin?(a.status==="realized"&&(window.AgendaAuth||{}).role==="secretary"?`<div class="appointment-status-editor"><span>Status</span><strong class="status-readonly">Atendido · protegido</strong></div>`:`<div class="appointment-status-editor"><label for="appointmentStatusSelect">Status</label><div class="appointment-status-controls"><select id="appointmentStatusSelect" class="status-select ${esc(a.status)}">${appointmentStatusOptions(a.status)}</select></div></div>`):""}</div><div class="appointment-detail-grid detail-edit-grid"><label>Procedimento<input id="detailProcedure" value="${esc(a.procedure||"")}"></label><label>Hospital<select id="detailHospital">${detailHospitalOptions(a.hospitalId)}</select></label><label>Convênio / plano<input id="detailAppointmentInsurance" value="${esc(appointmentInsurance(a))}" ${canAdmin?"":"disabled"}></label><label>Forma de cobrança<select id="detailBillingMethod" ${canAdmin?"":"disabled"}><option value="">Não informada</option><option value="PARTICULAR" ${a.forma_cobranca==="PARTICULAR"?"selected":""}>Particular</option><option value="CONVENIO" ${a.forma_cobranca==="CONVENIO"?"selected":""}>Convênio</option></select></label><label>Data<input id="detailDate" type="date" min="${ds(new Date())}" value="${esc(a.date)}"></label><label>Horário<input id="detailTime" type="time" value="${esc(a.time)}"></label><label>Duração<select id="detailDuration">${detailDurationOptions(a.duration)}</select></label><label>${relatedLabel}<select id="detailRelatedProfessional">${detailRelatedOptions(a,owner)}</select></label><label>Validade da guia<input id="detailGuideExpiry" type="date" value="${esc(a.guideExpiry||"")}"></label><label>Tipo<select id="detailCareType"><option value="outpatient" ${a.careType!=="inpatient"?"selected":""}>Ambulatorial</option><option value="inpatient" ${a.careType==="inpatient"?"selected":""}>Internado</option></select></label></div>${canAdmin?`<section id="nativeFinance" class="native-finance"></section>`:""}<div class="detail-docs editable-flags"><label class="detail-check"><input id="detailOpme" type="checkbox" role="switch" ${a.opme?"checked":""}> OPME</label><label class="detail-check"><input id="detailReports" type="checkbox" role="switch" ${a.reports?"checked":""}> Laudos</label><label class="detail-check"><input id="detailExams" type="checkbox" role="switch" ${a.exams?"checked":""}> Exames</label></div><div class="detail-notes"><span>Observações</span><textarea id="detailNotes" rows="3" placeholder="Observações do atendimento...">${esc(a.notes||"")}</textarea></div>${isDoctor?'<div class="detail-notes"><span>Motivo da sugestão</span><textarea id="detailSuggestionReason" rows="3" required placeholder="Explique o motivo da alteração"></textarea></div>':""}<section id="surgeryDocuments"></section>${renderRescheduleHistory(a)}<div class="appointment-detail-toolbar ${isDoctor?"doctor-detail-toolbar":""}"><div></div><div class="appointment-detail-actions">${isDoctor?"":`<button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>Cancelar</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button>`}<button id="saveDetailChangesBtn" type="button" class="primary-btn">${isDoctor?"Enviar sugestão":"Salvar alterações"}</button></div></div>`;
+ $("appointmentDetailView").innerHTML=`<div class="appointment-detail-hero detail-modern-hero"><div class="detail-avatar">${esc(heroName.charAt(0))}</div><div><span class="detail-eyebrow">${heroLabel}</span><h4>${esc(heroName)}</h4><p>${heroMeta}</p></div><div class="detail-hero-meta"><span>${p?.email?esc(p.email):"Sem e-mail"}</span>${phoneControl(p?.phone)}</div><span class="detail-status ${esc(a.status)}">${appointmentStatusLabel(a.status)}</span></div><div class="detail-appointment-line"><div><span>Agendamento</span><strong>${parseDate(a.date).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})} · ${esc(a.time)} às ${esc(end)}</strong>${isDoctor?`<div class="detail-appointment-actions"><button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>Cancelar</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button><button id="markAttendedBtn" type="button" class="attended-btn" ${a.status==="realized"?'disabled title="Atendimento já marcado como Atendido"':""}>Atendido</button></div>`:""}</div>${canAdmin?(a.status==="realized"&&(window.AgendaAuth||{}).role==="secretary"?`<div class="appointment-status-editor ${pending?.confirmation?"detail-pending-target":""}">${pending?.confirmation?pendingMark("Atendimento aguardando confirmação","detail-pending-mark"):""}<span>Status</span><strong class="status-readonly">Atendido · protegido</strong></div>`:`<div class="appointment-status-editor ${pending?.confirmation?"detail-pending-target":""}">${pending?.confirmation?pendingMark("Atendimento aguardando confirmação","detail-pending-mark"):""}<label for="appointmentStatusSelect">Status</label><div class="appointment-status-controls"><select id="appointmentStatusSelect" class="status-select ${esc(a.status)}">${appointmentStatusOptions(a.status)}</select></div></div>`):""}</div><div class="appointment-detail-grid detail-edit-grid"><label>Procedimento<input id="detailProcedure" value="${esc(a.procedure||"")}"></label><label>Hospital<select id="detailHospital">${detailHospitalOptions(a.hospitalId)}</select></label><label>Convênio / plano<input id="detailAppointmentInsurance" value="${esc(appointmentInsurance(a))}" ${canAdmin?"":"disabled"}></label><label>Forma de cobrança<select id="detailBillingMethod" ${canAdmin?"":"disabled"}><option value="">Não informada</option><option value="PARTICULAR" ${a.forma_cobranca==="PARTICULAR"?"selected":""}>Particular</option><option value="CONVENIO" ${a.forma_cobranca==="CONVENIO"?"selected":""}>Convênio</option></select></label><label>Data<input id="detailDate" type="date" min="${ds(new Date())}" value="${esc(a.date)}"></label><label>Horário<input id="detailTime" type="time" value="${esc(a.time)}"></label><label>Duração<select id="detailDuration">${detailDurationOptions(a.duration)}</select></label><label>${relatedLabel}<select id="detailRelatedProfessional">${detailRelatedOptions(a,owner)}</select></label><label class="${pending?.missingGuide||pending?.guide?"detail-pending-target":""}">Validade da guia${pending?.missingGuide?pendingMark("Validade da guia não informada","detail-pending-mark"):pending?.guide?pendingMark("Guia próxima do vencimento","detail-pending-mark"):""}<input id="detailGuideExpiry" type="date" value="${esc(a.guideExpiry||"")}"></label><label>Tipo<select id="detailCareType"><option value="outpatient" ${a.careType!=="inpatient"?"selected":""}>Ambulatorial</option><option value="inpatient" ${a.careType==="inpatient"?"selected":""}>Internado</option></select></label></div>${canAdmin?`<section id="nativeFinance" class="native-finance ${pending?.invoice?"pending-finance":""}" ${pending?.invoice?'title="Pendência: NF não informada" aria-label="Financeiro com pendência: NF não informada"':""}></section>`:""}<div class="detail-docs editable-flags"><label class="detail-check"><input id="detailOpme" type="checkbox" role="switch" ${a.opme?"checked":""}> OPME</label><label class="detail-check"><input id="detailReports" type="checkbox" role="switch" ${a.reports?"checked":""}> Laudos</label><label class="detail-check"><input id="detailExams" type="checkbox" role="switch" ${a.exams?"checked":""}> Exames</label></div><div class="detail-notes"><span>Observações</span><textarea id="detailNotes" rows="3" placeholder="Observações do atendimento...">${esc(a.notes||"")}</textarea></div>${isDoctor?'<div class="detail-notes"><span>Motivo da sugestão</span><textarea id="detailSuggestionReason" rows="3" required placeholder="Explique o motivo da alteração"></textarea></div>':""}<section id="surgeryDocuments"></section>${renderRescheduleHistory(a)}<div class="appointment-detail-toolbar ${isDoctor?"doctor-detail-toolbar":""}"><div></div><div class="appointment-detail-actions">${isDoctor?"":`<button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>Cancelar</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button>`}<button id="saveDetailChangesBtn" type="button" class="primary-btn">${isDoctor?"Enviar sugestão":"Salvar alterações"}</button></div></div>`;
  mountDocumentPanel($("surgeryDocuments"),a.id);
  if(canAdmin){void loadNativeFinance(a.id);$("detailBillingMethod").onchange=paintNativeFinance}
  $("cancelDetailAppointmentBtn").onclick=()=>openCancellation(a.id);$("rescheduleAppointmentBtn").onclick=()=>openReschedule(a.id);$("saveDetailChangesBtn").onclick=async()=>saveAppointmentDetailChanges(a.id,$("saveDetailChangesBtn"));if(isDoctor)$("markAttendedBtn").onclick=()=>requestPasswordStatusChange(a.id,"realized");qsa("#appointmentDetailView [data-close]").forEach(b=>b.onclick=closeModals);
@@ -1197,7 +1238,8 @@ function initMobileUI(){
 function mobileCalendarCard(entry,apps,owner){
  if(entry.kind==="appointment"){
   const a=entry.item;
-  return `<button class="mobile-appointment ${esc(a.status)} ${hasAnesthesiaConflict(a,apps,owner)?"has-conflict":""}" data-mobile-appointment="${esc(a.id)}"><span class="mobile-time"><strong>${esc(a.time)}</strong></span><span class="mobile-appointment-content">${appointmentCardContent(a,owner)}</span><span aria-hidden="true">›</span></button>`;
+  const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
+   return `<button class="mobile-appointment ${esc(a.status)} ${hasAnesthesiaConflict(a,apps,owner)?"has-conflict":""} ${badge?"has-pending":""}" data-mobile-appointment="${esc(a.id)}">${badge}<span class="mobile-time"><strong>${esc(a.time)}</strong></span><span class="mobile-appointment-content">${appointmentCardContent(a,owner)}</span><span aria-hidden="true">›</span></button>`;
  }
  if(entry.kind==="rule"){
   const interval=entry.item;

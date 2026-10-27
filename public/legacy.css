@@ -768,3 +768,22 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  #appointmentModal .doctor-detail-toolbar{margin-inline:-14px}
  .attendance-password-form{padding:20px}
 }
+
+/* Pendências: cartões e campos correspondentes. */
+.appointment-pending-mark{display:grid;place-items:center;box-sizing:border-box;flex:0 0 auto;width:19px;height:19px;border:1px solid #daae24;border-radius:50%;background:#ffdf61;color:#684900;font-size:13px;font-weight:950;line-height:1;box-shadow:0 1px 3px rgba(88,66,12,.22);pointer-events:none}
+.appointment .card-pending-mark{position:absolute;top:4px;right:4px;z-index:6;display:grid;margin:0;padding:0;white-space:normal;overflow:visible;line-height:1}
+.appointment.has-pending>strong:first-of-type{padding-right:20px;box-sizing:border-box}
+.mobile-appointment.has-pending{position:relative}
+.mobile-appointment .card-pending-mark{position:absolute;top:6px;right:7px;z-index:2}
+.mobile-appointment.has-pending .mobile-appointment-content>strong{padding-right:20px}
+#appointmentModal .detail-pending-target{position:relative}
+#appointmentModal .detail-pending-target .detail-pending-mark{position:absolute;right:9px;top:7px;z-index:2}
+#appointmentModal .detail-edit-grid label.detail-pending-target{padding-top:15px}
+#appointmentModal .appointment-status-editor.detail-pending-target{padding-right:16px}
+#appointmentModal .native-finance.pending-finance{position:relative;padding-right:40px}
+#appointmentModal .native-finance.pending-finance::after{content:"!";display:grid;place-items:center;position:absolute;top:14px;right:14px;box-sizing:border-box;width:19px;height:19px;border:1px solid #daae24;border-radius:50%;background:#ffdf61;color:#684900;font-size:13px;font-weight:950;line-height:1;box-shadow:0 1px 3px rgba(88,66,12,.22)}
+@media(max-width:720px){
+ .mobile-appointment .card-pending-mark{top:5px;right:5px}
+ #appointmentModal .detail-pending-target .detail-pending-mark{right:10px;top:8px}
+ #appointmentModal .native-finance.pending-finance{padding-right:35px}
+}
