@@ -32,7 +32,7 @@ import type { InvoiceRequest } from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { RotateCcw, BarChart3, Plus, FilePlus2 } from "lucide-react";
-import {availableInvoiceRequestRows} from "@/lib/invoice-request-actions";
+import {availableInvoiceRequestRows,canStartInvoiceRequest} from "@/lib/invoice-request-actions";
 import { eligibleForInvoice, payerKey } from "@/lib/billing-eligibility";
 import {
   attendanceInsuranceOptions,
@@ -1033,6 +1033,13 @@ export default function BillingClient({
                     >
                       <WalletIcon />
                     </button>}
+                    {tab === "records" && canStartInvoiceRequest(r,data) && (
+                      <button type="button" className="billing-secondary billing-attendance-request-action"
+                        title="Solicitar Nota Fiscal para este atendimento"
+                        onClick={() => chooseInvoiceRequest(r)}>
+                        <FilePlus2 size={17} aria-hidden="true"/> Solicitar NF
+                      </button>
+                    )}
                     {professionalBillingEnabled && tab === "records" && !!r.record && r.status_atendimento !== "cancelled" &&
                       [...new Set([r.clinical_doctor_id || r.doctor_id, r.anesthetist_id].filter(Boolean))]
                         .some(id => !data.rows.some(other => other.attendance_id === r.attendance_id && other.record?.professional_id === id)) && (
