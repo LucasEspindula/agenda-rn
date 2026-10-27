@@ -245,3 +245,22 @@ test('recurrent rule for a different professional does not leak into the mobile 
  c.renderMobileCalendar();
  assert.doesNotMatch(c.$('mobileCalendar').innerHTML,/Dia totalmente bloqueado|Restrição privada/);
 });
+
+test('mobile overlapping partial rules become a single gray interval and keep existing appointments',()=>{
+ const {context:c,appointment:a}=fixture();
+ c.state.appointments=[{...a,id:'before',time:'08:00'},{...a,id:'after',time:'14:00'}];
+ c.state.schedulingRules=[
+  {id:'one',professionalId:'d',weekday:5,severity:'block',name:'Reunião',start:'07:00',end:'19:00',forbiddenTimes:'12:00'},
+  {id:'two',professionalId:'d',weekday:5,severity:'block',name:'Consulta externa',start:'07:00',end:'19:00',forbiddenTimes:'12:15'}
+ ];
+ c.renderMobileCalendar();
+ const html=c.$('mobileCalendar').innerHTML;
+ assert.equal((html.match(/class="mobile-appointment mobile-block mobile-rule-block"/g)||[]).length,1);
+ assert.match(html,/Reunião/);
+ assert.match(html,/Consulta externa/);
+ assert.match(html,/12:00/);
+ assert.match(html,/até 12:45/);
+ assert.match(html,/data-mobile-appointment="before"/);
+ assert.match(html,/data-mobile-appointment="after"/);
+ assert.doesNotMatch(html,/Dia totalmente bloqueado/);
+});
