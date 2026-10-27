@@ -75,5 +75,6 @@ test('HTTP pathways and database trigger enforce availability separately from cl
  assert.match(sql,/ERRCODE='P0001'/);
  assert.doesNotMatch(sql,/(delete from public\.appointments|update public\.invoices)/i);
  assert.match(legacy,/window.RNAvailability\.appointmentAvailabilityIssues\(state,updated\)/);
+ assert.match(legacy,/const unavailable=window\.RNAvailability\.appointmentAvailabilityIssues\(state,updated\);if\(unavailable\.length\)return appNotice\("Horário indisponível"/);
  assert.match(legacy,/availability\.availabilityIntervals\(state,owner.id,date,includeRules\)/);
 });
