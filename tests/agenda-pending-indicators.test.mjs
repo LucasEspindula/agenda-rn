@@ -73,3 +73,11 @@ test("sino e marcas compartilham critérios sem consultas extras nos cartões",(
  const renderer=js.slice(js.indexOf("function appointmentCardContent("),js.indexOf("function renderPatients("));
  assert.doesNotMatch(renderer,/fetch\(|\/api\/billing|\/api\/state/);
 });
+
+
+test("selo de pendência pode ultrapassar discretamente o canto superior dos cartões",()=>{
+ assert.match(css,/\.appointment\.has-pending\{overflow:visible;z-index:5\}/);
+ assert.match(css,/\.appointment \.card-pending-mark\{[^}]*top:-7px;right:-7px;/);
+ assert.match(css,/\.mobile-appointment\.has-pending\{position:relative;z-index:1;overflow:visible\}/);
+ assert.match(css,/\.mobile-appointment \.card-pending-mark\{[^}]*top:-6px;right:-6px;/);
+});
