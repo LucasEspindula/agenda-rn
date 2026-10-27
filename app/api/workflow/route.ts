@@ -166,6 +166,7 @@ async function handlePATCH(request: Request) {
     p_notification: { id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` },
     p_audit: [{ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: (proposed || previous)?.patientId || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null } }],
   });
+  if(result.error?.code==='P0001'&&result.error.message?.includes('Nota Fiscal emitida'))return Response.json({error:result.error.message},{status:409});
   dbError(result.error,"Commit workflow decision");
   if (!result.data) return Response.json({error:"Agenda ou solicitação mudou. Atualize e tente novamente."},{status:409});
   return Response.json({ ok: true, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` });
