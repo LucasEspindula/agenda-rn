@@ -101,7 +101,7 @@ export function appointmentAvailabilityIssues(state:AvailabilityState,a:Availabi
 }
 export function appointmentAvailabilityChanged(before:AvailabilityAppointment|undefined,after:AvailabilityAppointment){
  if(!before)return true;
- return (['date','time','duration','doctorId','anesthetistId','hospitalId','procedure','status'] as const)
+ return (['date','time','duration','doctorId','anesthetistId','hospitalId','procedure'] as const)
    .some(k=>String(before[k]??'')!==String(after[k]??''));
 }
 export function changedAppointmentIssues(before:AvailabilityState,after:AvailabilityState){
