@@ -31,7 +31,8 @@ import { confirmFiscalPayment } from "@/components/confirm-fiscal-payment";
 import type { InvoiceRequest } from "@/lib/billing-types";
 import MoneyInput from "@/components/money-input";
 import { useCallback, useEffect, useState, useRef } from "react";
-import { RotateCcw, BarChart3, Plus } from "lucide-react";
+import { RotateCcw, BarChart3, Plus, FilePlus2 } from "lucide-react";
+import {availableInvoiceRequestRows} from "@/lib/invoice-request-actions";
 import { eligibleForInvoice, payerKey } from "@/lib/billing-eligibility";
 import {
   attendanceInsuranceOptions,
@@ -126,7 +127,7 @@ export default function BillingClient({
     InvoiceRequest | Invoice | true | null
   >(null);
   const [printMenu, setPrintMenu] = useState(false);
-  const [mobileInvoiceAddInfo, setMobileInvoiceAddInfo] = useState(false);
+  const [invoiceRequestStep, setInvoiceRequestStep] = useState<"menu"|"picker"|null>(null);
   const [manual, setManual] = useState<BillingRow | true | null>(null);
   const [professionalSource, setProfessionalSource] = useState<BillingRow | null>(null);
   const [professionalEdit, setProfessionalEdit] = useState(false);
@@ -146,6 +147,7 @@ export default function BillingClient({
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
+  const invoiceRequestCandidates = availableInvoiceRequestRows(data);
   const insurancePendingCount = data.rows.filter(isInsurancePending).length;
   const insurancePendingActive = tab === "insurance";
   const pendingCount = (data.requests || []).filter(
@@ -493,6 +495,12 @@ export default function BillingClient({
       no_invoice:!!r.record?.no_invoice,
     });
   }
+  function chooseInvoiceRequest(row: BillingRow) {
+    // Both mobile + and the desktop button enter the exact existing
+    // record -> fiscal confirmation -> save_billing flow.
+    setInvoiceRequestStep(null);
+    editRecord(row);
+  }
   function editInvoice(i?: Invoice) {
     if (professionalBillingEnabled && i && i.recipient_type !== "PARTICULAR" && invoiceRows(i,data).some(({row}) =>
       !!row.record && (row.record.professional_role !== "PRIMARY" ||
@@ -634,6 +642,7 @@ export default function BillingClient({
           },
           amount: parseBRL(draft.received_amount),
           paidAt: String(draft.paid_at || ""),
+          initialParts: currentRow?.record?.payment_status === "PAGO" ? parts : undefined,
         });
         if (!fiscal) return;
       }
@@ -1344,19 +1353,44 @@ export default function BillingClient({
             <h1 className="billing-title">Financeiro do atendimento</h1>
           </div>
         )}
-        {!appointmentId && tab === "invoices" && <>
-          <button type="button" className="billing-mobile-fab billing-invoice-future-add"
-            aria-label="Nova operação de Nota Fiscal" title="Nova operação de Nota Fiscal"
-            onClick={() => setMobileInvoiceAddInfo(true)}><span className="billing-fab-icon" aria-hidden="true"><Plus size={27}/></span><span className="billing-fab-label">+</span></button>
-          {mobileInvoiceAddInfo && <AppDialog label="Nova operação de Nota Fiscal" compact className="billing-mobile-actions-dialog billing-invoice-info-dialog"
-            onClose={() => setMobileInvoiceAddInfo(false)}>
-            <h2>Nova operação de Nota Fiscal</h2>
-            <p>Este botão está reservado para o novo fluxo de notas fiscais. Nenhuma nota foi criada ou alterada.</p>
-            <div className="billing-modal-actions">
-              <button type="button" className="billing-secondary" onClick={() => setMobileInvoiceAddInfo(false)}>Entendi</button>
-            </div>
-          </AppDialog>}
+        {!appointmentId && tab === "invoices" && invoiceRequestCandidates.length > 0 && <>
+          <div className="billing-invoice-request-desktop no-print">
+            <button type="button" className="billing-primary" onClick={() => setInvoiceRequestStep("picker")}>
+              <FilePlus2 size={18} aria-hidden="true"/> Solicitar NF
+            </button>
+          </div>
+          <button type="button" className="billing-mobile-fab billing-invoice-request-fab"
+            aria-label="Abrir ações de Nota Fiscal" title="Ações de Nota Fiscal"
+            onClick={() => setInvoiceRequestStep("menu")}><span className="billing-fab-icon" aria-hidden="true"><Plus size={27}/></span><span className="billing-fab-label">+</span></button>
         </>}
+        {invoiceRequestStep && <AppDialog label={invoiceRequestStep==="menu"?"Ações de Nota Fiscal":"Solicitar NF"} compact
+          className="billing-mobile-actions-dialog billing-invoice-request-dialog"
+          onClose={() => setInvoiceRequestStep(null)}>
+          {invoiceRequestStep==="menu" ? <>
+            <h2>Ações de Nota Fiscal</h2>
+            <div className="billing-mobile-actions-list">
+              <button type="button" className="billing-secondary billing-invoice-request-action"
+                onClick={() => setInvoiceRequestStep("picker")}><FilePlus2 size={19} aria-hidden="true"/> Solicitar NF</button>
+            </div>
+          </> : <>
+            <h2>Solicitar NF</h2>
+            <p>Selecione um atendimento particular já pago e sem NF ou solicitação fiscal ativa.</p>
+            <div className="billing-invoice-request-choices">
+              {invoiceRequestCandidates.map(row=>
+                <button type="button" key={row.record!.id} className="billing-invoice-request-choice"
+                  onClick={() => chooseInvoiceRequest(row)}>
+                  <strong>{row.patient}</strong>
+                  <span>{date(row.date)} · {row.procedure}</span>
+                  <small>{money(row.record?.received_amount??null)} · Confirmar dados fiscais</small>
+                </button>
+              )}
+              {!invoiceRequestCandidates.length && <p>Nenhum atendimento elegível. Atualize o faturamento antes de tentar novamente.</p>}
+            </div>
+          </>}
+          <div className="billing-modal-actions">
+            <button type="button" className="billing-secondary" onClick={() => setInvoiceRequestStep(null)}>Fechar</button>
+          </div>
+        </AppDialog>}
         {tab === "invoices" && (
           <nav className="billing-tabs" aria-label="Notas Fiscais">
             <button
