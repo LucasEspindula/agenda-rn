@@ -355,7 +355,7 @@ function syncAppointmentPendingBadges(){
   const a=byId.get(button.dataset.id||button.dataset.mobileAppointment);
   if(!a)return;
   button.querySelector(".card-pending-mark")?.remove();
-  const badge=appointmentPendingBadge(a);
+  const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
   if(badge)button.insertAdjacentHTML("afterbegin",badge);
   button.classList.toggle("has-pending",!!badge);
  });
@@ -520,7 +520,7 @@ function appointmentCardContent(a,owner=selectedProf()){
 }
 function appointmentCard(a,hour,extra,conflict){
  const top=Math.max(3,((mins(a.time)-hour)/60)*64+3),height=Math.max(36,(a.duration/60)*64-6);
- const badge=appointmentPendingBadge(a);
+ const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
  return `<button class="appointment ${a.status} ${conflict?"anesthesia-conflict":""} ${badge?"has-pending":""}" data-id="${esc(a.id)}" style="top:${top}px;height:${height}px;background:${isAnesthesiologist(selectedProf())?surgeonColor(a.doctorId):""};${extra}">${badge}${appointmentCardContent(a)}</button>`;
 }
 function renderPatients(){
@@ -1238,7 +1238,7 @@ function initMobileUI(){
 function mobileCalendarCard(entry,apps,owner){
  if(entry.kind==="appointment"){
   const a=entry.item;
-  const badge=appointmentPendingBadge(a);
+  const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
    return `<button class="mobile-appointment ${esc(a.status)} ${hasAnesthesiaConflict(a,apps,owner)?"has-conflict":""} ${badge?"has-pending":""}" data-mobile-appointment="${esc(a.id)}">${badge}<span class="mobile-time"><strong>${esc(a.time)}</strong></span><span class="mobile-appointment-content">${appointmentCardContent(a,owner)}</span><span aria-hidden="true">›</span></button>`;
  }
  if(entry.kind==="rule"){
