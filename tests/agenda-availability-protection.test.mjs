@@ -82,7 +82,7 @@ test('HTTP pathways and database trigger enforce availability separately from cl
 test('overlapping and adjacent recurring closure bands render once without changing raw validation',()=>{
  const s=state({schedulingRules:[
   {id:'morning',professionalId:'d1',severity:'block',weekday:5,name:'Pausa clínica',start:'07:00',end:'13:00'},
-  {id:'afternoon',professionalId:'d1',severity:'block',weekday:5,name:'Reunião',start:'12:00',end:'19:00',forbiddenTimes:'12:30'},
+  {id:'afternoon',professionalId:'d1',severity:'block',weekday:5,name:'Reunião',start:'12:00',end:'19:00',forbiddenTimes:'12:00,12:30'},
  ]});
  const original=availability.availabilityIntervals(s,'d1','2026-09-11');
  const joined=availability.groupedRuleIntervals(original);
