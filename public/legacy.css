@@ -701,3 +701,35 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .rn-agenda .mobile-full-day-block span{font-size:12px}
  .rn-agenda #newAppointmentBtn:disabled{opacity:.54;cursor:not-allowed}
 }
+
+/* Exibição responsiva dos dados de cancelamentos. */
+#cancelledList .cancel-table th,#cancelledList .cancel-table td{vertical-align:top}
+#cancelledList .cancel-table td{overflow-wrap:anywhere}
+.cancel-billing-pill{display:inline-block;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;white-space:nowrap;background:#eef2f4;color:#475b66}
+.cancel-billing-pill.insurance{background:#e6f2fc;color:#185f89}
+.cancel-billing-pill.private{background:#e5f6ec;color:#186947}
+.cancel-billing-pill.unknown{background:#f3f2e9;color:#6e6535}
+.cancel-details summary{width:max-content;min-height:35px;display:list-item;cursor:pointer;padding:7px 4px;font-size:12px;font-weight:800;color:#096d75}
+.cancel-details summary:focus-visible{outline:3px solid rgba(45,193,185,.4);outline-offset:2px;border-radius:4px}
+.cancel-details[open] summary{color:#123e53}
+.cancel-details-panel{width:min(340px,65vw);max-width:100%;padding:12px;border:1px solid #dce5eb;border-radius:10px;background:#f9fcfd}
+.cancel-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 12px;margin:0}
+.cancel-detail-field{min-width:0}
+.cancel-detail-field dt{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.035em;color:#607886}
+.cancel-detail-field dd{margin:4px 0 0;color:#223d4c;font-size:12px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.cancel-details-panel .appointment-reschedule-history{margin-top:14px;padding:10px}
+.cancel-details-panel .reschedule-history-title{flex-wrap:wrap}
+@media(max-width:720px){
+ #cancelledList .cancel-month{overflow:visible;padding:12px}
+ #cancelledList .cancel-table,#cancelledList .cancel-table tbody,#cancelledList .cancel-table tr{display:block;width:100%;min-width:0}
+ #cancelledList .cancel-table thead{display:none}
+ #cancelledList .cancel-table tbody{display:grid;gap:10px}
+ #cancelledList .cancel-table tr{box-sizing:border-box;padding:12px;border:1px solid #dce7eb;border-radius:12px;background:#fff}
+ #cancelledList .cancel-table td{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;box-sizing:border-box;min-width:0;width:100%;padding:7px 0;border:0;text-align:right;font-size:13px;white-space:normal}
+ #cancelledList .cancel-table td::before{content:attr(data-label);flex:0 0 42%;color:#607886;font-size:11px;font-weight:800;text-transform:uppercase;text-align:left}
+ #cancelledList .cancel-table td:first-child{font-size:15px;font-weight:800;border-bottom:1px solid #e8eef2;padding-bottom:12px;text-align:right}
+ #cancelledList .cancel-table .cancel-detail-cell{display:block;border-top:1px solid #e8eef2;margin-top:6px;padding-top:8px;text-align:left}
+ #cancelledList .cancel-table .cancel-detail-cell::before{display:none}
+ #cancelledList .cancel-details summary{min-height:42px;padding:11px 4px}
+ #cancelledList .cancel-details-panel{width:100%;max-width:none;box-sizing:border-box}
+}
