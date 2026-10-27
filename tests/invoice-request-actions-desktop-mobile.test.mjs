@@ -74,6 +74,7 @@ test('mobile + and desktop CTA share existing record editing and fiscal request 
  assert.match(ui,/onClick=\{\(\) => setInvoiceRequestStep\("menu"\)\}/);
  assert.match(ui,/onClick=\{\(\) => setInvoiceRequestStep\("picker"\)\}><FilePlus2/);
  assert.match(ui,/function chooseInvoiceRequest\(row: BillingRow\) \{[\s\S]*?setInvoiceRequestStep\(null\);[\s\S]*?editRecord\(row\);/);
+ assert.match(ui,/!!draft\.id && r\.record\?\.id === draft\.id/);
  assert.match(ui,/onClick=\{\(\) => chooseInvoiceRequest\(row\)\}/);
  assert.match(ui,/fiscal = await confirmFiscalPayment\(/);
  assert.match(ui,/initialParts: currentRow\?\.record\?\.payment_status === "PAGO" \? parts : undefined/);
