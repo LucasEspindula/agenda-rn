@@ -471,7 +471,9 @@ function renderCalendar(){
     const positions=group.appointments.map(a=>lanes.get("appointment:"+a.id)).filter(Boolean);
     if(positions.length<2)return;
     const left=Math.min(...positions.map(x=>x.lane/x.total))*100,right=Math.max(...positions.map(x=>(x.lane+1)/x.total))*100;
-    const top=Math.max(1,((group.start-hour)/60)*64+1),height=Math.max(40,((group.end-group.start)/60)*64-2);
+    const top=Math.max(1,((group.start-hour)/60)*64+1);
+    const lastCardBottom=Math.max(...group.appointments.map(a=>((mins(a.time)-hour)/60)*64+3+Math.max(36,(Number(a.duration||0)/60)*64-6)));
+    const height=Math.max(40,((group.end-group.start)/60)*64-2,lastCardBottom-top+2);
     html+=`<div class="calendar-conflict-outline" aria-hidden="true" style="top:${top}px;height:${height}px;left:calc(${left}% + 1px);width:calc(${right-left}% - 2px)"></div>`;
    });
    if(isAnesthesiologist(owner)&&apps.length){
