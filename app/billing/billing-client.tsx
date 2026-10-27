@@ -833,6 +833,8 @@ export default function BillingClient({
     );
   }
   const currentRow = data.rows.find(
+    (r) => !!draft.id && r.record?.id === draft.id,
+  ) || data.rows.find(
     (r) => r.attendance_id === draft.attendance_id,
   );
   const directPayment =
