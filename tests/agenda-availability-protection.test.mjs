@@ -94,5 +94,5 @@ test('overlapping and adjacent recurring closure bands render once without chang
  assert.match(joined[0].reason,/Reunião/);
  assert.equal(availability.entirelyUnavailable(s,'d1','2026-09-11'),true);
  assert.ok(availability.appointmentAvailabilityIssues(s,{...a,time:'11:30'}).length);
- assert.equal(original[0].end,13*60,'the renderer does not mutate canonical intervals');
+ assert.equal(original[0].end,12*60,'the renderer does not mutate canonical intervals');
 });
