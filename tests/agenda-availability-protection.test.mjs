@@ -53,6 +53,7 @@ test('isolated professional rules and scoped maximum/preferring time',()=>{
 test('changing rules never cancels old appointments; reschedules and new bookings recheck',()=>{
  const s=state({appointments:[a],schedulingRules:[{professionalId:'d1',severity:'block',blockAllDay:true,weekday:5}]});
  assert.equal(availability.changedAppointmentIssues(state({appointments:[a]}),s).length,0);
+ assert.equal(availability.changedAppointmentIssues(state({appointments:[a]}),state({...s,appointments:[{...a,status:'realized'}]})).length,0);
  const moved=state({...s,appointments:[{...a,id:'one',time:'12:00'}]});
  assert.ok(availability.changedAppointmentIssues(state({appointments:[a]}),moved).length>0);
  assert.ok(availability.changedAppointmentIssues(state(),s).length>0);
