@@ -4,6 +4,7 @@ import { getSession } from "@/app/authz";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 
 import {canUseAgenda} from "@/lib/doctor-services";
+import {changedAppointmentIssues,type AvailabilityState} from "@/lib/agenda-availability";
 type AgendaState = Record<string, unknown> & { appointments?: Record<string, unknown>[]; cancelledAppointments?: Record<string, unknown>[]; patients?: Record<string, unknown>[]; schedulingRules?: Record<string, unknown>[]; scheduleBlocks?: Record<string, unknown>[] };
 
 export async function GET() {
@@ -26,6 +27,10 @@ async function putState(request: Request) {
   const suppliedRevision = request.headers.get("if-match");
   if (row ? !suppliedRevision || Date.parse(suppliedRevision) !== Date.parse(row.updated_at) : suppliedRevision !== "new") return Response.json({ error: "A agenda foi atualizada por outra pessoa. Reabra o agendamento e tente novamente." }, { status: 409 });
   const next = mergeState(row?.payload || null, proposed, session) as AgendaState;
+  // Revalidate against the actual merged state, never a stale browser snapshot.
+  // Existing appointments that have not changed availability are preserved.
+  const unavailable=changedAppointmentIssues((row?.payload||{}) as AvailabilityState,next as AvailabilityState);
+  if(unavailable.length)return Response.json({error:"Horário indisponível: "+unavailable[0].problem},{status:409});
   if (session.account.role === "doctor") {
     const minutes = (v: unknown) => String(v).split(":").reduce((h,m)=>h*60+Number(m),0);
     for (const b of proposed.scheduleBlocks || []) if ((row.payload.appointments || []).some((a: Record<string, unknown>) => (a.doctorId === b.professionalId || a.anesthetistId === b.professionalId) && a.date === b.date && a.status !== "cancelled" && minutes(b.start) < minutes(a.time) + Number(a.duration || 0) && minutes(b.end) > minutes(a.time))) return Response.json({ error: "Existe atendimento no horário do bloqueio" }, { status: 409 });
@@ -51,6 +56,7 @@ async function putState(request: Request) {
 
   }
   const saved = await db.rpc("commit_agenda_change", { p_actor:session.account.id, p_expected: row?.updated_at ?? null, p_payload: next, p_revision: revision, p_audit: entries });
+  if(saved.error?.code==='P0001'&&saved.error.message?.includes('Horário indisponível'))return Response.json({error:saved.error.message},{status:409});
   if(saved.error?.code==='P0001'&&saved.error.message?.includes('Nota Fiscal emitida'))return Response.json({error:saved.error.message},{status:409});
   dbError(saved.error, "Save application state and audit");
   if (!saved.data) return Response.json({ error: "Outra pessoa salvou uma alteração. Atualize a agenda antes de salvar novamente." }, { status: 409 });
