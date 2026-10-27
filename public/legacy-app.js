@@ -1107,8 +1107,8 @@ function renderMobileCalendar(){
  const from=mobileListMode==="week"?ds(startOfWeek(selected)):mobileSelectedDate,to=mobileListMode==="week"?ds(addDays(startOfWeek(selected),6)):mobileSelectedDate;
  const rows=apps.filter(a=>a.date>=from&&a.date<=to).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
  const visibleBlocks=blocks.filter(b=>b.date>=from&&b.date<=to);
- const ruleIntervals=availability.availabilityIntervals(state,owner.id,mobileSelectedDate,includeRules)
-  .filter(interval=>interval.kind==="rule"&&!fullyBlocked);
+ const ruleIntervals=fullyBlocked?[]:availability.groupedRuleIntervals(
+  availability.availabilityIntervals(state,owner.id,mobileSelectedDate,includeRules));
  const entries=[...rows.map(a=>({kind:"appointment",item:a,date:a.date,time:a.time||""})),...visibleBlocks.map(b=>({kind:"block",item:b,date:b.date,time:b.start||""})),
   ...ruleIntervals.map((interval,i)=>({kind:"rule",item:interval,date:mobileSelectedDate,time:availability.timeLabel(interval.start),id:i}))].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
 
