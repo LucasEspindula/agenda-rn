@@ -390,6 +390,13 @@ function dayConflictCount(day,appointments){
  apps.forEach(a=>apps.forEach(b=>{if(a.id!==b.id&&mins(a.time)<mins(b.time)+Number(b.duration||0)&&mins(a.time)+Number(a.duration||0)>mins(b.time)){ids.add(a.id);ids.add(b.id)}}));
  return ids.size;
 }
+function appointmentConflictGroups(appointments=[]){
+ const sorted=appointments.filter(a=>a.status!=="cancelled").map(a=>({appointment:a,start:mins(a.time),end:mins(a.time)+Number(a.duration||0)})).filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start).sort((a,b)=>a.start-b.start||a.end-b.end||String(a.appointment.id).localeCompare(String(b.appointment.id)));
+ const groups=[];let group=[],groupEnd=-Infinity;
+ const commit=()=>{if(group.length>1)groups.push({start:group[0].start,end:groupEnd,appointments:group.map(x=>x.appointment)});group=[];groupEnd=-Infinity};
+ for(const entry of sorted){if(group.length&&entry.start>=groupEnd)commit();group.push(entry);groupEnd=Math.max(groupEnd,entry.end)}commit();
+ return groups;
+}
 function surgeonColor(id){const palette=["#dff4ef","#e8efff","#fff0d9","#f2e8ff","#ffe6ec","#e4f4ff","#edf4dc"];let n=0;for(const c of String(id||""))n=(n*31+c.charCodeAt(0))>>>0;return palette[n%palette.length]}
 function setAgendaOwnerState(owner){
  const shell=document.querySelector(".agenda-shell"),empty=$("agendaEmptyState"),agendaContext=(window.AgendaInitialView||"agenda")==="agenda",hasOwner=Boolean(owner);
@@ -409,6 +416,8 @@ function renderCalendar(){
  const relevantAppointments=state.appointments.filter(a=>visibleDays.has(a.date)&&(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id));
  const relevantBlocks=state.scheduleBlocks.filter(b=>visibleDays.has(b.date)&&b.professionalId===owner.id);
  const dayAppointments=new Map(days.map(d=>{const day=ds(d);return [day,visible.filter(a=>a.date===day&&a.status!=="cancelled")]}));
+ const staffConflictOutlines=(window.AgendaAuth||{}).role!=="doctor";
+ const dayConflictGroups=new Map(days.map(d=>{const day=ds(d);return [day,staffConflictOutlines?appointmentConflictGroups(dayAppointments.get(day)||[]):[]]}));
  const dayLaneAssignments=new Map(days.map(d=>{const day=ds(d),entries=[...(dayAppointments.get(day)||[]).map(a=>({key:"appointment:"+a.id,start:mins(a.time),end:mins(a.time)+Number(a.duration||0)})),...blocksForProfessional(owner.id,day).map(b=>({key:"block:"+b.id,start:mins(b.start),end:mins(b.end)}))];return [day,assignCalendarLanes(entries)]}));
  const timesToShow=[];
  relevantAppointments.forEach(a=>{timesToShow.push(mins(a.time));timesToShow.push(mins(a.time)+Number(a.duration||0))});
@@ -423,7 +432,7 @@ function renderCalendar(){
    end=Math.max(end,Math.ceil(latest/60)*60);
  }
  const hours=[];for(let m=start;m<end;m+=60)hours.push(m);
- const conflictDays=new Map(days.map(d=>[ds(d),isAnesthesiologist(owner)?dayConflictCount(ds(d),visible):0]));
+ const conflictDays=new Map(days.map(d=>[ds(d),(staffConflictOutlines||isAnesthesiologist(owner))?dayConflictCount(ds(d),visible):0]));
  let conflicts=0,html=`<div class="calendar-grid ${calendarMode==="day"?"day-mode":""}"><div class="corner"></div>`;
  days.forEach(d=>{
   const rulesToday=activeRulesForDate(owner,ds(d));
@@ -457,10 +466,18 @@ function renderCalendar(){
      const top=Math.max(2,((mins(b.start)-hour)/60)*64+2),height=Math.max(28,((mins(b.end)-mins(b.start))/60)*64-4);
      html+=`<button class="schedule-block" data-block-id="${esc(b.id)}" style="top:${top}px;height:${height}px;${laneStyle("block:"+b.id)}"><strong>${esc(b.start)} - ${esc(b.end)}</strong><span>${esc(b.reason)}</span></button>`;
    });
+   // The border belongs to overlapping appointments, never to manual schedule blocks.
+   (dayConflictGroups.get(day)||[]).filter(group=>Math.floor(group.start/60)*60===hour).forEach(group=>{
+    const positions=group.appointments.map(a=>lanes.get("appointment:"+a.id)).filter(Boolean);
+    if(positions.length<2)return;
+    const left=Math.min(...positions.map(x=>x.lane/x.total))*100,right=Math.max(...positions.map(x=>(x.lane+1)/x.total))*100;
+    const top=Math.max(1,((group.start-hour)/60)*64+1),height=Math.max(40,((group.end-group.start)/60)*64-2);
+    html+=`<div class="calendar-conflict-outline" aria-hidden="true" style="top:${top}px;height:${height}px;left:calc(${left}% + 1px);width:calc(${right-left}% - 2px)"></div>`;
+   });
    if(isAnesthesiologist(owner)&&apps.length){
     apps.forEach(a=>{
      const overlaps=dayApps.filter(b=>a.id!==b.id&&overlap(mins(a.time),mins(a.time)+Number(a.duration||0),mins(b.time),mins(b.time)+Number(b.duration||0)));if(overlaps.length)conflicts++;
-     html+=appointmentCard(a,hour,laneStyle("appointment:"+a.id),overlaps.length>0)
+     html+=appointmentCard(a,hour,laneStyle("appointment:"+a.id),overlaps.length>0&&!staffConflictOutlines)
     })
    }else apps.forEach(a=>html+=appointmentCard(a,hour,laneStyle("appointment:"+a.id),false));
    html+="</div>"
