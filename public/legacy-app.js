@@ -93,7 +93,7 @@ function hospitalAcronym(value=""){
 }
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 function prof(id){return state.professionals.find(x=>x.id===id)}function patient(id){return state.patients.find(x=>x.id===id)}function hospital(id){return state.hospitals.find(x=>x.id===id)}function selectedProf(){return prof($("professionalFilter").value)}
-function statusLabel(s){return({scheduled:"Agendado",confirmed:"Confirmado",authorized:"Autorizado",analysis:"Análise",realized:"Realizado",rescheduled:"Agendado",provisional:"Agendado",attended:"Realizado"})[s]||s}
+function statusLabel(s){return({scheduled:"Agendado",confirmed:"Confirmado",authorized:"Autorizado",analysis:"Análise",realized:"Atendido",rescheduled:"Agendado",provisional:"Agendado",attended:"Atendido"})[s]||s}
 function occurrenceInMonth(date){
  const d=new Date(date),day=d.getDay(),dayNum=d.getDate();
  const occurrence=Math.ceil(dayNum/7);
@@ -688,7 +688,7 @@ function updatePatientSide(){
 function setFlag(id,val){$(id).checked=!!val;document.querySelector(`[data-state-for="${id}"]`).textContent=val?"Sim":"Não"}
 const APPOINTMENT_STATUSES=["scheduled","confirmed","authorized","analysis","realized"];
 function appointmentStatusLabel(status){return statusLabel(status)}
-function appointmentStatusOptions(current){return APPOINTMENT_STATUSES.map(status=>`<option value="${status}" ${status===current?"selected":""}>${statusLabel(status)}</option>`).join("")}
+function appointmentStatusOptions(current){return APPOINTMENT_STATUSES.filter(status=>(window.AgendaAuth||{}).role!=="secretary"||status!=="realized").map(status=>`<option value="${status}" ${status===current?"selected":""}>${statusLabel(status)}</option>`).join("")}
 function detailHospitalOptions(current){return state.hospitals.map(h=>`<option value="${esc(h.id)}" ${h.id===current?"selected":""}>${esc(h.name)}</option>`).join("")}
 function detailDurationOptions(current){return [30,45,60,90,120].map(v=>`<option value="${v}" ${Number(current)===v?"selected":""}>${v} min</option>`).join("")}
 function detailRelatedOptions(a,owner){
@@ -699,6 +699,7 @@ function detailRelatedOptions(a,owner){
 async function applyAppointmentStatus(id,status,reason=""){
  const a=state.appointments.find(x=>x.id===id);if(!a||a.status===status)return;
  const previous=a.status,updated={...a,status,rescheduleReason:status==="rescheduled"?reason:(a.rescheduleReason||""),statusUpdatedAt:new Date().toISOString()};
+ if(previous==="realized"||status==="realized")return requestPasswordStatusChange(id,status);
  if((window.AgendaAuth||{}).role==="doctor"){if($("appointmentStatusSelect"))$("appointmentStatusSelect").value=previous;return appNotice("Acesso restrito","Status, valor e nota fiscal são alterados pela secretaria ou gerência.")}
  Object.assign(a,updated);hist(a.patientId,"Status alterado",`${statusLabel(previous)} → ${statusLabel(status)}${reason?` · Motivo: ${reason}`:""}`,id);if(await persist()===false)return;renderAppointmentDetail(a);toast(`Status alterado para ${statusLabel(status)}.`)
 }
@@ -887,7 +888,7 @@ async function saveNativeFinance(id){
 
 async function saveAppointmentDetailChanges(id,button){
  if(button?.dataset.saving)return;const a=state.appointments.find(x=>x.id===id),owner=selectedProf();if(!a||!owner)return;
- const canEditStatus=(window.AgendaAuth||{}).role!=="doctor",selectedStatus=$("appointmentStatusSelect")?.value;
+ const role=(window.AgendaAuth||{}).role,canEditStatus=role==="general_manager"||role==="secretary",selectedStatus=$("appointmentStatusSelect")?.value;
  const updates={
   ...(canEditStatus&&selectedStatus?{status:selectedStatus,statusUpdatedAt:selectedStatus!==a.status?new Date().toISOString():a.statusUpdatedAt}:{}),
   insurance:$("detailAppointmentInsurance").value.trim(),
@@ -900,6 +901,11 @@ async function saveAppointmentDetailChanges(id,button){
  };
  if(!updates.procedure||!updates.hospitalId||!updates.date||!updates.time)return appNotice("Dados incompletos","Informe procedimento, hospital, data e horário.");
  const statusChanged=canEditStatus&&Boolean(selectedStatus)&&selectedStatus!==a.status,changed=Object.keys(updates).some(k=>String(updates[k]??"")!==String(a[k]??"")),otherChanged=Object.keys(updates).some(k=>k!=="status"&&k!=="statusUpdatedAt"&&String(updates[k]??"")!==String(a[k]??""));
+ if(statusChanged&&(a.status==="realized"||selectedStatus==="realized")){
+  if(role!=="general_manager")return appNotice("Acesso restrito","O status Atendido exige senha do médico ou Gerente Geral.");
+  if(otherChanged)return appNotice("Salve os outros dados primeiro","Para confirmar o status com senha, salve as outras alterações antes.");
+  return requestPasswordStatusChange(id,selectedStatus);
+ }
  try{validateNativeFinance()}catch(error){nativeFinanceError(error.message);return}
  const detailReason=(window.AgendaAuth||{}).role==="doctor"?$("detailSuggestionReason")?.value.trim():"";if((window.AgendaAuth||{}).role==="doctor"&&!detailReason)return appNotice("Motivo necessário","Explique o motivo da alteração para enviar a sugestão.");const updated={...a,...updates,suggestionReason:detailReason||"Alteração do agendamento"};
  if(updated.forma_cobranca==="CONVENIO"&&!updated.insurance?.trim()&&(a.forma_cobranca!=="CONVENIO"||appointmentInsurance(a)!==updated.insurance))return appNotice("Convênio necessário","Informe o convênio do atendimento.");
@@ -925,15 +931,69 @@ async function saveAppointmentDetailChanges(id,button){
   }else toast("Agendamento salvo.");
  }finally{if(button.isConnected){delete button.dataset.saving;button.disabled=false;button.removeAttribute("aria-busy");button.textContent=oldText}}
 }
+function requestPasswordStatusChange(id,status="realized"){
+ const a=state.appointments.find(item=>item.id===id),role=(window.AgendaAuth||{}).role;
+ if(!a||!["doctor","general_manager"].includes(role))return appNotice("Acesso restrito","Somente médico ou Gerente Geral confirma o status.");
+ if(role==="doctor"&&status!=="realized")return appNotice("Acesso restrito","O médico só pode marcar como Atendido.");
+ if(a.status===status)return appNotice("Status já registrado","Este agendamento já está com esse status.");
+ const targetLabel=statusLabel(status),dialog=document.createElement("dialog");
+ dialog.className="attendance-password-dialog";
+ dialog.setAttribute("aria-labelledby","attendancePasswordTitle");
+ dialog.innerHTML=`<form class="attendance-password-form">
+  <div class="attendance-password-heading"><span class="attendance-password-icon" aria-hidden="true">✓</span>
+   <div><h3 id="attendancePasswordTitle">Confirmar ${esc(targetLabel)}</h3>
+    <p>Esta alteração será registrada no histórico e não precisa de aprovação da secretaria.</p></div>
+  </div>
+  <div class="attendance-password-context"><strong>${esc(patient(a.patientId)?.name||"Agendamento")}</strong><span>${parseDate(a.date).toLocaleDateString("pt-BR")} · ${esc(a.time)}</span></div>
+  <label for="attendancePasswordInput">Senha da sua conta (médico ou Gerente Geral)</label>
+  <input id="attendancePasswordInput" type="password" name="confirmPassword" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="Digite sua senha">
+  <p class="attendance-password-error" role="alert" hidden></p>
+  <div class="attendance-password-buttons"><button type="button" class="secondary-btn" data-cancel-password>Voltar</button><button type="submit" class="primary-btn">Confirmar ${esc(targetLabel)}</button></div>
+ </form>`;
+ document.body.appendChild(dialog);
+ dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+ dialog.querySelector("[data-cancel-password]").onclick=()=>dialog.close();
+ const form=dialog.querySelector("form"),password=dialog.querySelector("#attendancePasswordInput"),errorBox=dialog.querySelector(".attendance-password-error"),submit=dialog.querySelector('button[type="submit"]');
+ form.onsubmit=async event=>{
+  event.preventDefault();if(submit.disabled)return;
+  const secret=password.value;password.value="";
+  submit.disabled=true;submit.textContent="Confirmando…";errorBox.hidden=true;
+  let committed=false;
+  try{
+   const response=await fetch("/api/attendance/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({appointmentId:id,status,password:secret})});
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(result.error||"Não foi possível alterar o status.");
+   committed=true;
+   const read=await fetch("/api/state",{cache:"no-store"});
+   if(!read.ok)throw Error("O status foi salvo, mas a atualização da agenda falhou.");
+   const snapshot=await read.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);
+   dialog.close();renderAll();
+   const updated=state.appointments.find(item=>item.id===id);
+   if(updated&&$("appointmentModal")&&!$("appointmentModal").classList.contains("hidden"))renderAppointmentDetail(updated);
+   reconcileRemoteAgendaUpdate();
+   toast(`Status alterado para ${targetLabel}.`);
+  }catch(error){
+   if(committed){
+    dialog.close();closeModals();
+    await appNotice("Status salvo","A alteração foi registrada. Atualize a agenda para carregar as informações mais recentes.");
+    window.location.reload();return;
+   }
+   if(dialog.isConnected){errorBox.textContent=error.message||"Não foi possível confirmar.";errorBox.hidden=false;password.focus();}
+  }finally{
+   if(dialog.isConnected){submit.disabled=false;submit.textContent=`Confirmar ${targetLabel}`;}
+  }
+ };
+ dialog.showModal();password.focus();
+}
 function renderAppointmentDetail(a){
  const p=patient(a.patientId),h=hospital(a.hospitalId),doctor=prof(a.doctorId),anesthetist=prof(a.anesthetistId),end=hhmm(mins(a.time)+Number(a.duration||0));
  const owner=selectedProf(),isDoctor=(window.AgendaAuth||{}).role==="doctor",canAdmin=!isDoctor,relatedLabel=isAnesthesiologist(owner)?"Cirurgião":"Anestesista";
  const flags=[["OPME",a.opme],["Laudos",a.reports],["Exames",a.exams]].map(([label,on])=>`<span class="detail-flag ${on?"active":""}">${label}: ${on?"Sim":"Não"}</span>`).join("");
  const heroName=p?.name||doctor?.name||"Cirurgião não informado",heroLabel=p?"Paciente":"Cirurgião",heroMeta=p?`${esc(appointmentInsurance(a)||"Sem convênio")}`:`Paciente ainda não informado · ${esc(a.insurance||"Convênio não informado")}`;
- $("appointmentDetailView").innerHTML=`<div class="appointment-detail-hero detail-modern-hero"><div class="detail-avatar">${esc(heroName.charAt(0))}</div><div><span class="detail-eyebrow">${heroLabel}</span><h4>${esc(heroName)}</h4><p>${heroMeta}</p></div><div class="detail-hero-meta"><span>${p?.email?esc(p.email):"Sem e-mail"}</span>${phoneControl(p?.phone)}</div><span class="detail-status ${esc(a.status)}">${appointmentStatusLabel(a.status)}</span></div><div class="detail-appointment-line"><div><span>Agendamento</span><strong>${parseDate(a.date).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})} · ${esc(a.time)} às ${esc(end)}</strong></div>${canAdmin?`<div class="appointment-status-editor"><label for="appointmentStatusSelect">Status</label><div class="appointment-status-controls"><select id="appointmentStatusSelect" class="status-select ${esc(a.status)}">${appointmentStatusOptions(a.status)}</select></div></div>`:""}</div><div class="appointment-detail-grid detail-edit-grid"><label>Procedimento<input id="detailProcedure" value="${esc(a.procedure||"")}"></label><label>Hospital<select id="detailHospital">${detailHospitalOptions(a.hospitalId)}</select></label><label>Convênio / plano<input id="detailAppointmentInsurance" value="${esc(appointmentInsurance(a))}" ${canAdmin?"":"disabled"}></label><label>Forma de cobrança<select id="detailBillingMethod" ${canAdmin?"":"disabled"}><option value="">Não informada</option><option value="PARTICULAR" ${a.forma_cobranca==="PARTICULAR"?"selected":""}>Particular</option><option value="CONVENIO" ${a.forma_cobranca==="CONVENIO"?"selected":""}>Convênio</option></select></label><label>Data<input id="detailDate" type="date" min="${ds(new Date())}" value="${esc(a.date)}"></label><label>Horário<input id="detailTime" type="time" value="${esc(a.time)}"></label><label>Duração<select id="detailDuration">${detailDurationOptions(a.duration)}</select></label><label>${relatedLabel}<select id="detailRelatedProfessional">${detailRelatedOptions(a,owner)}</select></label><label>Validade da guia<input id="detailGuideExpiry" type="date" value="${esc(a.guideExpiry||"")}"></label><label>Tipo<select id="detailCareType"><option value="outpatient" ${a.careType!=="inpatient"?"selected":""}>Ambulatorial</option><option value="inpatient" ${a.careType==="inpatient"?"selected":""}>Internado</option></select></label></div>${canAdmin?`<section id="nativeFinance" class="native-finance"></section>`:""}<div class="detail-docs editable-flags"><label class="detail-check"><input id="detailOpme" type="checkbox" role="switch" ${a.opme?"checked":""}> OPME</label><label class="detail-check"><input id="detailReports" type="checkbox" role="switch" ${a.reports?"checked":""}> Laudos</label><label class="detail-check"><input id="detailExams" type="checkbox" role="switch" ${a.exams?"checked":""}> Exames</label></div><div class="detail-notes"><span>Observações</span><textarea id="detailNotes" rows="3" placeholder="Observações do atendimento...">${esc(a.notes||"")}</textarea></div>${isDoctor?'<div class="detail-notes"><span>Motivo da sugestão</span><textarea id="detailSuggestionReason" rows="3" required placeholder="Explique o motivo da alteração"></textarea></div>':""}<section id="surgeryDocuments"></section>${renderRescheduleHistory(a)}<div class="appointment-detail-toolbar"><div></div><div class="appointment-detail-actions"><button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>${isDoctor?"Sugerir cancelamento":"Cancelar"}</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button><button id="saveDetailChangesBtn" type="button" class="primary-btn">${isDoctor?"Enviar sugestão":"Salvar alterações"}</button></div></div>`;
+ $("appointmentDetailView").innerHTML=`<div class="appointment-detail-hero detail-modern-hero"><div class="detail-avatar">${esc(heroName.charAt(0))}</div><div><span class="detail-eyebrow">${heroLabel}</span><h4>${esc(heroName)}</h4><p>${heroMeta}</p></div><div class="detail-hero-meta"><span>${p?.email?esc(p.email):"Sem e-mail"}</span>${phoneControl(p?.phone)}</div><span class="detail-status ${esc(a.status)}">${appointmentStatusLabel(a.status)}</span></div><div class="detail-appointment-line"><div><span>Agendamento</span><strong>${parseDate(a.date).toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"})} · ${esc(a.time)} às ${esc(end)}</strong>${isDoctor?`<div class="detail-appointment-actions"><button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>Cancelar</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button><button id="markAttendedBtn" type="button" class="attended-btn" ${a.status==="realized"?'disabled title="Atendimento já marcado como Atendido"':""}>Atendido</button></div>`:""}</div>${canAdmin?(a.status==="realized"&&(window.AgendaAuth||{}).role==="secretary"?`<div class="appointment-status-editor"><span>Status</span><strong class="status-readonly">Atendido · protegido</strong></div>`:`<div class="appointment-status-editor"><label for="appointmentStatusSelect">Status</label><div class="appointment-status-controls"><select id="appointmentStatusSelect" class="status-select ${esc(a.status)}">${appointmentStatusOptions(a.status)}</select></div></div>`):""}</div><div class="appointment-detail-grid detail-edit-grid"><label>Procedimento<input id="detailProcedure" value="${esc(a.procedure||"")}"></label><label>Hospital<select id="detailHospital">${detailHospitalOptions(a.hospitalId)}</select></label><label>Convênio / plano<input id="detailAppointmentInsurance" value="${esc(appointmentInsurance(a))}" ${canAdmin?"":"disabled"}></label><label>Forma de cobrança<select id="detailBillingMethod" ${canAdmin?"":"disabled"}><option value="">Não informada</option><option value="PARTICULAR" ${a.forma_cobranca==="PARTICULAR"?"selected":""}>Particular</option><option value="CONVENIO" ${a.forma_cobranca==="CONVENIO"?"selected":""}>Convênio</option></select></label><label>Data<input id="detailDate" type="date" min="${ds(new Date())}" value="${esc(a.date)}"></label><label>Horário<input id="detailTime" type="time" value="${esc(a.time)}"></label><label>Duração<select id="detailDuration">${detailDurationOptions(a.duration)}</select></label><label>${relatedLabel}<select id="detailRelatedProfessional">${detailRelatedOptions(a,owner)}</select></label><label>Validade da guia<input id="detailGuideExpiry" type="date" value="${esc(a.guideExpiry||"")}"></label><label>Tipo<select id="detailCareType"><option value="outpatient" ${a.careType!=="inpatient"?"selected":""}>Ambulatorial</option><option value="inpatient" ${a.careType==="inpatient"?"selected":""}>Internado</option></select></label></div>${canAdmin?`<section id="nativeFinance" class="native-finance"></section>`:""}<div class="detail-docs editable-flags"><label class="detail-check"><input id="detailOpme" type="checkbox" role="switch" ${a.opme?"checked":""}> OPME</label><label class="detail-check"><input id="detailReports" type="checkbox" role="switch" ${a.reports?"checked":""}> Laudos</label><label class="detail-check"><input id="detailExams" type="checkbox" role="switch" ${a.exams?"checked":""}> Exames</label></div><div class="detail-notes"><span>Observações</span><textarea id="detailNotes" rows="3" placeholder="Observações do atendimento...">${esc(a.notes||"")}</textarea></div>${isDoctor?'<div class="detail-notes"><span>Motivo da sugestão</span><textarea id="detailSuggestionReason" rows="3" required placeholder="Explique o motivo da alteração"></textarea></div>':""}<section id="surgeryDocuments"></section>${renderRescheduleHistory(a)}<div class="appointment-detail-toolbar ${isDoctor?"doctor-detail-toolbar":""}"><div></div><div class="appointment-detail-actions">${isDoctor?"":`<button id="cancelDetailAppointmentBtn" type="button" class="danger-btn" ${financialIssuedAppointments.has(a.id)?'disabled title="Atendimento vinculado a Nota Fiscal emitida"':""}>Cancelar</button><button id="rescheduleAppointmentBtn" type="button" class="secondary-btn">Reagendar</button>`}<button id="saveDetailChangesBtn" type="button" class="primary-btn">${isDoctor?"Enviar sugestão":"Salvar alterações"}</button></div></div>`;
  mountDocumentPanel($("surgeryDocuments"),a.id);
  if(canAdmin){void loadNativeFinance(a.id);$("detailBillingMethod").onchange=paintNativeFinance}
- $("cancelDetailAppointmentBtn").onclick=()=>openCancellation(a.id);$("rescheduleAppointmentBtn").onclick=()=>openReschedule(a.id);$("saveDetailChangesBtn").onclick=async()=>saveAppointmentDetailChanges(a.id,$("saveDetailChangesBtn"));qsa("#appointmentDetailView [data-close]").forEach(b=>b.onclick=closeModals);
+ $("cancelDetailAppointmentBtn").onclick=()=>openCancellation(a.id);$("rescheduleAppointmentBtn").onclick=()=>openReschedule(a.id);$("saveDetailChangesBtn").onclick=async()=>saveAppointmentDetailChanges(a.id,$("saveDetailChangesBtn"));if(isDoctor)$("markAttendedBtn").onclick=()=>requestPasswordStatusChange(a.id,"realized");qsa("#appointmentDetailView [data-close]").forEach(b=>b.onclick=closeModals);
 }
 function setAppointmentViewMode(viewing){$("appointmentModal").classList.toggle("appointment-view-mode",viewing);$("appointmentDetailView").classList.toggle("hidden",!viewing);document.querySelector("#appointmentForm > .appointment-layout").classList.toggle("hidden",viewing);qsa("#appointmentForm > .appointment-layout input,#appointmentForm > .appointment-layout select,#appointmentForm > .appointment-layout textarea").forEach(el=>el.disabled=viewing);$("saveAppointmentBtn").classList.toggle("hidden",viewing);$("deleteAppointmentBtn").classList.toggle("hidden",viewing||!$("appointmentId").value);$("appointmentModalTitle").textContent=viewing?"Detalhes do agendamento":"Novo agendamento"}
 function openAppointment(id=null,preset={}){

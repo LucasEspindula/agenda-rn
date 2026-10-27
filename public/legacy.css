@@ -733,3 +733,38 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  #cancelledList .cancel-details summary{min-height:42px;padding:11px 4px}
  #cancelledList .cancel-details-panel{width:100%;max-width:none;box-sizing:border-box}
 }
+
+/* Ações do médico e confirmação de status por senha. */
+#appointmentModal .detail-appointment-line>div:first-child{flex:1;min-width:0}
+#appointmentModal .detail-appointment-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:13px;max-width:480px}
+#appointmentModal .detail-appointment-actions button{min-width:0;min-height:42px;padding:9px 8px;font-size:12px;font-weight:800;line-height:1.25;border-radius:9px}
+#appointmentModal .detail-appointment-actions .attended-btn{border:1px solid #a8d9bd;background:#e7f8ee;color:#166340;cursor:pointer}
+#appointmentModal .detail-appointment-actions .attended-btn:hover:not(:disabled){background:#d6f1e1}
+#appointmentModal .detail-appointment-actions button:disabled{opacity:.5;cursor:not-allowed}
+#appointmentModal .detail-appointment-actions button:focus-visible{outline:3px solid rgba(45,193,185,.42);outline-offset:2px}
+#appointmentModal .doctor-detail-toolbar{justify-content:stretch}
+#appointmentModal .doctor-detail-toolbar>div:first-child{display:none}
+#appointmentModal .doctor-detail-toolbar .appointment-detail-actions{width:100%;display:block}
+#appointmentModal .doctor-detail-toolbar #saveDetailChangesBtn{width:100%;min-height:46px;font-size:14px}
+#appointmentModal .status-readonly{display:block;margin-top:6px;border-radius:8px;padding:10px 12px;color:#166340;background:#e7f8ee;font-size:13px}
+.attendance-password-dialog{width:min(440px,calc(100vw - 28px));max-height:calc(100dvh - 28px);padding:0;border:1px solid #d5e3e9;border-radius:16px;background:#fff;color:#203f4e;box-shadow:0 22px 68px rgba(9,38,56,.25)}
+.attendance-password-dialog::backdrop{background:rgba(13,39,53,.56)}
+.attendance-password-form{display:grid;gap:14px;padding:24px}
+.attendance-password-heading{display:flex;gap:11px;align-items:flex-start}
+.attendance-password-heading h3{margin:0;color:#17495d;font-size:19px}
+.attendance-password-heading p{font-size:12px;color:#607886;line-height:1.45;margin:4px 0 0}
+.attendance-password-icon{display:grid;place-items:center;flex:0 0 36px;height:36px;border-radius:50%;background:#e6f7ee;color:#187247;font-size:18px;font-weight:900}
+.attendance-password-context{display:flex;flex-wrap:wrap;gap:5px 12px;padding:11px 13px;border-radius:10px;background:#f4f8fa;font-size:12px}
+.attendance-password-context span{color:#617987}
+.attendance-password-form label{font-size:12px;font-weight:800;color:#324e5c}
+.attendance-password-form input{width:100%;box-sizing:border-box}
+.attendance-password-error{margin:0;color:#a72739;font-size:12px;font-weight:700}
+.attendance-password-buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.attendance-password-buttons button{min-width:0;min-height:44px}
+@media(max-width:720px){
+ #appointmentModal .detail-appointment-line{width:auto;align-items:stretch}
+ #appointmentModal .detail-appointment-actions{max-width:none;gap:6px;margin-top:12px}
+ #appointmentModal .detail-appointment-actions button{min-height:44px;padding:9px 4px;font-size:12px;white-space:normal}
+ #appointmentModal .doctor-detail-toolbar{margin-inline:-14px}
+ .attendance-password-form{padding:20px}
+}

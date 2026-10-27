@@ -1,4 +1,5 @@
 import {canUseAgenda} from "@/lib/doctor-services";
+import { touchesAttendedStatus } from "@/lib/security/attendance-status";
 import {changedAppointmentIssues,type AvailabilityState} from "@/lib/agenda-availability";
 import { canReadAppointment, withoutLegacyFinance, validateAppointment, validId } from "@/lib/security/state";
 import { consumeLimit } from "@/lib/security/rate-limit";
@@ -97,6 +98,7 @@ async function handlePOST(request: Request) {
   if (body.action !== "create" && previous && !canReadAppointment(session, previous)) return Response.json({ error: "Agendamento sem permissão" }, { status: 403 });
   if (!proposed) return Response.json({ error: "Agendamento inválido" }, { status: 400 });
   validateAppointment(proposed);
+  if (body.action !== "delete" && touchesAttendedStatus(previous, proposed)) return Response.json({ error: "Alteração para/de Atendido exige senha do médico ou Gerente Geral." }, { status: 403 });
   if (body.action === "create" && [...(state.appointments || []),...(state.cancelledAppointments || [])].some(a=>a.id===proposed.id)) return Response.json({error:"Identificador já utilizado"},{status:409});
   if (previous && (proposed.id !== previous.id || proposed.doctorId !== previous.doctorId || proposed.anesthetistId !== previous.anesthetistId || proposed.patientId !== previous.patientId)) return Response.json({error:"Transferência de agendamento exige a gerência"},{status:403});
   if (!previous && proposed.patientId && !(state.patients || []).some(p=>p.id===proposed.patientId && session.agendaIds.includes(String(p.doctorId)))) return Response.json({error:"Paciente sem permissão"},{status:403});
@@ -145,6 +147,7 @@ async function handlePATCH(request: Request) {
     if (original && (!canReadAppointment(session,original) || JSON.stringify(original)!==JSON.stringify(previous))) return Response.json({error:"Agendamento mudou ou acesso foi revogado; envie uma nova sugestão"},{status:409});
     if (!proposed) return Response.json({error:"Solicitação inválida"},{status:400});
     validateAppointment(proposed);
+    if (row.action !== "delete" && touchesAttendedStatus(previous, proposed)) return Response.json({ error: "A mudança para/de Atendido exige confirmação por senha diretamente no agendamento." }, { status: 403 });
     if (!canReadAppointment(session,proposed) || (previous && (proposed.id!==previous.id || proposed.doctorId!==previous.doctorId || proposed.anesthetistId!==previous.anesthetistId || proposed.patientId!==previous.patientId))) return Response.json({error:"Vínculo da solicitação inválido"},{status:403});
     if (row.action==="create" && [...current,...(state.cancelledAppointments || [])].some(a=>a.id===proposed.id)) return Response.json({error:"Identificador já utilizado"},{status:409});
     if (row.action !== "create" && !current.some((a) => a.id === row.appointment_id)) return Response.json({ error: "O agendamento original já foi alterado. Negue a solicitação e peça uma nova sugestão." }, { status: 409 });
