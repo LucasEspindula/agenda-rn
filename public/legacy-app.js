@@ -1181,14 +1181,20 @@ function openBlock(id=null,preset={}){
  openModal("blockModal")
 }
 $("blockForm").onsubmit=async e=>{
- e.preventDefault();const owner=selectedProf();if($("blockDate").value<ds(new Date()))return appNotice("Data inválida","Não é possível criar bloqueio em data passada.");
+ e.preventDefault();const form=e.currentTarget;if(form.dataset.saving)return;
+ const owner=selectedProf();if(!owner)return appNotice("Profissional necessário","Selecione um profissional.");
+ if($("blockDate").value<ds(new Date()))return appNotice("Data inválida","Não é possível criar bloqueio em data passada.");
  if(mins($("blockStart").value)>=mins($("blockEnd").value))return appNotice("Horário inválido","O horário final deve ser posterior ao inicial.");
  const item={id:$("blockId").value||crypto.randomUUID(),professionalId:owner.id,date:$("blockDate").value,start:$("blockStart").value,end:$("blockEnd").value,reason:$("blockReason").value.trim(),hospitalId:null};
+ if(state.scheduleBlocks.some(b=>b.id!==item.id&&b.professionalId===item.professionalId&&b.date===item.date&&b.start===item.start&&b.end===item.end))
+  return appNotice("Bloqueio já cadastrado","Esse profissional já possui um bloqueio nesse mesmo período. Edite o bloqueio existente.");
 
  // Bloqueios manuais impedem novos agendamentos; atendimentos já existentes são preservados.
-
- const i=state.scheduleBlocks.findIndex(x=>x.id===item.id);if(i>=0)state.scheduleBlocks[i]=item;else state.scheduleBlocks.push(item);
- if(await persist()===false)return;closeModals();toast("Bloqueio salvo.")
+ form.dataset.saving="true";
+ try{
+  const i=state.scheduleBlocks.findIndex(x=>x.id===item.id);if(i>=0)state.scheduleBlocks[i]=item;else state.scheduleBlocks.push(item);
+  if(await persist()===false)return;closeModals();toast("Bloqueio salvo.")
+ }finally{delete form.dataset.saving}
 };
 $("deleteBlockBtn").onclick=async()=>{const id=$("blockId").value;if(id&&await appConfirm("Excluir bloqueio","Este horário voltará a ficar disponível.","Excluir",true)){state.scheduleBlocks=state.scheduleBlocks.filter(x=>x.id!==id);if(await persist()===false)return;closeModals();toast("Bloqueio excluído.")}};
 
