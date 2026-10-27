@@ -669,3 +669,35 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
  .rn-agenda .agenda-shell .main:has(#agendaView.active){padding-top:6px}
  .rn-agenda #agendaView>.toolbar{gap:6px}
 }
+
+
+/* RN Integra mobile: distinguish recurrent availability rules from appointments
+   and show full-day closures without hiding pre-existing appointments. */
+@media screen and (max-width:900px){
+ .rn-agenda .mobile-day-list .mobile-rule-block{
+   display:flex;
+   gap:10px;
+   align-items:center;
+   background:#edf1f4;
+   color:#354957;
+   border:0;
+   border-radius:10px;
+   text-align:left;
+   padding:12px 10px;
+   min-width:0;
+ }
+ .rn-agenda .mobile-full-day-block{
+   display:grid;
+   gap:6px;
+   padding:16px;
+   background:#edf1f4;
+   border:1px solid #b9c8d0;
+   border-left:4px solid #627c8a;
+   border-radius:12px;
+   color:#284455;
+   line-height:1.45;
+ }
+ .rn-agenda .mobile-full-day-block strong{font-size:14px;font-weight:800}
+ .rn-agenda .mobile-full-day-block span{font-size:12px}
+ .rn-agenda #newAppointmentBtn:disabled{opacity:.54;cursor:not-allowed}
+}
