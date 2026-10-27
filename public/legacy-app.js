@@ -654,7 +654,32 @@ function renderWorkflow(){
 }
 const workflowBusy=new Set();
 async function decideRequest(id,decision){if(workflowBusy.has(id))return;let note="";if(decision==="accepted"){const ok=await appConfirm("Aceitar solicitação","Tem certeza que deseja aceitar esta alteração? Ela será aplicada na agenda e ficará registrada no histórico.","Aceitar");if(!ok)return}else{const ok=await appConfirm("Negar solicitação","A solicitação será mantida no histórico e o médico receberá uma notificação.","Negar",true);if(!ok)return;note=await requestDenialReason();if(!note)return}workflowBusy.add(id);renderWorkflow();try{const response=await fetch("/api/workflow",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id,decision,note})});const result=await response.json().catch(()=>({}));if(!response.ok)return appNotice("Não foi possível concluir",result.error||"Tente novamente.");toast(result.message);const [stateResponse]=await Promise.all([fetch("/api/state"),refreshWorkflow()]);if(stateResponse.ok){const resultState=await stateResponse.json();if(resultState.state){window.AgendaRevision=resultState.revision;state=Storage.migrate(resultState.state);renderAll()}}}finally{workflowBusy.delete(id);renderWorkflow()}}
-async function sendAgendaSuggestion(action,appointment,appointmentId,button=null){if(button?.dataset.sending)return false;const auth=window.AgendaAuth||{},reason=appointment.suggestionReason||appointment.rescheduleReason||appointment.cancelReason||"";const needsReason=action!=="create";if(needsReason&&!reason){const typed=prompt("Informe o motivo da sugestão para a secretaria/gerente geral:");if(!typed?.trim())return appNotice("Motivo necessário","Explique o motivo da alteração para enviar a sugestão."),false;appointment={...appointment,suggestionReason:typed.trim()}}appointment={...appointment,suggestedByName:accountName(auth),suggestedByEmail:auth.email};const oldText=button?.textContent;if(button){button.dataset.sending="true";button.disabled=true;button.textContent="Enviando…";button.setAttribute("aria-busy","true")}try{const response=await fetch("/api/workflow",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,appointment,appointmentId})});const result=await response.json().catch(()=>({}));if(!response.ok){await appNotice("Não foi possível enviar",result.error||"Tente novamente.");return false}toast("Sugestão enviada, aguarde aprovação.");await refreshWorkflow();return true}finally{if(button?.isConnected){delete button.dataset.sending;button.disabled=false;button.textContent=oldText;button.removeAttribute("aria-busy")}}}
+async function sendAgendaSuggestion(action,appointment,appointmentId,button=null){
+ if(button?.dataset.sending)return false;
+ const auth=window.AgendaAuth||{},reason=appointment.suggestionReason||appointment.rescheduleReason||appointment.cancelReason||"";
+ if(action!=="create"&&!reason){
+  const typed=prompt("Informe o motivo da sugestão para a secretaria/gerente geral:");
+  if(!typed?.trim())return appNotice("Motivo necessário","Explique o motivo da alteração para enviar a sugestão."),false;
+  appointment={...appointment,suggestionReason:typed.trim()};
+ }
+ appointment={...appointment,suggestedByName:accountName(auth),suggestedByEmail:auth.email};
+ const oldText=button?.textContent;
+ if(button){button.dataset.sending="true";button.disabled=true;button.textContent="Enviando…";button.setAttribute("aria-busy","true")}
+ try{
+  const response=await fetch("/api/workflow",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,appointment,appointmentId})});
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok){await appNotice("Não foi possível enviar",result.error||"Tente novamente.");return false}
+  toast(result.message||"Sugestão enviada, aguarde aprovação.");
+  // Uma falha ao atualizar a lista não invalida uma solicitação já confirmada.
+  try{await refreshWorkflow()}catch{/* A lista será sincronizada na próxima atualização. */}
+  return true;
+ }catch{
+  await appNotice("Não foi possível confirmar o envio","A conexão falhou. Confira se a sugestão já aparece no histórico antes de tentar novamente.");
+  return false;
+ }finally{
+  if(button?.isConnected){delete button.dataset.sending;button.disabled=false;button.textContent=oldText;button.removeAttribute("aria-busy")}
+ }
+}
 function applyRoleRestrictions(){const auth=window.AgendaAuth||{},manager=auth.role==="general_manager",doctor=auth.role==="doctor";qsa(".manager-only").forEach(el=>el.classList.toggle("hidden",!manager));qsa(".doctor-only").forEach(el=>el.classList.toggle("hidden",!doctor));qsa(".workflow-reviewer").forEach(el=>el.classList.toggle("hidden",doctor));$("newBlockBtn").classList.toggle("hidden",!manager&&!doctor);$("newAppointmentBtn").textContent=doctor?"Enviar Agendamento":"+ Novo agendamento";$("newPatientBtn").classList.toggle("hidden",doctor);$("editPatientFromDetail").classList.toggle("hidden",doctor);if(manager)renderAccess();refreshWorkflow()}
 function cancelledBillingLabel(a){
  return ({PARTICULAR:"Particular",CONVENIO:"Convênio"})[a.forma_cobranca]||"Não informado";
@@ -1181,14 +1206,20 @@ function openBlock(id=null,preset={}){
  openModal("blockModal")
 }
 $("blockForm").onsubmit=async e=>{
- e.preventDefault();const owner=selectedProf();if($("blockDate").value<ds(new Date()))return appNotice("Data inválida","Não é possível criar bloqueio em data passada.");
+ e.preventDefault();const form=e.currentTarget;if(form.dataset.saving)return;
+ const owner=selectedProf();if(!owner)return appNotice("Profissional necessário","Selecione um profissional.");
+ if($("blockDate").value<ds(new Date()))return appNotice("Data inválida","Não é possível criar bloqueio em data passada.");
  if(mins($("blockStart").value)>=mins($("blockEnd").value))return appNotice("Horário inválido","O horário final deve ser posterior ao inicial.");
  const item={id:$("blockId").value||crypto.randomUUID(),professionalId:owner.id,date:$("blockDate").value,start:$("blockStart").value,end:$("blockEnd").value,reason:$("blockReason").value.trim(),hospitalId:null};
+ if(state.scheduleBlocks.some(b=>b.id!==item.id&&b.professionalId===item.professionalId&&b.date===item.date&&b.start===item.start&&b.end===item.end))
+  return appNotice("Bloqueio já cadastrado","Esse profissional já possui um bloqueio nesse mesmo período. Edite o bloqueio existente.");
 
  // Bloqueios manuais impedem novos agendamentos; atendimentos já existentes são preservados.
-
- const i=state.scheduleBlocks.findIndex(x=>x.id===item.id);if(i>=0)state.scheduleBlocks[i]=item;else state.scheduleBlocks.push(item);
- if(await persist()===false)return;closeModals();toast("Bloqueio salvo.")
+ form.dataset.saving="true";
+ try{
+  const i=state.scheduleBlocks.findIndex(x=>x.id===item.id);if(i>=0)state.scheduleBlocks[i]=item;else state.scheduleBlocks.push(item);
+  if(await persist()===false)return;closeModals();toast("Bloqueio salvo.")
+ }finally{delete form.dataset.saving}
 };
 $("deleteBlockBtn").onclick=async()=>{const id=$("blockId").value;if(id&&await appConfirm("Excluir bloqueio","Este horário voltará a ficar disponível.","Excluir",true)){state.scheduleBlocks=state.scheduleBlocks.filter(x=>x.id!==id);if(await persist()===false)return;closeModals();toast("Bloqueio excluído.")}};
 
