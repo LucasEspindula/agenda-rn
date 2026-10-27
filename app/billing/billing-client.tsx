@@ -2,6 +2,7 @@
 import InsurancePending from "./insurance-pending";
 import PortalSubmissions from "./portal-submissions";
 import MobileRowActions from "@/components/mobile-row-actions";
+import {hasIssuedInvoiceForAttendance,operationalAttendanceStatus,fiscalAttendanceStatus,ISSUED_NF_CANCEL_MESSAGE} from "@/lib/attendance-invoice-status";
 import BillingSubnav, {type BillingNavigationView} from "./billing-subnav";
 import ProfessionalChargeDialog from "./professional-charge-dialog";
 import ProfessionalInvoiceDialog from "./professional-invoice-dialog";
@@ -917,7 +918,8 @@ export default function BillingClient({
             {insurancePendingActive && <th>Emissão</th>}
             <th>Valor recebido</th>
             <th>Pagamento</th>
-            <th>Status</th>
+            <th>Status do Atendimento</th>
+            <th>Status da NF</th>
             {tab === "records" && statusFilter === "Cancelado" && <th>Motivo do cancelamento</th>}
             {insurancePendingActive && <th>Em aberto</th>}
             {!report && (
@@ -986,13 +988,13 @@ export default function BillingClient({
                 )}
               </td>
               <td>
-                <span
-                  className={
-                    "billing-badge " +
-                    (rowStatus(r) === "Pago" ? "paid" : "pending")
-                  }
-                >
-                  {rowStatus(r)}
+                <span className={"billing-badge "+(r.status_atendimento === "realized" ? "paid" : "pending")}>
+                  {operationalAttendanceStatus(r)}
+                </span>
+              </td>
+              <td>
+                <span className={"billing-badge "+(hasIssuedInvoiceForAttendance(r,data) ? "paid" : "pending")}>
+                  {fiscalAttendanceStatus(r,data)}
                 </span>
               </td>
               {tab === "records" && statusFilter === "Cancelado" && (
@@ -1043,11 +1045,13 @@ export default function BillingClient({
                       r.status_atendimento !== "cancelled" && (
                         <button
                           className="billing-icon-action billing-delete"
-                          disabled={!!r.invoice}
+                          disabled={!!r.invoice || hasIssuedInvoiceForAttendance(r,data)}
                           title={
-                            r.invoice
-                              ? "Remova ou regularize a Nota Fiscal vinculada antes de cancelar este atendimento."
-                              : "Cancelar atendimento manual"
+                            hasIssuedInvoiceForAttendance(r,data)
+                              ? ISSUED_NF_CANCEL_MESSAGE
+                              : r.invoice
+                                ? "Remova ou regularize a Nota Fiscal vinculada antes de cancelar este atendimento."
+                                : "Cancelar atendimento manual"
                           }
                           aria-label={"Cancelar atendimento de " + r.patient}
                           onClick={() =>
