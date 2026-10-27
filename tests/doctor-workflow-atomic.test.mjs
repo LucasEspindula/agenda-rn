@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const migration=readFileSync('supabase/migrations/20261027190000_atomic_agenda_suggestions.sql','utf8');
+const migration=readFileSync('supabase/migrations/20261027185310_atomic_agenda_suggestions.sql','utf8');
 const route=readFileSync('app/api/workflow/route.ts','utf8');
 const legacy=readFileSync('public/legacy-app.js','utf8');
 
@@ -11,6 +11,8 @@ test('doctor suggestion is atomic, idempotent and repairs the confirmed orphan n
  const db=new PGlite();t.after(()=>db.close());
  await db.exec(`
    CREATE ROLE service_role;
+   CREATE ROLE anon;
+   CREATE ROLE authenticated;
    CREATE TABLE public.users(id bigint PRIMARY KEY);
    INSERT INTO public.users(id) VALUES(7);
    CREATE TABLE public.agenda_requests(
@@ -32,6 +34,8 @@ test('doctor suggestion is atomic, idempotent and repairs the confirmed orphan n
  await db.query(`INSERT INTO public.agenda_requests(id,professional_id,appointment_id,action,requested_by,created_at)
                  VALUES('orphan','d1','a0','update',7,$1)`,[now]);
  await db.exec(migration);
+ const acl=(await db.query("SELECT has_function_privilege('service_role','public.submit_agenda_suggestion(jsonb,jsonb,jsonb)','EXECUTE') service_role, has_function_privilege('anon','public.submit_agenda_suggestion(jsonb,jsonb,jsonb)','EXECUTE') anon, has_function_privilege('authenticated','public.submit_agenda_suggestion(jsonb,jsonb,jsonb)','EXECUTE') authenticated")).rows[0];
+ assert.deepEqual(acl,{service_role:true,anon:false,authenticated:false});
  assert.equal((await db.query("SELECT count(*)::int AS n FROM public.notifications WHERE request_id='orphan' AND type='request_sent'")).rows[0].n,1);
 
  const make=(id,appointmentId)=>({
