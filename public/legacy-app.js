@@ -207,26 +207,14 @@ function activeRulesForDate(owner,dateString){
  return state.schedulingRules.filter(r=>r.professionalId===owner.id&&ruleMatchesDate(r,dateString));
 }
 function hardRuleIntervalsForDate(owner,dateString){
- const workStart=mins(selectedProf()?.agendaSettings?.workStart||state.settings.workStart),workEnd=mins(selectedProf()?.agendaSettings?.workEnd||state.settings.workEnd),out=[];
- for(const r of activeRulesForDate(owner,dateString).filter(r=>r.severity==="block"||r.blockAllDay)){
-   if(r.blockAllDay){
-     out.push({start:workStart,end:workEnd,rule:r,label:`Dia bloqueado: ${r.name}`});
-     continue;
-   }
-   // "start/end" represent the allowed window; outside it is blocked.
-   if(r.start && mins(r.start)>workStart){
-     out.push({start:workStart,end:mins(r.start),rule:r,label:`Fora da regra: ${r.name}`});
-   }
-   if(r.end && mins(r.end)<workEnd){
-     out.push({start:mins(r.end),end:workEnd,rule:r,label:`Fora da regra: ${r.name}`});
-   }
-   for(const t of csvTimes(r.forbiddenTimes)){
-     const s=mins(t);
-     out.push({start:s,end:Math.min(s+30,workEnd),rule:r,label:`Horário bloqueado: ${r.name}`});
-   }
- }
- return out.filter(x=>x.end>x.start);
+ if(!owner||isAnesthesiologist(owner))return [];
+ // Same local-clock rule projection used by mobile and server checks.
+ return window.RNAvailability.availabilityIntervals(state,owner.id,dateString)
+  .filter(interval=>interval.kind==="rule")
+  .map(interval=>({...interval,label:interval.rule?.blockAllDay
+    ?`Dia bloqueado: ${interval.reason}`:`Fora da regra: ${interval.reason}`}));
 }
+
 function evaluateVisibleHardRuleBlocks(a){
  const surgeon=prof(a.doctorId);
  if(!surgeon||isAnesthesiologist(surgeon)||!a.date||!a.time)return [];
@@ -860,6 +848,14 @@ async function saveAppointmentDetailChanges(id,button){
  try{validateNativeFinance()}catch(error){nativeFinanceError(error.message);return}
  const detailReason=(window.AgendaAuth||{}).role==="doctor"?$("detailSuggestionReason")?.value.trim():"";if((window.AgendaAuth||{}).role==="doctor"&&!detailReason)return appNotice("Motivo necessário","Explique o motivo da alteração para enviar a sugestão.");const updated={...a,...updates,suggestionReason:detailReason||"Alteração do agendamento"};
  if(updated.forma_cobranca==="CONVENIO"&&!updated.insurance?.trim()&&(a.forma_cobranca!=="CONVENIO"||appointmentInsurance(a)!==updated.insurance))return appNotice("Convênio necessário","Informe o convênio do atendimento.");
+ const availabilityChanged=["date","time","duration","doctorId","anesthetistId","hospitalId","procedure"]
+  .some(key=>String(a[key]??"")!==String(updated[key]??""));
+ if(availabilityChanged){
+   const problems=window.RNAvailability.appointmentAvailabilityIssues(state,updated);
+   if(problems.length)return appNotice("Horário indisponível",problems.join("\\n"));
+   const ruleBlocks=evaluateSchedulingRules(updated).filter(x=>x.severity==="block");
+   if(ruleBlocks.length)return appNotice("Agendamento bloqueado",ruleBlocks.map(x=>x.name+": "+x.text).join("\\n"));
+ }
  const oldText=button.textContent;button.dataset.saving="true";button.disabled=true;button.setAttribute("aria-busy","true");button.textContent=(window.AgendaAuth||{}).role==="doctor"?"Enviando…":"Salvando…";
  try{
   if((window.AgendaAuth||{}).role==="doctor"){const sent=await sendAgendaSuggestion("update",updated,id,button);if(sent){closeModals();toast("Sugestão enviada, aguarde aprovação.")}return}
@@ -889,6 +885,8 @@ function openAppointment(id=null,preset={}){
  if(id){const a=state.appointments.find(x=>x.id===id);if(!a)return;$("appointmentId").value=id;setAppointmentViewMode(true);renderAppointmentDetail(a);openModal("appointmentModal");return}
  $("appointmentDetailView").replaceChildren();
  const owner=selectedProf();if(!owner)return appNotice("Profissional necessário","Cadastre um profissional para continuar.");if((owner&&!isAnesthesiologist(owner))&&!state.patients.length)return appNotice("Paciente necessário","Cadastre um paciente para continuar.");if(!state.hospitals.length)return appNotice("Hospital necessário","Cadastre um hospital em Médicos → Hospitais.");
+ if(!id&&preset.date&&window.RNAvailability.entirelyUnavailable(state,owner.id,preset.date,!isAnesthesiologist(owner)))
+  return appNotice("Dia totalmente bloqueado","Agenda indisponível nesta data para novos agendamentos.");
  if(!id&&preset.date&&preset.time){
    const issue=manualBlockForSlot(owner,preset.date,preset.time,60);
    if(issue){
@@ -951,6 +949,8 @@ $("appointmentForm").onsubmit=async e=>{
  if((owner&&!isAnesthesiologist(owner))&&!a.patientId)return appNotice("Paciente necessário","Selecione o paciente do agendamento.");
  if(!a.doctorId)return appNotice("Cirurgião necessário","Selecione o cirurgião responsável.");
  const absoluteBlocks=getAbsoluteSchedulingBlocks(a);
+ const sharedBlocks=window.RNAvailability.appointmentAvailabilityIssues(state,a);
+ if(sharedBlocks.length)return appNotice("Horário indisponível",sharedBlocks.join("\\n"));
  if(absoluteBlocks.length){
    return appNotice("Não é possível salvar",absoluteBlocks.map(x=>`${x.name}: ${x.text}`).join("\n"));
  }
@@ -1083,6 +1083,10 @@ function mobileCalendarCard(entry,apps,owner){
   const a=entry.item;
   return `<button class="mobile-appointment ${esc(a.status)} ${hasAnesthesiaConflict(a,apps,owner)?"has-conflict":""}" data-mobile-appointment="${esc(a.id)}"><span class="mobile-time"><strong>${esc(a.time)}</strong></span><span class="mobile-appointment-content">${appointmentCardContent(a,owner)}</span><span aria-hidden="true">›</span></button>`;
  }
+ if(entry.kind==="rule"){
+  const interval=entry.item;
+  return `<div class="mobile-appointment mobile-block mobile-rule-block" role="note" aria-label="Indisponível das ${esc(window.RNAvailability.timeLabel(interval.start))} às ${esc(window.RNAvailability.timeLabel(interval.end))}"><span class="mobile-time"><strong>${esc(window.RNAvailability.timeLabel(interval.start))}</strong><small>até ${esc(window.RNAvailability.timeLabel(interval.end))}</small></span><span class="mobile-appointment-content"><strong class="mobile-block-label">HORÁRIO INDISPONÍVEL</strong><span class="mobile-block-reason">${esc(interval.reason)}</span></span></div>`;
+ }
  const b=entry.item;
  return `<button type="button" class="mobile-appointment mobile-block" data-mobile-block="${esc(b.id)}" aria-label="Horário bloqueado, das ${esc(b.start)} às ${esc(b.end)}. ${esc(b.reason||"Sem motivo informado")}"><span class="mobile-time"><strong>${esc(b.start)}</strong><small>até ${esc(b.end)}</small></span><span class="mobile-appointment-content"><strong class="mobile-block-label">HORÁRIO BLOQUEADO</strong><span class="mobile-block-reason">${esc(b.reason||"Sem motivo informado")}</span></span><span aria-hidden="true">›</span></button>`;
 }
@@ -1092,12 +1096,23 @@ function renderMobileCalendar(){
  if($("mobileAccountSpecialty")){const auth=window.AgendaAuth||{},professional=state.professionals.find(p=>p.id===auth.professionalId)||state.professionals.find(p=>(auth.agendaIds||[]).includes(p.id));$("mobileAccountSpecialty").textContent=auth.role==="doctor"?(professional?.specialty||""):""}
  const root=$("mobileCalendar");if(!root)return;const owner=selectedProf();if(!owner){root.innerHTML='<div class="empty">Nenhuma agenda disponível.</div>';return}
  const apps=state.appointments.filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id)&&a.status!=="cancelled"),blocks=state.scheduleBlocks.filter(b=>b.professionalId===owner.id),dates=new Set(apps.map(a=>a.date)),blockDates=new Set(blocks.map(b=>b.date)),start=addDays(mobileMonth,-mobileMonth.getDay()),selected=parseDate(mobileSelectedDate);
+ const availability=window.RNAvailability,includeRules=!isAnesthesiologist(owner);
+ const monthDates=Array.from({length:42},(_,i)=>ds(addDays(start,i)));
+ const ruleDates=new Set(monthDates.filter(date=>availability.availabilityIntervals(state,owner.id,date,includeRules).some(interval=>interval.kind==="rule")));
+ for(const date of ruleDates)blockDates.add(date);
+ const fullyBlocked=availability.entirelyUnavailable(state,owner.id,mobileSelectedDate,includeRules);
+ const newButton=$("newAppointmentBtn");
+ if(newButton&&window.matchMedia("(max-width:900px)").matches){newButton.disabled=fullyBlocked;newButton.title=fullyBlocked?"Agenda indisponível nesta data.":"";}
+
  const from=mobileListMode==="week"?ds(startOfWeek(selected)):mobileSelectedDate,to=mobileListMode==="week"?ds(addDays(startOfWeek(selected),6)):mobileSelectedDate;
  const rows=apps.filter(a=>a.date>=from&&a.date<=to).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
  const visibleBlocks=blocks.filter(b=>b.date>=from&&b.date<=to);
- const entries=[...rows.map(a=>({kind:"appointment",item:a,date:a.date,time:a.time||""})),...visibleBlocks.map(b=>({kind:"block",item:b,date:b.date,time:b.start||""}))].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+ const ruleIntervals=availability.availabilityIntervals(state,owner.id,mobileSelectedDate,includeRules)
+  .filter(interval=>interval.kind==="rule"&&!fullyBlocked);
+ const entries=[...rows.map(a=>({kind:"appointment",item:a,date:a.date,time:a.time||""})),...visibleBlocks.map(b=>({kind:"block",item:b,date:b.date,time:b.start||""})),
+  ...ruleIntervals.map((interval,i)=>({kind:"rule",item:interval,date:mobileSelectedDate,time:availability.timeLabel(interval.start),id:i}))].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
 
- root.innerHTML=`<div class="mobile-month-nav"><button data-mobile-month="-1" aria-label="Mês anterior">‹</button><strong>${esc(mobileMonth.toLocaleDateString("pt-BR",{month:"long"}))}</strong><button data-mobile-month="1" aria-label="Próximo mês">›</button></div><div class="mobile-year-nav"><button data-mobile-year="-1" aria-label="Ano anterior">‹</button><strong>${mobileMonth.getFullYear()}</strong><button data-mobile-year="1" aria-label="Próximo ano">›</button></div><div class="mobile-month-grid">${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"].map(d=>`<span class="mobile-weekday">${d}</span>`).join("")}${Array.from({length:42},(_,i)=>{const date=addDays(start,i),key=ds(date);return `<button class="mobile-date ${date.getMonth()!==mobileMonth.getMonth()?"outside":""} ${key===mobileSelectedDate?"selected":""}" data-mobile-date="${key}" aria-pressed="${key===mobileSelectedDate}" aria-label="${date.toLocaleDateString("pt-BR")}${dates.has(key)?", com atendimentos":""}${blockDates.has(key)?", com horário bloqueado":""}"><span>${date.getDate()}</span>${dates.has(key)||blockDates.has(key)?`<em class="mobile-date-dots" aria-hidden="true">${dates.has(key)?'<i class="mobile-date-appointment-dot"></i>':""}${blockDates.has(key)?'<i class="mobile-date-block-dot"></i>':""}</em>`:""}</button>`}).join("")}</div><div class="mobile-day-heading"><strong>${selected.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"})}${mobileListMode==="week"?" · Semana":""}</strong><button id="mobileCalendarTop" aria-label="Voltar ao calendário">↑</button></div><div class="mobile-day-list">${entries.map(entry=>mobileCalendarCard(entry,apps,owner)).join("")||'<div class="empty">Nenhum atendimento ou bloqueio neste dia.</div>'}</div>`;
+ root.innerHTML=`<div class="mobile-month-nav"><button data-mobile-month="-1" aria-label="Mês anterior">‹</button><strong>${esc(mobileMonth.toLocaleDateString("pt-BR",{month:"long"}))}</strong><button data-mobile-month="1" aria-label="Próximo mês">›</button></div><div class="mobile-year-nav"><button data-mobile-year="-1" aria-label="Ano anterior">‹</button><strong>${mobileMonth.getFullYear()}</strong><button data-mobile-year="1" aria-label="Próximo ano">›</button></div><div class="mobile-month-grid">${["DOM","SEG","TER","QUA","QUI","SEX","SÁB"].map(d=>`<span class="mobile-weekday">${d}</span>`).join("")}${Array.from({length:42},(_,i)=>{const date=addDays(start,i),key=ds(date);return `<button class="mobile-date ${date.getMonth()!==mobileMonth.getMonth()?"outside":""} ${key===mobileSelectedDate?"selected":""}" data-mobile-date="${key}" aria-pressed="${key===mobileSelectedDate}" aria-label="${date.toLocaleDateString("pt-BR")}${dates.has(key)?", com atendimentos":""}${blockDates.has(key)?", com horário bloqueado":""}"><span>${date.getDate()}</span>${dates.has(key)||blockDates.has(key)?`<em class="mobile-date-dots" aria-hidden="true">${dates.has(key)?'<i class="mobile-date-appointment-dot"></i>':""}${blockDates.has(key)?'<i class="mobile-date-block-dot"></i>':""}</em>`:""}</button>`}).join("")}</div><div class="mobile-day-heading"><strong>${selected.toLocaleDateString("pt-BR",{day:"numeric",month:"short",year:"numeric"})}${mobileListMode==="week"?" · Semana":""}</strong><button id="mobileCalendarTop" aria-label="Voltar ao calendário">↑</button></div><div class="mobile-day-list">${fullyBlocked?'<div class="mobile-full-day-block" role="status"><strong>Dia totalmente bloqueado</strong><span>Agenda indisponível nesta data para novos agendamentos.</span></div>':''}${entries.map(entry=>mobileCalendarCard(entry,apps,owner)).join("")||(!fullyBlocked?'<div class="empty">Nenhum atendimento ou bloqueio neste dia.</div>':"")}</div>`;
  root.querySelectorAll("[data-mobile-month],[data-mobile-year]").forEach(b=>b.onclick=()=>{mobileMonth=new Date(mobileMonth.getFullYear()+Number(b.dataset.mobileYear||0),mobileMonth.getMonth()+Number(b.dataset.mobileMonth||0),1);mobileSelectedDate=ds(mobileMonth);currentDate=new Date(mobileMonth);renderCalendar()});
  root.querySelectorAll("[data-mobile-date]").forEach(b=>b.onclick=()=>{mobileSelectedDate=b.dataset.mobileDate;currentDate=parseDate(mobileSelectedDate);mobileMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);renderCalendar()});
  root.querySelectorAll("[data-mobile-appointment]").forEach(b=>b.onclick=()=>openAppointment(b.dataset.mobileAppointment));
