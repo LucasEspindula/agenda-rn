@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {loadTs} from './helpers/load-ts.mjs';
+import {loadTs} from './load-ts.mjs';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const guard=loadTs('lib/attendance-invoice-status.ts');
 
