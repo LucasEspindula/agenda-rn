@@ -5,6 +5,7 @@ import {verifyPassword} from '@/app/passwords';
 import {consumeLimit} from '@/lib/security/rate-limit';
 import {canReadAppointment,type Row} from '@/lib/security/state';
 import {loadBillingData} from '@/lib/billing-data';
+import {hasIssuedInvoiceForAttendance} from '@/lib/attendance-invoice-status';
 import {doctorBillingProjection,projectFinancialRow} from '@/lib/billing-projection';
 import {canOpenBilling,canOpenInvoices} from '@/lib/doctor-services';
 export const dynamic='force-dynamic';
@@ -33,7 +34,7 @@ export async function GET(request:Request){
     data.rows=scopedProfessional?[{...provisional,doctor_id:scopedProfessional}]:[];
    }
   }
-  if(summary)return Response.json({rows:data.rows.map(r=>({appointment_id:r.appointment_id,invoice_number:r.invoice?.invoice_number||r.record?.invoice_number||null}))},{headers:{'Cache-Control':'private, no-store'}});
+  if(summary)return Response.json({rows:data.rows.map(r=>({appointment_id:r.appointment_id,invoice_number:r.invoice?.invoice_number||r.record?.invoice_number||null,issued_invoice:hasIssuedInvoiceForAttendance(r,data)}))},{headers:{'Cache-Control':'private, no-store'}});
   if(session.account.role==='secretary'){
    const entityIds=new Set(data.rows.map(r=>r.record?.billing_entity_id));
    const doctors=new Set([...data.rows.map(r=>r.doctor_id),...data.rows.flatMap(r=>[r.clinical_doctor_id,r.anesthetist_id]).filter((id):id is string=>!!id&&session.agendaIds.includes(id))]);
