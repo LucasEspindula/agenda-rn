@@ -616,7 +616,62 @@ const workflowBusy=new Set();
 async function decideRequest(id,decision){if(workflowBusy.has(id))return;let note="";if(decision==="accepted"){const ok=await appConfirm("Aceitar solicitação","Tem certeza que deseja aceitar esta alteração? Ela será aplicada na agenda e ficará registrada no histórico.","Aceitar");if(!ok)return}else{const ok=await appConfirm("Negar solicitação","A solicitação será mantida no histórico e o médico receberá uma notificação.","Negar",true);if(!ok)return;note=await requestDenialReason();if(!note)return}workflowBusy.add(id);renderWorkflow();try{const response=await fetch("/api/workflow",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id,decision,note})});const result=await response.json().catch(()=>({}));if(!response.ok)return appNotice("Não foi possível concluir",result.error||"Tente novamente.");toast(result.message);const [stateResponse]=await Promise.all([fetch("/api/state"),refreshWorkflow()]);if(stateResponse.ok){const resultState=await stateResponse.json();if(resultState.state){window.AgendaRevision=resultState.revision;state=Storage.migrate(resultState.state);renderAll()}}}finally{workflowBusy.delete(id);renderWorkflow()}}
 async function sendAgendaSuggestion(action,appointment,appointmentId,button=null){if(button?.dataset.sending)return false;const auth=window.AgendaAuth||{},reason=appointment.suggestionReason||appointment.rescheduleReason||appointment.cancelReason||"";const needsReason=action!=="create";if(needsReason&&!reason){const typed=prompt("Informe o motivo da sugestão para a secretaria/gerente geral:");if(!typed?.trim())return appNotice("Motivo necessário","Explique o motivo da alteração para enviar a sugestão."),false;appointment={...appointment,suggestionReason:typed.trim()}}appointment={...appointment,suggestedByName:accountName(auth),suggestedByEmail:auth.email};const oldText=button?.textContent;if(button){button.dataset.sending="true";button.disabled=true;button.textContent="Enviando…";button.setAttribute("aria-busy","true")}try{const response=await fetch("/api/workflow",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,appointment,appointmentId})});const result=await response.json().catch(()=>({}));if(!response.ok){await appNotice("Não foi possível enviar",result.error||"Tente novamente.");return false}toast("Sugestão enviada, aguarde aprovação.");await refreshWorkflow();return true}finally{if(button?.isConnected){delete button.dataset.sending;button.disabled=false;button.textContent=oldText;button.removeAttribute("aria-busy")}}}
 function applyRoleRestrictions(){const auth=window.AgendaAuth||{},manager=auth.role==="general_manager",doctor=auth.role==="doctor";qsa(".manager-only").forEach(el=>el.classList.toggle("hidden",!manager));qsa(".doctor-only").forEach(el=>el.classList.toggle("hidden",!doctor));qsa(".workflow-reviewer").forEach(el=>el.classList.toggle("hidden",doctor));$("newBlockBtn").classList.toggle("hidden",!manager&&!doctor);$("newAppointmentBtn").textContent=doctor?"Enviar Agendamento":"+ Novo agendamento";$("newPatientBtn").classList.toggle("hidden",doctor);$("editPatientFromDetail").classList.toggle("hidden",doctor);if(manager)renderAccess();refreshWorkflow()}
-function renderCancelled(){if(!$("cancelledList"))return;const owner=selectedProf(),rows=(state.cancelledAppointments||[]).filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner?.id)).sort((a,b)=>b.date.localeCompare(a.date)),groups={};rows.forEach(a=>{const key=a.date.slice(0,7);(groups[key]||=[]).push(a)});$("cancelledList").innerHTML=Object.entries(groups).map(([month,items])=>`<section class="cancel-month"><h3>${parseDate(month+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}</h3><table class="table"><thead><tr><th>Paciente</th><th>Data</th><th>Horário</th><th>Cancelado em</th><th>Motivo</th><th>Valor</th><th>NF</th></tr></thead><tbody>${items.map(a=>`<tr><td>${esc(patient(a.patientId)?.name||"Paciente")}</td><td>${parseDate(a.date).toLocaleDateString("pt-BR")}</td><td>${esc(a.time)}</td><td>${a.cancelledAt?workflowDate(a.cancelledAt):"—"}</td><td>${esc(a.cancelReason||"Não informado")}</td><td>${money(a.payment)}</td><td>${esc(a.invoiceNumber||"—")}</td></tr>`).join("")}</tbody></table></section>`).join("")||'<div class="empty">Nenhum cancelamento nesta agenda.</div>'}
+function cancelledBillingLabel(a){
+ return ({PARTICULAR:"Particular",CONVENIO:"Convênio"})[a.forma_cobranca]||"Não informado";
+}
+function cancelledDetails(a){
+ const snapshot=agendaLogSnapshot(a);
+ const fields=[
+  ["Procedimento",snapshot.procedure],
+  ["Hospital",hospital(a.hospitalId)?.name||snapshot.place],
+  ["Convênio / plano",a.insurance||"Não informado"],
+  ["Médico",snapshot.doctor],
+  ["Anestesista",snapshot.anesthetist],
+  ["Status antes do cancelamento",snapshot.status],
+  ["Duração",snapshot.duration],
+  ["Validade da guia",snapshot.guideExpiry],
+  ["Tipo de atendimento",snapshot.careType],
+  ["OPME",snapshot.opme],
+  ["Laudos",snapshot.reports],
+  ["Exames",snapshot.exams],
+  ["Observações",snapshot.notes],
+  ["Proposto por",a.suggestedByName||""],
+  ["Motivo da sugestão",a.suggestionReason&&a.suggestionReason!==a.cancelReason?a.suggestionReason:""],
+  ["Última mudança de status",a.statusUpdatedAt?workflowDate(a.statusUpdatedAt):""]
+ ];
+ const details=fields.filter(([,value])=>value!=null&&String(value).trim()!=="").map(([label,value])=>`<div class="cancel-detail-field"><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join("");
+ return `<dl class="cancel-detail-grid">${details}</dl>${renderRescheduleHistory(a)}`;
+}
+function renderCancelled(){
+ if(!$("cancelledList"))return;
+ const owner=selectedProf(),isDoctor=(window.AgendaAuth||{}).role==="doctor";
+ const rows=(state.cancelledAppointments||[])
+  .filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner?.id))
+  .sort((a,b)=>b.date.localeCompare(a.date));
+ const groups={};
+ rows.forEach(a=>{const key=a.date.slice(0,7);(groups[key]||=[]).push(a)});
+ const financialHeaders=isDoctor?"":"<th>Valor</th><th>NF</th>";
+ $("cancelledList").innerHTML=Object.entries(groups).map(([month,items])=>`
+  <section class="cancel-month">
+   <h3>${parseDate(month+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}</h3>
+   <table class="table cancel-table">
+    <thead><tr><th>Paciente</th><th>Data</th><th>Horário</th><th>Forma de cobrança</th><th>Cancelado em</th><th>Motivo</th>${financialHeaders}<th>Informações</th></tr></thead>
+    <tbody>${items.map(a=>`
+     <tr>
+      <td data-label="Paciente">${esc(patient(a.patientId)?.name||"Paciente não disponível")}</td>
+      <td data-label="Data">${parseDate(a.date).toLocaleDateString("pt-BR")}</td>
+      <td data-label="Horário">${esc(a.time||"—")}</td>
+      <td data-label="Forma de cobrança"><span class="cancel-billing-pill ${a.forma_cobranca==="CONVENIO"?"insurance":a.forma_cobranca==="PARTICULAR"?"private":"unknown"}">${esc(cancelledBillingLabel(a))}</span></td>
+      <td data-label="Cancelado em">${a.cancelledAt?workflowDate(a.cancelledAt):"—"}</td>
+      <td data-label="Motivo">${esc(a.cancelReason||"Não informado")}</td>
+      ${isDoctor?"":`<td data-label="Valor">${a.payment==null?"—":money(a.payment)}</td><td data-label="NF">${esc(a.invoiceNumber||"—")}</td>`}
+      <td data-label="Informações" class="cancel-detail-cell">
+       <details class="cancel-details"><summary>Ver detalhes</summary><div class="cancel-details-panel">${cancelledDetails(a)}</div></details>
+      </td>
+     </tr>`).join("")}</tbody>
+   </table>
+  </section>`).join("")||'<div class="empty">Nenhum cancelamento nesta agenda.</div>';
+}
 function money(v){return window.RNMoney.formatBRL(v==null?null:Number(v))}
 
 function renderAll(){renderProfessionalOptions();renderAppointmentOptions();renderCalendar();renderPatients();renderCancelled();renderSettings();renderRules();if((window.AgendaAuth||{}).role==="general_manager")renderAccess()}
