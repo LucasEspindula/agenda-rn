@@ -116,12 +116,15 @@ async function handlePOST(request: Request) {
   const now = new Date().toISOString();
   const actor = session.account.name || session.account.email;
   const description = requestDescription(state, actor, body.action, proposed, previous);
-  const [createdRequest, createdNotification, createdAudit] = await Promise.all([
-    db.from("agenda_requests").insert({ id, professional_id: professionalId, appointment_id: targetAppointmentId, action: body.action, proposed_payload: proposed, previous_payload: previous, requested_by: session.account.id, created_at: now }),
-    db.from("notifications").insert({ id: crypto.randomUUID(), user_id: session.account.id, type: "request_sent", request_id: id, message: "Alteração de agenda enviada.", created_at: now }),
-    db.from("audit_logs").insert({ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: "request_created", professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: id, requestAction: body.action }, created_at: now }),
-  ]); [createdRequest, createdNotification, createdAudit].forEach((result) => dbError(result.error, "Create workflow request"));
-  return Response.json({ ok: true, id, message: "Alteração de agenda enviada." });
+  // A solicitação, a notificação e a auditoria são uma única transação.
+  // Criá-las em Promise.all permite que a notificação ultrapasse o pedido (FK 23503).
+  const { data: savedId, error } = await db.rpc("submit_agenda_suggestion", {
+    p_request: { id, professional_id: professionalId, appointment_id: targetAppointmentId, action: body.action, proposed_payload: proposed, previous_payload: previous, requested_by: session.account.id, created_at: now },
+    p_notification: { id: crypto.randomUUID(), user_id: session.account.id, type: "request_sent", request_id: id, message: "Alteração de agenda enviada.", created_at: now },
+    p_audit: { id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: "request_created", professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: id, requestAction: body.action }, created_at: now },
+  });
+  dbError(error, "Create workflow request");
+  return Response.json({ ok: true, id: savedId, message: savedId === id ? "Alteração de agenda enviada." : "Sugestão já enviada. Aguarde aprovação." });
 }
 
 async function handlePATCH(request: Request) {
