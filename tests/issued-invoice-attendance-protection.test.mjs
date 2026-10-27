@@ -48,7 +48,7 @@ test('operational status remains separate and matches persisted attendance state
  assert.equal(guard.operationalAttendanceStatus({...base,status_atendimento:'cancelled'}),'Cancelado');
 });
 test('database guards block both agenda and attendance mutations, including direct DELETE',()=>{
- const sql=read('supabase/migrations/20261027120000_guard_issued_invoice_attendance_cancellation.sql');
+ const sql=read('supabase/migrations/20261027120529_guard_issued_invoice_attendance_cancellation.sql');
  assert.match(sql,/CREATE TRIGGER guard_issued_invoice_agenda_cancellation[\s\S]*?BEFORE UPDATE OF payload ON public.app_state/);
  assert.match(sql,/FROM jsonb_array_elements\(coalesce\(OLD.payload->'appointments'/);
  assert.match(sql,/FROM jsonb_array_elements\(coalesce\(NEW.payload->'appointments'/);
