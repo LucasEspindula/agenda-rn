@@ -7,9 +7,9 @@ export function touchesAttendedStatus(before: StatusRecord, after: StatusRecord)
 }
 
 export function hasUnverifiedAttendedTransition(
-  before: Array<{ id: string; status?: string }>,
-  after: Array<{ id: string; status?: string }>,
+  before: Array<Record<string, unknown>>,
+  after: Array<Record<string, unknown>>,
 ) {
   const previous = new Map(before.map((row) => [row.id, row]));
-  return after.some((row) => touchesAttendedStatus(previous.get(row.id), row));
+  return after.some((row) => touchesAttendedStatus({ status: previous.get(row.id)?.status as string | undefined }, { status: row.status as string | undefined }));
 }
