@@ -21,10 +21,10 @@ BEGIN
       WHERE value->>'id'=a->>'id' LIMIT 1;
     IF prior IS NOT NULL AND
       (prior->>'date',prior->>'time',prior->>'duration',prior->>'doctorId',
-       prior->>'anesthetistId',prior->>'hospitalId',prior->>'procedure',prior->>'status')
+       prior->>'anesthetistId',prior->>'hospitalId',prior->>'procedure')
       IS NOT DISTINCT FROM
       (a->>'date',a->>'time',a->>'duration',a->>'doctorId',
-       a->>'anesthetistId',a->>'hospitalId',a->>'procedure',a->>'status') THEN
+       a->>'anesthetistId',a->>'hospitalId',a->>'procedure') THEN
       CONTINUE;
     END IF;
     date_text:=a->>'date';
