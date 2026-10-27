@@ -51,6 +51,7 @@ async function putState(request: Request) {
 
   }
   const saved = await db.rpc("commit_agenda_change", { p_actor:session.account.id, p_expected: row?.updated_at ?? null, p_payload: next, p_revision: revision, p_audit: entries });
+  if(saved.error?.code==='P0001'&&saved.error.message?.includes('Nota Fiscal emitida'))return Response.json({error:saved.error.message},{status:409});
   dbError(saved.error, "Save application state and audit");
   if (!saved.data) return Response.json({ error: "Outra pessoa salvou uma alteração. Atualize a agenda antes de salvar novamente." }, { status: 409 });
   return Response.json({ ok: true, revision });
