@@ -1,5 +1,6 @@
 import { readJson, secureMutation } from "@/lib/security/http";
 import { mergeState, visibleState } from "@/lib/security/state";
+import { hasUnverifiedAttendedTransition } from "@/lib/security/attendance-status";
 import { getSession } from "@/app/authz";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 
@@ -27,6 +28,9 @@ async function putState(request: Request) {
   const suppliedRevision = request.headers.get("if-match");
   if (row ? !suppliedRevision || Date.parse(suppliedRevision) !== Date.parse(row.updated_at) : suppliedRevision !== "new") return Response.json({ error: "A agenda foi atualizada por outra pessoa. Reabra o agendamento e tente novamente." }, { status: 409 });
   const next = mergeState(row?.payload || null, proposed, session) as AgendaState;
+  if (hasUnverifiedAttendedTransition((row?.payload as AgendaState)?.appointments || [], next.appointments || [])) {
+    return Response.json({ error: "O status Atendido só pode ser alterado mediante senha do médico ou Gerente Geral." }, { status: 403 });
+  }
   // Revalidate against the actual merged state, never a stale browser snapshot.
   // Existing appointments that have not changed availability are preserved.
   const unavailable=changedAppointmentIssues((row?.payload||{}) as AvailabilityState,next as AvailabilityState);
