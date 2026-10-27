@@ -696,6 +696,61 @@ function detailRelatedOptions(a,owner){
  const current=category==="doctor"?a.doctorId:a.anesthetistId;
  return empty+state.professionals.filter(p=>(p.active!==false||p.id===current)&&(category==="anesthetist"?isAnesthesiologist(p):!isAnesthesiologist(p))).map(p=>`<option value="${esc(p.id)}" ${p.id===current?"selected":""}>${esc(p.name)}${p.crm?` - CRM ${esc(p.crm)}`:""}</option>`).join("")
 }
+function requestPasswordStatusChange(id,status="realized"){
+ const a=state.appointments.find(item=>item.id===id),role=(window.AgendaAuth||{}).role;
+ if(!a||!["doctor","general_manager"].includes(role))return appNotice("Acesso restrito","Somente médico ou Gerente Geral confirma o status.");
+ if(role==="doctor"&&status!=="realized")return appNotice("Acesso restrito","O médico só pode marcar como Atendido.");
+ if(a.status===status)return appNotice("Status já registrado","Este agendamento já está com esse status.");
+ const targetLabel=statusLabel(status),dialog=document.createElement("dialog");
+ dialog.className="attendance-password-dialog";
+ dialog.setAttribute("aria-labelledby","attendancePasswordTitle");
+ dialog.innerHTML=`<form class="attendance-password-form">
+  <div class="attendance-password-heading"><span class="attendance-password-icon" aria-hidden="true">✓</span>
+   <div><h3 id="attendancePasswordTitle">Confirmar ${esc(targetLabel)}</h3>
+    <p>Esta alteração será registrada no histórico e não precisa de aprovação da secretaria.</p></div>
+  </div>
+  <div class="attendance-password-context"><strong>${esc(patient(a.patientId)?.name||"Agendamento")}</strong><span>${parseDate(a.date).toLocaleDateString("pt-BR")} · ${esc(a.time)}</span></div>
+  <label for="attendancePasswordInput">Senha da sua conta (médico ou Gerente Geral)</label>
+  <input id="attendancePasswordInput" type="password" name="confirmPassword" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="Digite sua senha">
+  <p class="attendance-password-error" role="alert" hidden></p>
+  <div class="attendance-password-buttons"><button type="button" class="secondary-btn" data-cancel-password>Voltar</button><button type="submit" class="primary-btn">Confirmar ${esc(targetLabel)}</button></div>
+ </form>`;
+ document.body.appendChild(dialog);
+ dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+ dialog.querySelector("[data-cancel-password]").onclick=()=>dialog.close();
+ const form=dialog.querySelector("form"),password=dialog.querySelector("#attendancePasswordInput"),errorBox=dialog.querySelector(".attendance-password-error"),submit=dialog.querySelector('button[type="submit"]');
+ form.onsubmit=async event=>{
+  event.preventDefault();if(submit.disabled)return;
+  const secret=password.value;password.value="";
+  submit.disabled=true;submit.textContent="Confirmando…";errorBox.hidden=true;
+  let committed=false;
+  try{
+   const response=await fetch("/api/attendance/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({appointmentId:id,status,password:secret})});
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(result.error||"Não foi possível alterar o status.");
+   committed=true;
+   const read=await fetch("/api/state",{cache:"no-store"});
+   if(!read.ok)throw Error("O status foi salvo, mas a atualização da agenda falhou.");
+   const snapshot=await read.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);
+   dialog.close();renderAll();
+   const updated=state.appointments.find(item=>item.id===id);
+   if(updated&&$("appointmentModal")&&!$("appointmentModal").classList.contains("hidden"))renderAppointmentDetail(updated);
+   reconcileRemoteAgendaUpdate();
+   toast(`Status alterado para ${targetLabel}.`);
+  }catch(error){
+   if(committed){
+    dialog.close();closeModals();
+    await appNotice("Status salvo","A alteração foi registrada. Atualize a agenda para carregar as informações mais recentes.");
+    window.location.reload();return;
+   }
+   if(dialog.isConnected){errorBox.textContent=error.message||"Não foi possível confirmar.";errorBox.hidden=false;password.focus();}
+  }finally{
+   if(dialog.isConnected){submit.disabled=false;submit.textContent=`Confirmar ${targetLabel}`;}
+  }
+ };
+ dialog.showModal();password.focus();
+}
+
 async function applyAppointmentStatus(id,status,reason=""){
  const a=state.appointments.find(x=>x.id===id);if(!a||a.status===status)return;
  const previous=a.status,updated={...a,status,rescheduleReason:status==="rescheduled"?reason:(a.rescheduleReason||""),statusUpdatedAt:new Date().toISOString()};
@@ -930,60 +985,6 @@ async function saveAppointmentDetailChanges(id,button){
    void checkAgendaRevision();
   }else toast("Agendamento salvo.");
  }finally{if(button.isConnected){delete button.dataset.saving;button.disabled=false;button.removeAttribute("aria-busy");button.textContent=oldText}}
-}
-function requestPasswordStatusChange(id,status="realized"){
- const a=state.appointments.find(item=>item.id===id),role=(window.AgendaAuth||{}).role;
- if(!a||!["doctor","general_manager"].includes(role))return appNotice("Acesso restrito","Somente médico ou Gerente Geral confirma o status.");
- if(role==="doctor"&&status!=="realized")return appNotice("Acesso restrito","O médico só pode marcar como Atendido.");
- if(a.status===status)return appNotice("Status já registrado","Este agendamento já está com esse status.");
- const targetLabel=statusLabel(status),dialog=document.createElement("dialog");
- dialog.className="attendance-password-dialog";
- dialog.setAttribute("aria-labelledby","attendancePasswordTitle");
- dialog.innerHTML=`<form class="attendance-password-form">
-  <div class="attendance-password-heading"><span class="attendance-password-icon" aria-hidden="true">✓</span>
-   <div><h3 id="attendancePasswordTitle">Confirmar ${esc(targetLabel)}</h3>
-    <p>Esta alteração será registrada no histórico e não precisa de aprovação da secretaria.</p></div>
-  </div>
-  <div class="attendance-password-context"><strong>${esc(patient(a.patientId)?.name||"Agendamento")}</strong><span>${parseDate(a.date).toLocaleDateString("pt-BR")} · ${esc(a.time)}</span></div>
-  <label for="attendancePasswordInput">Senha da sua conta (médico ou Gerente Geral)</label>
-  <input id="attendancePasswordInput" type="password" name="confirmPassword" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="Digite sua senha">
-  <p class="attendance-password-error" role="alert" hidden></p>
-  <div class="attendance-password-buttons"><button type="button" class="secondary-btn" data-cancel-password>Voltar</button><button type="submit" class="primary-btn">Confirmar ${esc(targetLabel)}</button></div>
- </form>`;
- document.body.appendChild(dialog);
- dialog.addEventListener("close",()=>dialog.remove(),{once:true});
- dialog.querySelector("[data-cancel-password]").onclick=()=>dialog.close();
- const form=dialog.querySelector("form"),password=dialog.querySelector("#attendancePasswordInput"),errorBox=dialog.querySelector(".attendance-password-error"),submit=dialog.querySelector('button[type="submit"]');
- form.onsubmit=async event=>{
-  event.preventDefault();if(submit.disabled)return;
-  const secret=password.value;password.value="";
-  submit.disabled=true;submit.textContent="Confirmando…";errorBox.hidden=true;
-  let committed=false;
-  try{
-   const response=await fetch("/api/attendance/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({appointmentId:id,status,password:secret})});
-   const result=await response.json().catch(()=>({}));
-   if(!response.ok)throw Error(result.error||"Não foi possível alterar o status.");
-   committed=true;
-   const read=await fetch("/api/state",{cache:"no-store"});
-   if(!read.ok)throw Error("O status foi salvo, mas a atualização da agenda falhou.");
-   const snapshot=await read.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);
-   dialog.close();renderAll();
-   const updated=state.appointments.find(item=>item.id===id);
-   if(updated&&$("appointmentModal")&&!$("appointmentModal").classList.contains("hidden"))renderAppointmentDetail(updated);
-   reconcileRemoteAgendaUpdate();
-   toast(`Status alterado para ${targetLabel}.`);
-  }catch(error){
-   if(committed){
-    dialog.close();closeModals();
-    await appNotice("Status salvo","A alteração foi registrada. Atualize a agenda para carregar as informações mais recentes.");
-    window.location.reload();return;
-   }
-   if(dialog.isConnected){errorBox.textContent=error.message||"Não foi possível confirmar.";errorBox.hidden=false;password.focus();}
-  }finally{
-   if(dialog.isConnected){submit.disabled=false;submit.textContent=`Confirmar ${targetLabel}`;}
-  }
- };
- dialog.showModal();password.focus();
 }
 function renderAppointmentDetail(a){
  const p=patient(a.patientId),h=hospital(a.hospitalId),doctor=prof(a.doctorId),anesthetist=prof(a.anesthetistId),end=hhmm(mins(a.time)+Number(a.duration||0));
