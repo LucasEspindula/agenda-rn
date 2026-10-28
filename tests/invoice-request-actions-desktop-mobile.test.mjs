@@ -95,3 +95,25 @@ test('NF creation stays on pre-existing billing endpoints and RPC idempotence re
  assert.doesNotMatch(ui,/kind:\s*["']new_invoice_request["']/);
  assert.match(ui,/no_invoice:!!\(fiscal\?\.no_invoice\|\|draft\.no_invoice\)/);
 });
+
+test('solicitações de NF mostram quem solicitou e data/hora a partir do registro original',async()=>{
+ const React=await import('react');
+ const {renderToStaticMarkup}=await import('react-dom/server');
+ const {default:InvoiceRequests}=loadTs('app/billing/invoice-requests.tsx',{
+  '@/components/mobile-row-actions':{default:({children})=>React.createElement('div',{},children)}
+ });
+ const request={id:'request-1',status:'PENDING',billing_record_id:'finance-1',created_by:7,created_at:'2026-10-28T12:53:00Z',
+  patient_name_snapshot:'Paciente Teste',taker_kind:'PATIENT',taker_tax_id:'12345678901',doctor_name_snapshot:'Dra. Ana',
+  procedure_snapshot:'Consulta',attendance_date_snapshot:'2026-10-27',entity_name_snapshot:'Empresa A',received_amount_snapshot:150};
+ const props={data:{rows:[],requests:[request],users:[{id:7,name:'Roseni Nunes'}]},onIssue:()=>{},onReview:()=>{},onEdit:()=>{}};
+ const html=renderToStaticMarkup(React.createElement(InvoiceRequests,props));
+ assert.match(html,/<th>Solicitado por<\/th><th>Solicitado em<\/th>/);
+ assert.match(html,/data-mobile-label="Solicitado por">Roseni Nunes<\/td>/);
+ assert.match(html,/data-mobile-label="Solicitado em"[^>]*><time[^>]*>28\/10\/2026 \d{2}:\d{2}<\/time>/);
+ assert.match(html,/class="billing-table billing-mobile-card-table billing-invoice-requests-table"/);
+ assert.doesNotMatch(html,/Usuário #7|Solicitado por.*undefined/);
+ const unknown=renderToStaticMarkup(React.createElement(InvoiceRequests,{...props,data:{...props.data,users:[]}}));
+ assert.match(unknown,/data-mobile-label="Solicitado por">Não identificado<\/td>/);
+ const css=read('app/billing/billing.css');
+ assert.match(css,/\.billing-invoice-requests-table \.billing-requested-at\{white-space:nowrap/);
+});
