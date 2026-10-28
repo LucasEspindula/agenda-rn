@@ -52,6 +52,13 @@ export const POST=secureMutation(async request=>{
  if(!session||session.account.role==='doctor') throw new HttpError(403,'Acesso negado.');
  const {kind,data,manager_password,manager_user_id}=await readJson(request);
  if(!['entity','link','record','professional_charge','professional_invoice','invoice','delete_entity','delete_link','attendance','expense','undo_invoice','cancel_invoice','replace_invoice','restore_invoice','cancel_attendance','edit_invoice_request'].includes(kind)||!data||typeof data!=='object'||Array.isArray(data)) throw new HttpError(400,'Operação inválida.');
+ const fiscal=data.fiscal;
+ if(fiscal&&typeof fiscal==='object'&&!Array.isArray(fiscal)&&!fiscal.no_invoice&&
+    (typeof fiscal.taker_address!=='string'||!fiscal.taker_address.trim()))
+  throw new HttpError(400,'Informe o endereço completo do tomador para solicitar a NF.');
+ if(kind==='edit_invoice_request'&&
+    (typeof data.taker_address!=='string'||!data.taker_address.trim()))
+  throw new HttpError(400,'Informe o endereço completo do tomador para solicitar a NF.');
  const fiscalActions=['cancel_invoice','replace_invoice','undo_invoice','restore_invoice'];
  if(session.account.role!=='general_manager'&&!['record','professional_charge','edit_invoice_request'].includes(kind)
     &&!(session.account.role==='secretary'&&fiscalActions.includes(kind)))
