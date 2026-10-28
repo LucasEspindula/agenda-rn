@@ -148,7 +148,7 @@ test('log extenso de agendamento tem resumo, sem repetir identificação do cont
  c.renderAgendaLogs();
  const html=elements.auditList.innerHTML,summary=html.split('<details class="agenda-log-details">')[0];
  assert.match(summary,/agenda-log-summary/);
- assert.match(summary,/Data e horário: 22\/09\/2026 às 08:00/);
+ assert.match(summary,/<strong>Data e horário<\/strong><span>22\/09\/2026 às 08:00/);
  assert.doesNotMatch(summary,/Paciente: Paciente Lucas.*Paciente: Paciente Lucas|\[object Object\]/);
  assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
  assert.match(html,/OPME: Não/);
@@ -208,3 +208,18 @@ test("agenda control positions swap mode and cancelled actions",()=>{assert.matc
 test("agenda log labels follow INSERT UPDATE and DELETE semantics",()=>{const {context:c}=agendaFixture();const insert=c.agendaLogContent(event).lines.map(x=>x.label),deleted=c.agendaLogContent({...event,before:appointment,after:null}).lines.map(x=>x.label),filled=c.agendaLogContent({...event,before:{...appointment,notes:""},after:{...appointment,notes:"Incluída"}}).lines.map(x=>x.label),cleared=c.agendaLogContent({...event,before:{...appointment,notes:"Anterior"},after:{...appointment,notes:""}}).lines.map(x=>x.label),changed=c.agendaLogContent({...event,before:{...appointment,notes:"A"},after:{...appointment,notes:"B"}}).lines.map(x=>x.label);assert.ok(insert.every(x=>x==="Adicionou"));assert.ok(deleted.every(x=>x==="REMOVIDO"));assertSameStructure(filled,["PARA"]);assertSameStructure(cleared,["DE"]);assertSameStructure(changed,["DE","PARA"])});
 test("log cards render the request-card composition with directional changes",async()=>{const React=await import("react"),{renderToStaticMarkup}=await import("react-dom/server");let index=0;const Component=loadTs("app/billing/billing-logs.tsx",{react:{...React,useEffect:()=>{},useState:initial=>[index++===0?[{id:"layout",actor_id:1,actor_name:"Roseni",kind:"invoice",created_at:"2026-10-06",changes:[change(1,{notes:"Antes"},{notes:"Depois"})]}]:initial,()=>{}]}}).default;const html=renderToStaticMarkup(React.createElement(Component,{data:{rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:"secretary",name:"Roseni"}]}}));assert.match(html,/workflow-card-main/);assert.match(html,/workflow-heading/);assert.match(html,/workflow-status log-invoice/);assert.match(html,/workflow-changes/);assert.match(html,/workflow-change from/);assert.match(html,/workflow-change to/);assert.match(html,/workflow-arrow/);assert.doesNotMatch(html,/billing-log-line/)});
 test("billing log UI labels follow record operations",async()=>{const React=await import("react"),{renderToStaticMarkup}=await import("react-dom/server");const render=changeRow=>{let index=0;const Component=loadTs("app/billing/billing-logs.tsx",{react:{...React,useEffect:()=>{},useState:initial=>[index++===0?[{id:"l",actor_id:1,actor_name:"Roseni",actor_email:"",kind:"record",created_at:"2026-09-22",changes:[changeRow]}]:initial,()=>{}]}}).default;return renderToStaticMarkup(React.createElement(Component,{data:{rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:"secretary",name:"Roseni"}]}}))};const insert=render(change(1,null,{notes:"Novo"})),deleted=render(change(1,{notes:"Anterior"},null)),filled=render({...change(1,null,{notes:"Preenchida"}),action:"UPDATE"}),cleared=render({...change(1,{notes:"Anterior"},null),action:"UPDATE"}),changed=render(change(1,{notes:"A"},{notes:"B"}));assert.match(insert,/<b class="workflow-change-label">Adicionou<\/b>/);assert.doesNotMatch(insert,/<b class="workflow-change-label">DE<\/b>/);assert.match(deleted,/<b class="workflow-change-label">REMOVIDO<\/b>/);assert.match(filled,/<b class="workflow-change-label">PARA<\/b>/);assert.doesNotMatch(filled,/<b class="workflow-change-label">Adicionou<\/b>/);assert.match(cleared,/<b class="workflow-change-label">DE<\/b>/);assert.doesNotMatch(cleared,/<b class="workflow-change-label">REMOVIDO<\/b>/);assert.match(changed,/<b class="workflow-change-label">DE<\/b>/);assert.match(changed,/<b class="workflow-change-label">PARA<\/b>/)});
+
+test('agendamento curto e extenso usam cartões compactos idênticos, com mudanças completas nos detalhes',()=>{
+ const {context:c,elements}=agendaFixture();
+ c.workflowData.audit=[{...event,action:'appointment_updated',before:appointment,after:{...appointment,time:'09:00'}}];
+ c.renderAgendaLogs();
+ const html=elements.auditList.innerHTML,visible=html.split('<details class="agenda-log-details">')[0];
+ assert.match(visible,/class="agenda-log-summary-row"/);
+ assert.match(visible,/<strong>Data e horário<\/strong><span>22\/09\/2026 às 08:00 → 22\/09\/2026 às 09:00/);
+ assert.doesNotMatch(visible,/workflow-change-group|workflow-arrow|>DE<|>PARA</);
+ assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
+ assert.match(html,/workflow-change-label">DE/);
+ const css=readFileSync('public/legacy.css','utf8');
+ assert.match(css,/\.agenda-log-event \.agenda-log-summary-row\{display:grid;grid-template-columns:minmax\(115px,148px\) minmax\(0,1fr\);/);
+ assert.match(css,/\.agenda-log-event \.agenda-log-summary-row>strong\{[^}]*font-size:11\.5px;/s);
+});
