@@ -17,7 +17,7 @@ test('financial logs collapse net-zero subevents and transient insert/delete wit
 });
 const source=readFileSync('public/legacy-app.js','utf8');
 const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
-const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','agendaLogNormalize','agendaLogLocalDay','agendaLogMatchesFilters','agendaLogFilterOptions','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowRoleLabel','workflowAuthorship','suggestionReason','roleLabel']);
+const wanted=new Set(['agendaLogPerson','agendaLogSnapshot','agendaLogContext','agendaLogHasValue','agendaLogSnapshotText','agendaLogTitle','agendaLogBadge','agendaLogValues','agendaLogContent','agendaLogNormalize','agendaLogLocalDay','agendaLogMatchesFilters','agendaLogFilterOptions','agendaLogChangeMarkup','agendaLogCompactValues','renderAgendaLogs','workflowAppointment','workflowRequestTitle','workflowChangeRows','workflowRoleLabel','workflowAuthorship','suggestionReason','roleLabel']);
 const code=ast.statements.filter(n=>(ts.isFunctionDeclaration(n)&&wanted.has(n.name.text))||(ts.isVariableStatement(n)&&n.getText(ast).includes('agendaLogFieldLabels'))).map(n=>n.getText(ast)).join('\n');
 function agendaFixture(){
  const elements={auditList:{innerHTML:''},auditStart:{value:''},auditEnd:{value:''},auditActor:{value:'',innerHTML:''},auditProfessional:{value:'',innerHTML:''},auditAction:{value:''},auditSearch:{value:''}};
@@ -97,8 +97,8 @@ test('workflow API resolves decision authorship without users roles or per-reque
  const source=readFileSync('app/api/workflow/route.ts','utf8');
  assert.match(source,/db\.from\("users"\)\.select\("id,name,email"\)/);
  assert.doesNotMatch(source,/db\.from\("users"\)\.select\("id,name,email,role"\)/);
- assert.match(source,/let decisionAuditRows = audit/);
- assert.match(source,/session\.account\.role === "doctor" && visibleRequests\.length/);
+ assert.match(source,/let decisionAuditRows: DecisionAudit\[\] = \[\]/);
+ assert.match(source,/if \(visibleRequests\.length\)/);
  assert.match(source,/\.in\("metadata->>requestId", visibleRequestIds\)/);
  assert.match(source,/row\.action === "request_accepted" \|\| row\.action === "request_denied"/);
  assert.match(source,/session\.account\.role === "doctor"/);
@@ -142,6 +142,17 @@ test('agenda log filters combine date, user, agenda, action and the single gener
  assert.equal(c.agendaLogMatchesFilters({a:event,...c.agendaLogContent(event),context:c.agendaLogContext(event,c.agendaLogSnapshot(event.after))},{search:'lucas',action:'removed'}),false);
  const source=readFileSync('public/legacy-app.js','utf8');assert.doesNotMatch(source,/auditPatient/);assert.match(source,/<label class="agenda-log-search">Buscar<input id="auditSearch" type="search">/);assert.doesNotMatch(source,/<input id="auditSearch"[^>]*placeholder=/);
 });
+test('log extenso de agendamento tem resumo, sem repetir identificação do contexto',()=>{
+ const {context:c,elements}=agendaFixture();
+ c.workflowData.audit=[{...event,before:null,after:{...appointment,insurance:'Particular',forma_cobranca:'PARTICULAR',opme:false,reports:false,exams:true,careType:'outpatient',notes:'Observação do atendimento'}}];
+ c.renderAgendaLogs();
+ const html=elements.auditList.innerHTML,summary=html.split('<details class="agenda-log-details">')[0];
+ assert.match(summary,/agenda-log-summary/);
+ assert.match(summary,/Data e horário: 22\/09\/2026 às 08:00/);
+ assert.doesNotMatch(summary,/Paciente: Paciente Lucas.*Paciente: Paciente Lucas|\[object Object\]/);
+ assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
+ assert.match(html,/OPME: Não/);
+});
 test('agenda and billing logs keep aligned workflow tokens without duplicate billing authorship rules',()=>{
  const agendaCss=readFileSync('public/legacy.css','utf8'),billingCss=readFileSync('app/billing/billing.css','utf8'),billing=readFileSync('app/billing/billing-logs.tsx','utf8');
  assert.match(agendaCss,/\.agenda-log-filters\{display:grid/);
@@ -157,10 +168,8 @@ function workflowRoute(role,agendaIds,leaky=false){
  const db={from(table){const filters=[];const chain={select(){return chain},eq(){return chain},in(key,value){filters.push([key,value]);calls.push([table,'in',key,value]);return chain},order(){calls.push([table,'order']);return chain},limit(){calls.push([table,'limit']);return chain},then(resolve){return Promise.resolve({data:table==='audit_logs'?audit.filter(row=>leaky||filters.every(([key,values])=>values.includes(row[key]))):[],error:null}).then(resolve)}};return chain}};
  const api=loadTs('app/api/workflow/route.ts',{'@/app/authz':{getSession:async()=>({account:{id:1,role,doctorId:role==='doctor'?'d1':null},agendaIds,services:{scheduling_enabled:true}}),isManager:r=>r==='general_manager'},'@/lib/supabase-admin':{getSupabaseAdmin:()=>db,dbError:e=>{if(e)throw e}}});return {api,calls};
 }
-test('workflow manager reads all agendas; secretary query and response both enforce agenda scope',async()=>{
- const manager=workflowRoute('general_manager',[]);assert.equal((await(await manager.api.GET()).json()).audit.length,3);
- for(const leaky of [false,true])for(const ids of [['d1'],['d2'],[]]){const {api,calls}=workflowRoute('secretary',ids,leaky);const body=await(await api.GET()).json();assertSameStructure(body.audit.map(r=>r.professional_id),ids);const filter=calls.findIndex(c=>c[0]==='audit_logs'&&c[1]==='in'),limit=calls.findIndex(c=>c[0]==='audit_logs'&&c[1]==='limit');assert.ok(filter>=0&&filter<limit);}
- const doctor=workflowRoute('doctor',['d1','d2'],true);assert.equal((await(await doctor.api.GET()).json()).audit.length,0);assert.ok(!doctor.calls.some(c=>c[0]==='audit_logs'&&c[1]==='limit'));
+test('workflow geral não transfere logs operacionais; somente decisões autorizadas são consultadas',async()=>{
+ for(const role of ['general_manager','secretary','doctor']){const {api,calls}=workflowRoute(role,['d1','d2']);const body=await(await api.GET()).json();assertSameStructure(body.audit,[]);assert.ok(!calls.some(c=>c[0]==='audit_logs'&&c[1]==='limit'));}
 });
 
 test('billing timeline presents add/remove without empty opposite sides or actor email',async()=>{

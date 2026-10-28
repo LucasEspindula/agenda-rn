@@ -8,6 +8,7 @@ import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type Appointment = Record<string, unknown> & { id: string; doctorId?: string; anesthetistId?: string | null; patientId?: string; date?: string; time?: string; duration?: number; status?: string };
 type AgendaState = Record<string, unknown> & { appointments?: Appointment[]; cancelledAppointments?: Appointment[]; patients?: Array<Record<string, unknown>>; professionals?: Array<Record<string, unknown>> };
+type DecisionAudit = {actor_name:string;actor_role:string;action:string;metadata:Record<string,unknown>|null};
 
 function allowed(session: NonNullable<Awaited<ReturnType<typeof getSession>>>, professionalId: string) {
   return isManager(session.account.role) || session.agendaIds.includes(professionalId);
@@ -38,30 +39,28 @@ export async function GET() {
   let requestQuery = db.from("agenda_requests").select("*");
   if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id).in("professional_id", session.agendaIds);
   else if (!isManager(session.account.role)) requestQuery = requestQuery.in("professional_id", session.agendaIds);
-  let auditQuery = db.from("audit_logs").select("*");
-  if (!isManager(session.account.role)) auditQuery = auditQuery.in("professional_id", session.agendaIds);
-  const [requestRows, userRows, notificationRows, auditRows] = await Promise.all([
+  const [requestRows, userRows, notificationRows] = await Promise.all([
     requestQuery.order("created_at", { ascending: false }).limit(200),
     db.from("users").select("id,name,email"),
     db.from("notifications").select("*").eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(100),
-    (isManager(session.account.role) || session.account.role === "secretary") ? auditQuery.order("created_at", { ascending: false }).limit(500) : Promise.resolve({ data: [], error: null }),
   ]);
-  [requestRows, userRows, notificationRows, auditRows].forEach((result) => dbError(result.error, "Read workflow"));
+  [requestRows, userRows, notificationRows].forEach((result) => dbError(result.error, "Read workflow"));
   // Supabase schema types are generated after the first production migration.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>, audit = (auditRows.data || []) as Array<Record<string, any>>;
+  const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>;
   const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
-  const requestPayloads = new Map(requests.map((row) => [row.id, { before: row.previous_payload || null, after: row.proposed_payload || null, action: row.action }]));
   const scopedRequests = session.account.role === "doctor" ? requests.map(withoutLegacyFinance) : requests;
   const visibleRequests = scopedRequests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
-  let decisionAuditRows = audit;
-  if (session.account.role === "doctor" && visibleRequests.length) {
+  let decisionAuditRows: DecisionAudit[] = [];
+  if (visibleRequests.length) {
     const visibleRequestIds = visibleRequests.map((row) => String(row.id));
-    const decisionAudits = await db.from("audit_logs").select("actor_name,actor_role,action,metadata").in("action", ["request_accepted", "request_denied"]).in("metadata->>requestId", visibleRequestIds).in("professional_id", session.agendaIds);
+    let decisionQuery = db.from("audit_logs").select("actor_name,actor_role,action,metadata").in("action", ["request_accepted", "request_denied"]).in("metadata->>requestId", visibleRequestIds);
+    if (!isManager(session.account.role)) decisionQuery = decisionQuery.in("professional_id", session.agendaIds);
+    const decisionAudits = await decisionQuery;
     dbError(decisionAudits.error, "Read decision authorship");
-    decisionAuditRows = (decisionAudits.data || []) as typeof audit;
+    decisionAuditRows = (decisionAudits.data || []) as DecisionAudit[];
   }
-  const decisionAuditsByRequest = new Map<string, (typeof audit)[number]>();
+  const decisionAuditsByRequest = new Map<string, (typeof decisionAuditRows)[number]>();
   decisionAuditRows.forEach((row) => {
     const metadata = (row.metadata || {}) as Record<string, unknown>;
     const requestId = typeof metadata.requestId === "string" ? metadata.requestId : null;
@@ -74,11 +73,8 @@ export async function GET() {
       return { ...row, requestedBy: Number(row.requested_by), decidedBy: row.decided_by ? Number(row.decided_by) : null, professionalId: row.professional_id, appointmentId: row.appointment_id, createdAt: row.created_at, decidedAt: row.decided_at, decisionNote: row.decision_note, requesterName: names.get(Number(row.requested_by)), deciderName: decisionAudit?.actor_name || deciderName || null, deciderRole: decisionAudit?.actor_role || null, proposed: row.proposed_payload || null, previous: row.previous_payload || null };
     }),
     notifications: notifications.map((row) => ({ ...row, readAt: row.read_at, createdAt: row.created_at, requestId: row.request_id })),
-    audit: audit.filter(row => isManager(session.account.role) || (session.account.role === "secretary" && session.agendaIds.includes(row.professional_id))).map((row) => {
-      const metadata = (row.metadata || {}) as Record<string, unknown>;
-      const linked = typeof metadata.requestId === "string" ? requestPayloads.get(metadata.requestId) : null;
-      return { ...row, actorName: row.actor_name, actorRole: row.actor_role, professionalId: row.professional_id, appointmentId: row.appointment_id, patientId: row.patient_id, createdAt: row.created_at, requestAction: linked?.action ?? metadata.requestAction ?? null, before: linked?.before ?? metadata.before ?? null, after: linked?.after ?? metadata.after ?? null };
-    }),
+    // Logs are loaded separately and lazily by /api/workflow/logs.
+    audit: [],
   });
 }
 

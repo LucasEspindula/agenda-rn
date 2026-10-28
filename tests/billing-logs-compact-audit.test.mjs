@@ -4,10 +4,10 @@ import {loadTs} from './load-ts.mjs';
 
 const context={rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:'general_manager',name:'Roseni'}]};
 const inserted=(id,record_type,after_data)=>({id,record_type,record_id:record_type+'-'+id,action:'INSERT',before_data:null,after_data,differences:Object.entries(after_data).map(([field,after])=>({field,before:null,after}))});
-async function render(changes){
+async function render(changes,relatedLogs=[]){
  const React=await import('react'),{renderToStaticMarkup}=await import('react-dom/server');
  let index=0;
- const logs=[{id:'one',kind:'record',actor_id:1,actor_name:'Roseni',created_at:'2026-10-28T12:53:00Z',changes}];
+ const logs=[{id:'one',kind:'record',actor_id:1,actor_name:'Roseni',created_at:'2026-10-28T12:53:00Z',changes},...relatedLogs];
  const Component=loadTs('app/billing/billing-logs.tsx',{react:{...React,useEffect:()=>{},useState:initial=>[index++===0?logs:initial,()=>{}]}}).default;
  return renderToStaticMarkup(React.createElement(Component,{data:context}));
 }
@@ -47,4 +47,32 @@ test('eventos não fiscais continuam com histórico detalhado imediatamente vis�
  assert.doesNotMatch(html,/billing-log-summary|Ver auditoria completa/);
  assert.match(html,/Observação: Observação registrada/);
  assert.match(html,/Adicionou/);
+});
+
+test('comprovante vinculado aparece no cartão SOLICITAÇÃO, com autoria própria preservada',async()=>{
+ const request=[inserted(1,'invoice_requests',{status:'PENDING',billing_record_id:'record-1',patient_name_snapshot:'Paciente'})];
+ const proof={id:'proof',kind:'payment_proof',actor_id:2,actor_name:'Secretária Ana',created_at:'2026-10-28T13:00:00Z',changes:[inserted(2,'financial_attachments',{status:'READY',billing_record_id:'record-1',original_filename:'recibo.pdf',file_size:2048,mime_type:'application/pdf'})]};
+ const html=await render(request,[proof]);
+ assert.equal((html.match(/class="billing-log-event workflow-card"/g)||[]).length,1);
+ assert.match(html,/SOLICITAÇÃO/);
+ assert.doesNotMatch(html,/>COMPROVANTE</);
+ assert.match(html,/recibo\.pdf/);
+ assert.match(html,/Secretária Ana/);
+ assert.match(html,/billing-log-linked-proof/);
+ assert.match(html,/Ver auditoria completa/);
+});
+test('comprovante independente continua com seu próprio evento',async()=>{
+ const request=[inserted(1,'invoice_requests',{status:'PENDING',billing_record_id:'record-1'})];
+ const proof={id:'proof',kind:'payment_proof',actor_id:2,actor_name:'Secretária Ana',created_at:'2026-10-28T13:00:00Z',changes:[inserted(2,'financial_attachments',{status:'READY',billing_record_id:'another-record',original_filename:'outro.pdf'})]};
+ const html=await render(request,[proof]);
+ assert.equal((html.match(/class="billing-log-event workflow-card"/g)||[]).length,2);
+ assert.match(html,/>COMPROVANTE</);
+});
+test('eventos financeiros extensos exibem resumo deduplicado sem objetos ou códigos internos',async()=>{
+ const html=await render([inserted(1,'invoices',{status:'ACTIVE',invoice_number:'123',billing_entity_id:'entity-id',total_amount:1500,net_amount:1450,patient_id:'patient-id',notes:'NF de consulta',settings:{internal:'object'},origin:'AGENDA'})]);
+ const compact=html.split('<details class="billing-log-details">')[0];
+ assert.match(compact,/billing-log-summary/);
+ assert.match(compact,/Número da NF/);
+ assert.doesNotMatch(compact,/\[object Object\]|Dados atualizados|settings|entity-id|patient-id|AGENDA/);
+ assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
 });
