@@ -1,7 +1,7 @@
 import {getSession} from '@/app/authz';
 import {loadBillingData} from '@/lib/billing-data';
 import {isAnesthesiologist} from '@/lib/medical-specialties';
-import {agendaDateLabel,appointmentInsurance,appointmentStatusLabel} from '@/lib/agenda-report';
+import {agendaDateLabel,agendaTimeline,appointmentInsurance,appointmentStatusLabel} from '@/lib/agenda-report';
 import {PdfReport,brDate,brDateTime,pdfResponse} from '@/lib/reports/pdf';
 
 export const dynamic='force-dynamic';
@@ -40,21 +40,19 @@ export async function GET(request:Request){
    'Gerado em: '+brDateTime(new Date().toISOString()),
    'Gerado por: '+session.account.name
   ],centerTitle);
-  const appointmentsByDay=new Map(groupByDay(appointments));
-  const blocksByDay=new Map(groupByDay(blocks));
-  const days=[...new Set([...appointmentsByDay.keys(),...blocksByDay.keys()])].sort();
+  const timeline=agendaTimeline(appointments,blocks);
   pdf.section('Programação',undefined,{reserve:48});
-  for(const date of days){
-   const dayAppointments=appointmentsByDay.get(date)||[];
-   const dayBlocks=blocksByDay.get(date)||[];
+  for(const [date,entries] of groupByDay(timeline)){
    pdf.dayHeading(agendaDateLabel(date));
-   if(dayAppointments.length){
-    pdf.gridTable([
-     {label:'Horário',width:58},{label:'Paciente',width:144},
-     {label:anesthesiologist?'Médico':'Anestesista',width:108},
-     {label:'Procedimento',width:139},{label:'Convênio',width:96},
-     {label:'Hospital',width:117},{label:'Status',width:71}
-    ],dayAppointments.map(item=>[
+   const rows=entries.map(entry=>{
+    if(entry.kind==='block')return [
+     entry.block.start+' - '+entry.block.end,
+     'HORÁRIO BLOQUEADO','—',
+     'Motivo: '+(entry.block.reason||'Indisponibilidade do profissional'),
+     '—','—','Bloqueado'
+    ];
+    const item=entry.appointment;
+    return [
      item.time||'—',
      patients.get(item.patientId)?.name||'Não informado',
      professionals.get(anesthesiologist?item.doctorId||'':item.anesthetistId||'')?.name||'—',
@@ -62,16 +60,17 @@ export async function GET(request:Request){
      appointmentInsurance(item,patients.get(item.patientId))||'—',
      hospitals.get(item.hospitalId||'')?.name||'—',
      appointmentStatusLabel(item.status)
-    ]));
-   }
-   if(dayBlocks.length){
-    pdf.section('Horários bloqueados',undefined,{reserve:40});
-    pdf.gridTable([
-     {label:'Horário',width:130},{label:'Motivo',width:534}
-    ],dayBlocks.map(block=>[block.start+' - '+block.end,block.reason]));
-   }
+    ];
+   });
+   const rowTints=entries.map(entry=>entry.kind==='block'?'blocked' as const:null);
+   pdf.gridTable([
+    {label:'Horário',width:69},{label:'Paciente',width:144},
+    {label:anesthesiologist?'Médico':'Anestesista',width:108},
+    {label:'Procedimento / Motivo',width:153},{label:'Convênio',width:96},
+    {label:'Hospital',width:117},{label:'Status',width:71}
+   ],rows,rowTints);
   }
-  if(!days.length){
+  if(!timeline.length){
    pdf.ensureSpace(16);
    pdf.text('Nenhum atendimento ou bloqueio no período selecionado.',pdf.margin,pdf.y,9);
    pdf.y-=22;
