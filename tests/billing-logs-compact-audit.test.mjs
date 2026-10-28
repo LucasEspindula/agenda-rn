@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
+import {readFileSync} from 'node:fs';
+
 
 const context={rows:[],entities:[],doctors:[],links:[],invoices:[],users:[{id:1,role:'general_manager',name:'Roseni'}]};
 const inserted=(id,record_type,after_data)=>({id,record_type,record_id:record_type+'-'+id,action:'INSERT',before_data:null,after_data,differences:Object.entries(after_data).map(([field,after])=>({field,before:null,after}))});
@@ -75,4 +77,13 @@ test('eventos financeiros extensos exibem resumo deduplicado sem objetos ou cód
  assert.match(compact,/Número da NF/);
  assert.doesNotMatch(compact,/\[object Object\]|Dados atualizados|settings|entity-id|patient-id|AGENDA/);
  assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
+});
+
+test('cartões compactos de faturamento mantêm colunas, espaçamento e fonte discreta',()=>{
+ const css=readFileSync('app/billing/billing.css','utf8');
+ assert.match(css,/\.billing-log-event \.billing-log-summary-row\s*\{\s*display:grid;\s*grid-template-columns:minmax\(115px,148px\) minmax\(0,1fr\);/);
+ assert.match(css,/\.billing-log-event \.billing-log-summary-row>strong\s*\{[^}]*font-size:11\.5px;/s);
+ assert.match(css,/\.billing-log-event \.billing-log-summary-row>span,[\s\S]*?font-size:12px;/);
+ assert.match(css,/\.billing-log-event \.billing-log-details>summary\s*\{[^}]*font-size:11px;/s);
+ assert.match(css,/@media\(max-width:560px\)\s*\{\s*\.billing-log-event \.billing-log-summary-row/);
 });
