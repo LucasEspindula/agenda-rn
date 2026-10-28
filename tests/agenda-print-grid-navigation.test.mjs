@@ -31,31 +31,27 @@ test("Agenda hamburger reuses real view handlers and respects role-specific sect
  assert.match(app,/function showView\(view\)\{/);
 });
 
-test("Agenda PDF prints each day only once with appointments and blocks together",()=>{
+test("Agenda PDF uses one chronological table per date, interleaving appointments and blocks",()=>{
  const report=source("app/api/reports/agenda/route.ts");
  const pdf=source("lib/reports/pdf.ts");
- assert.match(report,/const groupByDay=<T extends \{date:string\}>/);
- assert.match(report,/new Map\(groupByDay\(appointments\)\)/);
- assert.match(report,/new Map\(groupByDay\(blocks\)\)/);
- assert.match(report,/new Set\(\[\.\.\.appointmentsByDay\.keys\(\),\.\.\.blocksByDay\.keys\(\)\]\)/);
- assert.match(report,/for\(const date of days\)/);
- assert.match(report,/const dayAppointments=appointmentsByDay\.get\(date\)\|\|\[\]/);
- assert.match(report,/const dayBlocks=blocksByDay\.get\(date\)\|\|\[\]/);
+ assert.match(report,/agendaTimeline\(appointments,blocks\)/);
+ assert.match(report,/for\(const \[date,entries\] of groupByDay\(timeline\)\)/);
  assert.equal((report.match(/pdf\.dayHeading\(agendaDateLabel\(date\)\)/g)||[]).length,1);
- assert.match(report,/if\(dayAppointments\.length\)\{/);
- assert.match(report,/if\(dayBlocks\.length\)\{/);
- assert.match(report,/pdf\.section\('Horários bloqueados'/);
- assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:58\},\{label:'Paciente',width:144\}/);
- assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:130\},\{label:'Motivo',width:534\}/);
- assert.match(report,/if\(!days\.length\)/);
+ assert.equal((report.match(/pdf\.gridTable\(/g)||[]).length,1);
+ assert.match(report,/if\(entry\.kind==='block'\)return \[/);
+ assert.match(report,/entry\.block\.start\+' - '\+entry\.block\.end/);
+ assert.match(report,/HORÁRIO BLOQUEADO/);
+ assert.match(report,/Motivo: /);
+ assert.match(report,/rowTints=entries\.map\(entry=>entry\.kind==='block'\?'blocked' as const:null\)/);
+ assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:69\}/);
+ assert.match(report,/\],rows,rowTints\)/);
+ assert.doesNotMatch(report,/pdf\.section\('Horários bloqueados'/);
  assert.doesNotMatch(report,/\{label:'Data',width:/);
  assert.doesNotMatch(report,/pdf\.table\(/);
  assert.match(pdf,/dayHeading\(value:string\)/);
- assert.match(pdf,/this\.ensureSpace\(96\)/);
+ assert.match(pdf,/rowTints:readonly \("replaced"\|"cancelled"\|"blocked"\|null\)\[\]/);
+ assert.match(pdf,/tint==="blocked"\?rgb\(/);
  assert.match(pdf,/const factor=this\.contentWidth\/sum/);
- assert.match(pdf,/const widths=columns\.map\(c=>c\.width\*factor\)/);
- assert.match(pdf,/width:this\.contentWidth,height:headerHeight/);
- assert.match(pdf,/drawHeader\(\);\s*for\(const \[rowIndex,values\] of rows\.entries\(\)\)/);
  assert.match(pdf,/this\.addPage\(\);\s*drawHeader\(\)/);
 });
 
