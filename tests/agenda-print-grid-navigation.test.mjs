@@ -86,3 +86,15 @@ test("Agenda printable data, period filters and permissions remain unchanged",()
  assert.match(agenda,/function renderMobileCalendar\(\)/);
  assert.match(agenda,/class="mobile-day-list"/);
 });
+
+test("Agenda PDF shows the recorded amount to staff, without exposing it to doctors or blocked slots",()=>{
+ const report=source("app/api/reports/agenda/route.ts");
+ assert.match(report,/individualReceived\(row\)/);
+ assert.match(report,/session\.account\.role!=='doctor'/);
+ assert.match(report,/row\.record\.professional_id!==professionalId/);
+ assert.match(report,/countedRecords\.has\(row\.record\.id\)/);
+ assert.match(report,/brl\(valuesByAppointment\.get\(item\.id\)\)/);
+ assert.match(report,/\{label:'Valor',width:69,align:'right'\}/);
+ assert.match(report,/if\(entry\.kind==='block'\)return \[/);
+ assert.doesNotMatch(report,/item\.payment/);
+});
