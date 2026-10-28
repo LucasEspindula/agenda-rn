@@ -18,8 +18,12 @@ export class PdfReport{
  ensureSpace(height:number):void{this.ensure(height)}
  text(value:string,x:number,y:number,size=8,bold=false,color=green):void{this.page.drawText(value||'—',{x,y,size,font:bold?this.bold:this.font,color})}
  line(y:number):void{this.page.drawLine({start:{x:this.margin,y},end:{x:this.width-this.margin,y},thickness:.5,color:line})}
- header(title:string,subtitle:string,details:string[]=[],rightDetails:string[]=[]):void{
-  this.text('RN Integra · '+title,this.margin,this.y,17,true);
+ header(title:string,subtitle:string,details:string[]=[],rightDetails:string[]=[],centerTitle?:string):void{
+  this.text(centerTitle?'RN Integra':'RN Integra · '+title,this.margin,this.y,17,true);
+  if(centerTitle){
+   const size=13,labelWidth=this.bold.widthOfTextAtSize(centerTitle,size);
+   this.text(centerTitle,(this.width-labelWidth)/2,this.y-1,size,true);
+  }
   for(const [index,detail] of rightDetails.slice(0,2).entries()){
    const size=7,maxWidth=this.contentWidth*.45;
    let label=detail;

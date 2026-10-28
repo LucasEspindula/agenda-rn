@@ -1,7 +1,7 @@
 import {getSession} from '@/app/authz';
 import {loadBillingData} from '@/lib/billing-data';
 import {isAnesthesiologist} from '@/lib/medical-specialties';
-import {appointmentInsurance,appointmentStatusLabel} from '@/lib/agenda-report';
+import {agendaDateLabel,appointmentInsurance,appointmentStatusLabel} from '@/lib/agenda-report';
 import {PdfReport,brDate,brDateTime,pdfResponse} from '@/lib/reports/pdf';
 
 export const dynamic='force-dynamic';
@@ -33,15 +33,16 @@ export async function GET(request:Request){
   const appointments=(snapshot.appointments||[]).filter(item=>(anesthesiologist?item.anesthetistId===professionalId:item.doctorId===professionalId)&&item.status!=='cancelled'&&item.date>=period.start&&item.date<=period.end).sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
   const blocks=(snapshot.scheduleBlocks||[]).filter(item=>item.professionalId===professionalId&&item.date>=period.start&&item.date<=period.end).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
   const pdf=await new PdfReport().init();
+  const centerTitle=mode==='week'?'Agenda da semana':mode==='month'?'Agenda do mês':'Agenda do dia';
   pdf.header('Agenda',professional.name+(professional.crm?' · CRM: '+professional.crm:''),[
    'Período: '+brDate(period.start)+(period.end!==period.start?' a '+brDate(period.end):'')
   ],[
    'Gerado em: '+brDateTime(new Date().toISOString()),
    'Gerado por: '+session.account.name
-  ]);
+  ],centerTitle);
   pdf.section('Atendimentos',undefined,{reserve:48});
   for(const [date,dayAppointments] of groupByDay(appointments)){
-   pdf.dayHeading(brDate(date));
+   pdf.dayHeading(agendaDateLabel(date));
    pdf.gridTable([
     {label:'Horário',width:58},{label:'Paciente',width:144},
     {label:anesthesiologist?'Médico':'Anestesista',width:108},
@@ -65,7 +66,7 @@ export async function GET(request:Request){
   if(blocks.length){
    pdf.section('Horários bloqueados',undefined,{reserve:48});
    for(const [date,dayBlocks] of groupByDay(blocks)){
-    pdf.dayHeading(brDate(date));
+    pdf.dayHeading(agendaDateLabel(date));
     pdf.gridTable([
      {label:'Horário',width:130},{label:'Motivo',width:534}
     ],dayBlocks.map(block=>[block.start+' - '+block.end,block.reason]));
