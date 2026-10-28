@@ -47,8 +47,10 @@ test('CSS isolado é importado pelo componente, com estilo inline defensivo e bu
  assert.match(form,/data-layout-version="receipt-20261021-v2"/);
  assert.match(form,/style=\{\{width:18,height:18,minWidth:18,minHeight:18/);
  const legacy=readFileSync('app/dashboard/legacy-app.tsx','utf8');
- assert.match(legacy,/legacy-app\.js\?v=receipt-modal-v2-20261021/);
- assert.match(legacy,/legacy\.css\?v=receipt-modal-v2-20261021/);
+ const scriptVersion=legacy.match(/legacy-app\.js\?v=([a-z0-9-]+)/)?.[1];
+ const styleVersion=legacy.match(/legacy\.css\?v=([a-z0-9-]+)/)?.[1];
+ assert.ok(scriptVersion,'script da agenda deve usar identificador de versão');
+ assert.equal(styleVersion,scriptVersion,'CSS e script precisam atualizar o cache juntos');
  const globals=readFileSync('app/globals.css','utf8');
  assert.doesNotMatch(globals,/\.fiscal-confirmation input:not\(\[type=radio\]\)/);
 });
