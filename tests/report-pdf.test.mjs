@@ -49,7 +49,7 @@ test('agenda day headers and generator metadata render into a valid multipage PD
 });
 
 test('agenda report preserves historical insurance and human status labels',async()=>{
- const {appointmentInsurance,appointmentStatusLabel}=await importTypeScript('lib/agenda-report.ts');
+ const {agendaDateLabel,appointmentInsurance,appointmentStatusLabel}=await importTypeScript('lib/agenda-report.ts');
  assert.equal(appointmentInsurance({insurance:''},{insurance:'UNIMED'}),'');
  assert.equal(appointmentInsurance({},{insurance:'UNIMED'}),'UNIMED');
  assert.equal(appointmentStatusLabel('scheduled'),'Agendado');
