@@ -40,7 +40,9 @@ export function validateState(s: State) {
       if (!row || typeof row !== 'object' || Array.isArray(row) || !validId(row.id) || seen.has(row.id)) throw new HttpError(400, 'Identificador inválido ou duplicado.');
       seen.add(row.id);
       if(key==='patients'&&row.cpf){if(typeof row.cpf!=='string'||!validCPF(row.cpf))throw new HttpError(400,'CPF inválido. Deixe vazio se não informado.');row.cpf=normalizeCPF(row.cpf);}
-      if(key==='patients'&&row.address!=null&&typeof row.address!=='string')throw new HttpError(400,'Endereço inválido.');
+      if(key==='patients')for(const field of ['address','addressZip','addressNumber','addressComplement','addressNeighborhood','addressCity','addressState']){
+       if(row[field]!=null&&(typeof row[field]!=='string'||row[field].length>1000))throw new HttpError(400,'Endereço inválido.');
+      }
       for (const field of ['name','email','phone','insurance','cardNumber','crm','specialty','category','notes','procedure','invoiceNumber','reason','text','type','at','severity','start','end','date','time','cancelReason','suggestionReason','rescheduleReason','abbreviation']) if (row[field] !== undefined && row[field] !== null && typeof row[field] !== 'string') throw new HttpError(400, 'Texto inválido.');
       if(key==='hospitals'&&row.abbreviation!=null&&String(row.abbreviation).length>16)throw new HttpError(400,'Abreviação inválida.');
       for (const field of ['doctorId','anesthetistId','patientId','professionalId','hospitalId','appointmentId']) if (row[field] && !validId(row[field])) throw new HttpError(400, 'Vínculo inválido.');
@@ -70,7 +72,7 @@ export function visibleState(s: State, p: Principal): State {
   const patientIds = new Set(patients.map((a: Row) => a.id));
   const appointmentIds = new Set([...appointments,...cancelled].map((a: Row) => a.id));
   return { schemaVersion:s.schemaVersion, settings:s.settings, professionals:s.professionals || [], hospitals:s.hospitals || [],
-    patients:p.account.role==='doctor'?patients.map((patient:Row)=>{const clinical={...patient};delete clinical.cpf;delete clinical.address;return clinical}):patients, appointments:p.account.role==='doctor'?withoutLegacyFinance(appointments):appointments, cancelledAppointments:p.account.role==='doctor'?withoutLegacyFinance(cancelled):cancelled,
+    patients:p.account.role==='doctor'?patients.map((patient:Row)=>{const clinical={...patient};delete clinical.cpf;for(const field of ['address','addressZip','addressNumber','addressComplement','addressNeighborhood','addressCity','addressState'])delete clinical[field];return clinical}):patients, appointments:p.account.role==='doctor'?withoutLegacyFinance(appointments):appointments, cancelledAppointments:p.account.role==='doctor'?withoutLegacyFinance(cancelled):cancelled,
     patientHistory:(s.patientHistory || []).filter((h: Row) => patientIds.has(h.patientId) && (!h.appointmentId || appointmentIds.has(h.appointmentId)) && (p.account.role!=='doctor'||!String(h.type||'').toLowerCase().includes('financeiro'))),
     schedulingRules:(s.schedulingRules || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)),
     scheduleBlocks:(s.scheduleBlocks || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)) };

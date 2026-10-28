@@ -21,6 +21,9 @@ export default function InvoiceRequestEditor({request,onClose,onSaved}:Props){
   if(!form.taker_name.trim()||!validCPF(form.taker_tax_id)){
    setError("Informe nome e CPF válido do tomador.");return;
   }
+  if(!form.taker_address.trim()){
+   setError("Informe o endereço completo do tomador para solicitar a NF.");return;
+  }
   setBusy(true);setError("");
   try{
    const response=await fetch("/api/billing",{
@@ -29,7 +32,7 @@ export default function InvoiceRequestEditor({request,onClose,onSaved}:Props){
      id:request.id,updated_at:request.updated_at,
      taker_kind:form.taker_kind,taker_name:form.taker_name.trim(),
      taker_tax_id:normalizeCPF(form.taker_tax_id),
-     taker_address:form.taker_address,notes:form.notes
+     taker_address:form.taker_address.trim(),notes:form.notes
     }})
    });
    const result=await response.json().catch(()=>({}));
@@ -65,8 +68,8 @@ export default function InvoiceRequestEditor({request,onClose,onSaved}:Props){
      <input required inputMode="numeric" maxLength={14} placeholder="000.000.000-00"
       value={formatCPF(form.taker_tax_id)} onChange={e=>field("taker_tax_id",e.target.value)}/>
     </label>
-    <label>Endereço (opcional)
-     <input maxLength={1000} value={form.taker_address}
+    <label>Endereço completo do tomador
+     <input required maxLength={1000} placeholder="Rua, número, bairro, cidade/UF e CEP" value={form.taker_address}
       onChange={e=>field("taker_address",e.target.value)}/>
     </label>
     <label className="invoice-request-span">Observação (opcional)

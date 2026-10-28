@@ -4,6 +4,7 @@ import type {BillingData,Financial,Invoice,BillingRow} from './billing-types';
 import {projectFinancialRow} from './billing-projection';
 import {payerKey} from './billing-eligibility';
 import {includeArchivedCancellations} from './billing-cancelled';
+import {formatPatientAddress,type PatientAddressInput} from './patient-address';
 export async function loadBillingData(){
  const db=getSupabaseAdmin();
  // Fetch complete sets: truncating invoice items could wrongly classify a shared NF as private.
@@ -24,7 +25,7 @@ export async function loadBillingData(){
  if(stateResult.error||results.some(r=>r.error))throw new Error('Não foi possível carregar o faturamento.');
  const state=stateResult.data?.payload||{};
  const records=results[2].data as Financial[],invoices=results[3].data as Invoice[],items=results[4].data as BillingData['items'];
- const patients=(state.patients||[]) as {id:string;name:string;insurance?:string;cpf?:string;address?:string;created_at?:string;created_by?:number}[];
+ const patients=(state.patients||[]) as ({id:string;name:string;insurance?:string;cpf?:string;phone?:string;email?:string;cardNumber?:string;created_at?:string;created_by?:number}&PatientAddressInput)[];
  const itemsByRecord=new Map(items.filter(item=>item.is_active!==false).map(item=>[item.billing_record_id,item]));
  const recordsByAttendance=new Map<string,Financial[]>();
  for(const record of records){const current=recordsByAttendance.get(record.attendance_id)||[];current.push(record);recordsByAttendance.set(record.attendance_id,current);}
@@ -36,7 +37,7 @@ export async function loadBillingData(){
   return attendanceRecords.map(record=>{const item=record?itemsByRecord.get(record.id):null;return projectFinancialRow({...t,anesthetist_id:appointment?.anesthetistId||''},record,item?invoices.find(i=>i.id===item.invoice_id)||null:null,item?{received_amount:item.received_amount??null}:null,patients.find(p=>p.id===t.patient_id)?.name||'Paciente não informado');});
  }) as BillingRow[];
  const projectedRows=includeArchivedCancellations(rows,state.cancelledAppointments||[],results[1].data,patients);
- const data:BillingData={rows:projectedRows,entities:results[0].data,links:results[1].data,doctors:results[5].data,invoices,items,expenses:results[7].data,associates:results[8].data,requests:results[9].data,users:results[10].data,payment_parts:results[11].data,attachments:results[12].data,patients:patients.map(p=>({id:p.id,name:p.name,cpf:p.cpf,address:p.address,created_by:p.created_by,created_at:p.created_at})),payers:[...new Set([...patients.map(p=>p.insurance||''),...projectedRows.map(r=>r.insurance),...invoices.filter(i=>i.recipient_type!=='PARTICULAR').map(i=>i.payer)].map(payerKey).filter(Boolean))].sort()};
+ const data:BillingData={rows:projectedRows,entities:results[0].data,links:results[1].data,doctors:results[5].data,invoices,items,expenses:results[7].data,associates:results[8].data,requests:results[9].data,users:results[10].data,payment_parts:results[11].data,attachments:results[12].data,patients:patients.map(p=>({id:p.id,name:p.name,cpf:p.cpf,address:formatPatientAddress(p),phone:p.phone,email:p.email,insurance:p.insurance,cardNumber:p.cardNumber,created_by:p.created_by,created_at:p.created_at})),payers:[...new Set([...patients.map(p=>p.insurance||''),...projectedRows.map(r=>r.insurance),...invoices.filter(i=>i.recipient_type!=='PARTICULAR').map(i=>i.payer)].map(payerKey).filter(Boolean))].sort()};
  return {data,state};
 }
 
