@@ -5,21 +5,12 @@ import {loadTs} from './load-ts.mjs';
 
 const source=path=>readFileSync(path,'utf8');
 
-test('Perseu is disabled by default on both server navigation and experimental routes',()=>{
- const previous=process.env.RN_PERSEUS_ENABLED;
- delete process.env.RN_PERSEUS_ENABLED;
- const availability=loadTs('lib/perseu/availability.ts');
- assert.equal(availability.isPerseusOperationalEnabled(),false);
- process.env.RN_PERSEUS_ENABLED='true';
- assert.equal(availability.isPerseusOperationalEnabled(),true);
- if(previous===undefined)delete process.env.RN_PERSEUS_ENABLED;else process.env.RN_PERSEUS_ENABLED=previous;
+test('financial navigation keeps insurance, denials, and invoices available',()=>{
  const subnav=source('app/billing/billing-subnav.tsx');
- assert.match(subnav,/perseusEnabled = false/);
- assert.match(subnav,/\{perseusEnabled &&/);
- for(const path of ['app/api/perseu/chat/route.ts','app/api/perseu/conversations/route.ts','app/api/perseu/documents/route.ts','app/api/perseu/documents/analyze/route.ts','app/api/perseu/proposals/route.ts']){
-  assert.match(source(path),/isPerseusOperationalEnabled/);
- }
- assert.match(source('app/perseu/page.tsx'),/redirect\("\/billing\?view=insurance"\)/);
+ assert.match(subnav,/"insurance", "Convênios"/);
+ assert.match(subnav,/"invoices", "Notas Fiscais"/);
+ assert.match(subnav,/denialsEnabled/);
+ assert.match(source('app/billing/billing-client.tsx'),/insurance-view-frame/);
 });
 
 test('professional charge model keeps the clinical attendance as source and separates commercial concepts',()=>{
@@ -48,7 +39,7 @@ test('billing projection creates one financial row per professional charge and d
  assert.match(rows,/billingRowKey/);
 });
 
-test('professional mutations stay isolated from the legacy record endpoint and no Perseu migrations are applied',()=>{
+test('professional mutations stay isolated from the legacy record endpoint',()=>{
  const route=source('app/api/billing/route.ts');
  assert.match(route,/professional_charge/);
  assert.match(route,/save_professional_charge/);
@@ -58,5 +49,5 @@ test('professional mutations stay isolated from the legacy record endpoint and n
  assert.match(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/perform public\.financial_operation\(p_actor,'professional_charge',target_id::text\)/);
  assert.match(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/Profissional não participa deste atendimento/);
  assert.match(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/cobranças independentes/);
- assert.doesNotMatch(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/perseus_documents|openai/i);
+ assert.doesNotMatch(source('supabase/migrations/20261016120000_independent_professional_billing.sql'),/openai/i);
 });

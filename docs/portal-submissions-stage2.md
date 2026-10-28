@@ -34,7 +34,7 @@ O módulo está **desabilitado por padrão**. Somente após sucesso de migraçã
 RN_PORTAL_SUBMISSIONS_ENABLED=true
 ```
 
-A ativação financeira profissional anterior permanece independente (`RN_PROFESSIONAL_BILLING_ENABLED`), também protegida. Nenhuma migration do Perseu é pré-requisito, nem deve ser aplicada por causa deste recurso.
+A ativação financeira profissional anterior permanece independente (`RN_PROFESSIONAL_BILLING_ENABLED`), também protegida.
 
 ## Cenários obrigatórios de homologação
 

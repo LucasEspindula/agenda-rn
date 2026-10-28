@@ -31,7 +31,7 @@ Consulta opcional sem escrita: `supabase/validation/financial-release-preflight-
 4. `20261016220000_billing_denials_and_appeals.sql` — glosas, recursos, decisões e recuperação.
 5. `20261016230000_monthly_entity_closing.sql` — fechamento consolidado e snapshots imutáveis.
 
-A ordem depende da estrutura anterior. A execução real só ocorrerá **mediante autorização expressa em outra etapa**. Não aplicar as migrations do Perseu.
+A ordem depende da estrutura anterior. A execução real só ocorrerá **mediante autorização expressa em outra etapa**.
 
 ## Bloqueios atuais (NO-GO)
 

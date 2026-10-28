@@ -8,16 +8,15 @@ export type BillingNavigationView =
   | "closing"
   | "expenses"
   | "entities"
-  | "logs"
-  | "perseu";
+  | "logs";
 
 const activeLabels: Record<BillingNavigationView, string> = {
   records: "Atendimentos", invoices: "Notas Fiscais", insurance: "Convênios",
   denials: "Glosas", closing: "Fechamento mensal", expenses: "Despesas",
-  entities: "Entidades recebedoras", logs: "Logs Faturamento", perseu: "Perseu",
+  entities: "Entidades recebedoras", logs: "Logs Faturamento",
 };
 
-const items: [Exclude<BillingNavigationView, "perseu">, string, string][] = [
+const items: [BillingNavigationView, string, string][] = [
   ["records", "Atendimentos", "/billing"],
   ["invoices", "Notas Fiscais", "/billing?view=invoices"],
   ["insurance", "Convênios", "/billing?view=insurance"],
@@ -28,14 +27,12 @@ export default function BillingSubnav({
   active,
   pendingCount = 0,
   insurancePendingCount = 0,
-  perseusEnabled = false,
   denialsEnabled = false,
   closingEnabled = false,
 }: {
   active: BillingNavigationView;
   pendingCount?: number;
   insurancePendingCount?: number;
-  perseusEnabled?: boolean;
   denialsEnabled?: boolean;
   closingEnabled?: boolean;
 }) {
@@ -52,7 +49,6 @@ export default function BillingSubnav({
           <a href="/billing?view=entities" aria-current={active==="entities"?"page":undefined}>Entidades recebedoras</a>
           {closingEnabled&&<a href="/billing/fechamento" aria-current={active==="closing"?"page":undefined}>Fechamento mensal</a>}
           <a href="/billing?view=logs" aria-current={active==="logs"?"page":undefined}>Logs Faturamento</a>
-          {perseusEnabled&&<a href="/perseu" aria-current={active==="perseu"?"page":undefined}>Perseu</a>}
         </nav>
       </details>
       <nav className="billing-subnav-nav" aria-label="Visões de faturamento">
@@ -82,13 +78,6 @@ export default function BillingSubnav({
             <NavIcon kind="entities" />Entidades recebedoras
           </a>
         </div>
-        {perseusEnabled && (
-          <div className="billing-subnav-perseus">
-            <a href="/perseu" aria-current={active === "perseu" ? "page" : undefined}>
-              <NavIcon kind="insurance" />Perseu
-            </a>
-          </div>
-        )}
         <div className="billing-subnav-fixed">
           {closingEnabled && (
             <a href="/billing/fechamento" aria-current={active === "closing" ? "page" : undefined}>

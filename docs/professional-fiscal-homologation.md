@@ -18,7 +18,7 @@
 1. `supabase/migrations/20261016120000_independent_professional_billing.sql`
 2. `supabase/migrations/20261016183000_professional_private_fiscal_requests.sql`
 
-As migrations experimentais do Perseu **não fazem parte deste processo**. Não executá-las automaticamente.
+
 
 Antes da aplicação, verificar `supabase_migrations.schema_migrations`, versões já presentes, snapshot do esquema e backup consistente. **Não aplicar em produção antes de executar todos os testes em uma cópia isolada do banco.**
 
