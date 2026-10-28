@@ -54,7 +54,10 @@ export async function GET(request: Request) {
   if (!allowed.length) return Response.json({ documents:[] });
   const { data, error } = await db.from('surgery_documents').select('id,appointment_id,name,category,size,created_at').in('appointment_id',allowed.map(a=>a.id)).eq('status','ready').order('created_at',{ascending:false});
   if (error) throw error;
-  return Response.json({ documents:(data || []).map((d: { appointment_id:string }) => ({ ...d, surgery:allowed.find(a=>a.id===d.appointment_id) })) },{ headers:{'Cache-Control':'no-store'} });
+  // The browser only needs a heading for each surgery. Never serialize the raw
+  // appointment: it can contain financial and other restricted patient fields.
+  const previews = new Map(allowed.map(a => [a.id, { id:a.id, date:a.date ?? null, procedure:a.procedure ?? null }]));
+  return Response.json({ documents:(data || []).map((d: { appointment_id:string }) => ({ ...d, surgery:previews.get(d.appointment_id) ?? null })) },{ headers:{'Cache-Control':'no-store'} });
  } catch(error) { return failure(error); }
 }
 async function handlePOST(request: Request) {
