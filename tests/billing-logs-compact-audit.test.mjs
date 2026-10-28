@@ -44,10 +44,13 @@ test('comprovante tem apenas arquivo e formato no resumo, com detalhes expansív
  assert.match(html,/Comprovante operacional/);
  assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
 });
-test('eventos não fiscais continuam com histórico detalhado imediatamente visível',async()=>{
+test('eventos curtos também usam o resumo padronizado e mantêm a auditoria expansível',async()=>{
  const html=await render([inserted(1,'billing_records',{notes:'Observação registrada'})]);
- assert.doesNotMatch(html,/billing-log-summary|Ver auditoria completa/);
- assert.match(html,/Observação: Observação registrada/);
+ const visible=html.split('<details class="billing-log-details">')[0];
+ assert.match(visible,/class="billing-log-summary"/);
+ assert.match(visible,/Observação<\/strong><span>Observação registrada/);
+ assert.doesNotMatch(visible,/workflow-change-group/);
+ assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
  assert.match(html,/Adicionou/);
 });
 
@@ -86,4 +89,19 @@ test('cartões compactos de faturamento mantêm colunas, espaçamento e fonte di
  assert.match(css,/\.billing-log-event \.billing-log-summary-row>span,[\s\S]*?font-size:12px;/);
  assert.match(css,/\.billing-log-event \.billing-log-details>summary\s*\{[^}]*font-size:11px;/s);
  assert.match(css,/@media\(max-width:560px\)\s*\{\s*\.billing-log-event \.billing-log-summary-row/);
+});
+
+test('alterações curtas de comprovante têm o mesmo layout de criação, sem setas na vista principal',async()=>{
+ const change={...inserted(1,'financial_attachments',{is_current:false,deactivation_reason:'Informação histórica'}),action:'UPDATE',before_data:{is_current:true,deactivation_reason:null},differences:[
+  {field:'is_current',before:true,after:false},
+  {field:'deactivation_reason',before:null,after:'Informação histórica'}
+ ]};
+ const html=await render([change]);
+ const visible=html.split('<details class="billing-log-details">')[0];
+ assert.match(visible,/class="billing-log-summary"/);
+ assert.match(visible,/Comprovante operacional<\/strong><span>Sim → Não/);
+ assert.match(visible,/Motivo do histórico<\/strong><span>Informação histórica/);
+ assert.doesNotMatch(visible,/workflow-change-group|workflow-arrow|>DE<|>PARA</);
+ assert.match(html,/<summary>Ver auditoria completa<\/summary>/);
+ assert.match(html,/workflow-change-group/);
 });
