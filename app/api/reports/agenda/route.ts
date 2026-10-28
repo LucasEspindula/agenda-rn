@@ -1,4 +1,5 @@
 import {getSession} from '@/app/authz';
+import {canUseAgenda} from '@/lib/doctor-services';
 import {loadBillingData} from '@/lib/billing-data';
 import {individualReceived} from '@/lib/billing-reports';
 import {isAnesthesiologist} from '@/lib/medical-specialties';
@@ -19,7 +20,7 @@ const groupByDay=<T extends {date:string}>(rows:readonly T[]):Array<[string,T[]]
 export async function GET(request:Request){
  const session=await getSession(),params=new URL(request.url).searchParams;
  const professionalId=params.get('professional_id')||'',mode=params.get('period')||'day',day=params.get('date')||'';
- if(!session)return Response.json({error:'Acesso negado.'},{status:403});
+ if(!session||!canUseAgenda(session))return Response.json({error:'Acesso negado.'},{status:403});
  if(!professionalId||!date.test(day)||!['day','week','month'].includes(mode))return Response.json({error:'Parâmetros de impressão inválidos.'},{status:400});
  try{
   const {state,data}=await loadBillingData();
