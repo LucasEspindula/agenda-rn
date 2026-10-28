@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
-const sql=readFileSync(new URL('../supabase/migrations/20261028210000_organization_foundation.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../supabase/migrations/20261028203004_organization_foundation.sql',import.meta.url),'utf8');
 
 test('organization foundation migrates without touching legacy clinical or financial tables',async()=>{
  const db=new PGlite();
