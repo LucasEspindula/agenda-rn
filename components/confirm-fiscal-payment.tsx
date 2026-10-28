@@ -7,14 +7,15 @@ import AppDialog from './app-dialog';
 import './confirm-fiscal-payment.css';
 import {formatBRL} from '@/lib/money';
 import {formatCPF,normalizeCPF,validCPF} from '@/lib/cpf';
+import {formatPatientAddress,type PatientAddressInput} from '@/lib/patient-address';
 
 export type FiscalRecipient={taker_kind:'PATIENT'|'OTHER';taker_name:string;taker_tax_id:string;taker_address:string;notes:string;payment_parts?:PaymentPart[];no_invoice?:boolean};
-export type FiscalPatient={id:string;name:string;cpf?:string;address?:string};
+export type FiscalPatient={id:string;name:string;cpf?:string}&PatientAddressInput;
 type Context={patient:FiscalPatient;amount:number|null;paidAt:string;noInvoice?:boolean;initialParts?:PaymentPart[]};
 
 export function patientRecipient(patient:FiscalPatient):FiscalRecipient{
  return {taker_kind:'PATIENT',taker_name:patient.name,taker_tax_id:patient.cpf||'',
-  taker_address:patient.address||'',notes:''};
+  taker_address:formatPatientAddress(patient),notes:''};
 }
 
 function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipient|null)=>void}){
@@ -29,6 +30,9 @@ function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipien
   if(!noInvoice&&(!value.taker_name.trim()||!validCPF(value.taker_tax_id))){
    setError('Informe o nome e um CPF válido do tomador.');return;
   }
+  if(!noInvoice&&!value.taker_address.trim()){
+   setError('Informe o endereço completo do tomador para solicitar a NF.');return;
+  }
   if(!noInvoice&&value.taker_kind==='PATIENT'&&context.patient.cpf&&
      normalizeCPF(context.patient.cpf)!==normalizeCPF(value.taker_tax_id)){
    setError('CPF diferente do cadastro. Corrija o paciente ou selecione Outra pessoa.');return;
@@ -37,7 +41,8 @@ function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipien
    setError('As formas de pagamento devem somar o valor recebido.');return;
   }
   done({...value,payment_parts:parts,no_invoice:noInvoice,
-   taker_name:value.taker_name.trim(),taker_tax_id:noInvoice?'':normalizeCPF(value.taker_tax_id)});
+   taker_name:value.taker_name.trim(),taker_tax_id:noInvoice?'':normalizeCPF(value.taker_tax_id),
+   taker_address:value.taker_address.trim()});
  };
 
  return <AppDialog label="Confirmar pagamento e solicitar NF" onClose={()=>done(null)}
@@ -93,8 +98,8 @@ function Confirmation({context,done}:{context:Context;done:(value:FiscalRecipien
        maxLength={14} value={formatCPF(value.taker_tax_id)}
        onChange={e=>set('taker_tax_id',e.target.value)}/>
      </label>
-     <label className="fiscal-field">Endereço (opcional)
-      <input maxLength={1000} value={value.taker_address}
+     <label className="fiscal-field">Endereço completo do tomador
+      <input required maxLength={1000} placeholder="Rua, número, bairro, cidade/UF e CEP" value={value.taker_address}
        onChange={e=>set('taker_address',e.target.value)}/>
      </label>
      <label className="fiscal-field fiscal-field-full">Observação (opcional)
