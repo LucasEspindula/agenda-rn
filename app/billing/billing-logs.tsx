@@ -48,7 +48,7 @@ if(l.kind==='undo_invoice')return `Desfez o lançamento da NF ${oldNF||'históri
   if(changes.some(c=>c.record_type==='invoice_requests'&&c.action==='INSERT'&&c.after_data?.status==='PENDING'))return 'request';
   if(changes.some(c=>c.record_type==='financial_attachments'&&c.action==='INSERT'))return 'proof';
   const fields=changes.reduce((n,c)=>n+presentLogDifferences(c.differences).length,0);
-  if(fields>6||changes.length>=3&&fields>4)return 'generic';
+  if(fields>0)return 'generic';
   return null;
  }
  function compactAuditRows(kind:'request'|'proof'|'generic',changes:ReturnType<typeof collapseChanges>){
@@ -56,20 +56,20 @@ if(l.kind==='undo_invoice')return `Desfez o lançamento da NF ${oldNF||'históri
   const row=(label:string,value:unknown)=>{if(value!=null&&String(value).trim())fields.push({label,value:String(value)})};
   const after=(type:string)=>changes.find(c=>c.record_type===type)?.after_data||{};
   if(kind==='generic'){
-   const ignored=new Set(['appointment_id','attendance_id','billing_record_id','patient_id','doctor_id','billing_entity_id','patient_name_snapshot','doctor_name_snapshot','entity_name_snapshot','entity_tax_id_snapshot','created_by','updated_by','origin','is_current','no_invoice','payment_composition_verified']);
-   const priority=['status','payment_status','invoice_number','received_amount','amount','issue_date','paid_at','date','procedure','reason','cancellation_reason','notes','description','total_amount','net_amount','billing_method','taker_name','name'];
+   const ignored=new Set(['appointment_id','attendance_id','billing_record_id','patient_id','doctor_id','billing_entity_id','patient_name_snapshot','doctor_name_snapshot','entity_name_snapshot','entity_tax_id_snapshot','created_by','updated_by','origin','no_invoice','payment_composition_verified']);
+   const priority=['status','payment_status','invoice_number','received_amount','amount','issue_date','paid_at','date','procedure','reason','cancellation_reason','is_current','deactivation_reason','notes','description','total_amount','net_amount','billing_method','taker_name','name'];
    const proposed:Array<{label:string;value:string;order:number}>=[],seen=new Set<string>();
    for(const c of changes){for(const d of presentLogDifferences(c.differences)){
-    if(ignored.has(d.field)||!labels[d.field])continue;
+    if(ignored.has(d.field)||!labels[d.field]||d.field==='is_current'&&(d.before===null||d.after===null))continue;
     if([d.before,d.after].some(v=>v!==null&&typeof v==='object'))continue;
     const label=labelFor(d.field),before=d.before===null?'':display(d.field,d.before,c.before_data),after=d.after===null?'':display(d.field,d.after,c.after_data);
-    if(!before&&!after||[before,after].some(v=>v==='Dados atualizados'||v==='Informação histórica'||isTechnicalIdentifier(v)))continue;
+    if(!before&&!after||[before,after].some(v=>v==='Dados atualizados'||isTechnicalIdentifier(v)))continue;
     const value=before&&after&&before!==after?before+' → '+after:after||'Removido: '+before;
     const key=label+'|'+value;if(seen.has(key))continue;seen.add(key);
     const n=priority.indexOf(d.field);proposed.push({label,value,order:n<0?100:n});
    }}
    proposed.sort((a,b)=>a.order-b.order);for(const entry of proposed.slice(0,5))row(entry.label,entry.value);
-   if(!fields.length)row('Alterações',changes.length+' registros vinculados');
+   if(!fields.length)row('Alteração',changes.length===1?'Registro atualizado':changes.length+' registros vinculados');
    return fields;
   }
   if(kind==='proof'){
