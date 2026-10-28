@@ -100,7 +100,7 @@ test('solicitações de NF mostram quem solicitou e data/hora a partir do regist
  const React=await import('react');
  const {renderToStaticMarkup}=await import('react-dom/server');
  const {default:InvoiceRequests}=loadTs('app/billing/invoice-requests.tsx',{
-  '@/components/mobile-row-actions':{default:({children})=>React.createElement('div',{},children)}
+  '@/components/mobile-row-actions':{__esModule:true,default:({children})=>React.createElement('div',{},children)}
  });
  const request={id:'request-1',status:'PENDING',billing_record_id:'finance-1',created_by:7,created_at:'2026-10-28T12:53:00Z',
   patient_name_snapshot:'Paciente Teste',taker_kind:'PATIENT',taker_tax_id:'12345678901',doctor_name_snapshot:'Dra. Ana',
