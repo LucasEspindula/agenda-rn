@@ -5,11 +5,11 @@ import {readFileSync} from "node:fs";
 const src=readFileSync("public/legacy-app.js","utf8");
 const between=(start,end)=>src.slice(src.indexOf(start),src.indexOf(end,src.indexOf(start)));
 const detail=between("async function saveAppointmentDetailChanges(id,button){","function renderAppointmentDetail(a){");
-const financial=between("async function saveNativeFinance(id){","async function saveAppointmentDetailChanges(id,button){");
+const financial=between("async function saveNativeFinance(id,onProgress=()=>{}){","async function saveAppointmentDetailChanges(id,button){");
 const fetcher=between("async function loadNativeFinance(id,draft=null){","function validateNativeFinance(){");
 
 test("confirmação de recebimento fecha janela sem refazer Detalhes e sem deixar Carregando financeiro",()=>{
- assert.match(detail,/await saveNativeFinance\(id\)/);
+ assert.match(detail,/await saveNativeFinance\(id,stage=>/);
  assert.match(detail,/closeModals\(\);\s*renderAll\(\)/);
  assert.doesNotMatch(detail,/renderAppointmentDetail\(/);
  assert.match(detail,/finally\{if\(button\.isConnected\)/);
@@ -22,10 +22,9 @@ test("erro da API financeira mantém janela aberta e apresenta erro; nunca confi
 });
 test("pagamento confirmado não vira erro por falha posterior na consulta do estado",()=>{
  assert.match(financial,/window\.RNFinance\.notifyFinancialChange\(\)/);
- assert.match(financial,/let stateRefreshed=false/);
- assert.match(financial,/try\{\s*const response=await fetch\('\/api\/state'/);
- assert.match(financial,/catch\{\/\* Sincronismo de agenda recupera eventual falha de leitura/);
- assert.match(financial,/return \{paymentSaved:true,stateRefreshed\}/);
+ assert.doesNotMatch(financial,/await fetch\('\/api\/state'/);
+ assert.match(financial,/financialRefreshAt=0;void refreshFinancialAlerts\(\)/);
+ assert.match(financial,/return \{paymentSaved:true,stateRefreshed:false,invoiceRequested:!!payload\.fiscal\}/);
  assert.match(detail,/void checkAgendaRevision\(\)/);
 });
 test("carregamento do financeiro tem prazo e botão de nova tentativa",()=>{
@@ -63,7 +62,7 @@ test("fluxo executado fecha modal somente em sucesso e não reconstrói Detalhes
   validateNativeFinance:()=>true,appointmentInsurance:(a)=>a.insurance,
   appNotice:()=>calls.push("notice"),nativeFinanceError:(e)=>calls.push("error:"+e),
   persist:async()=>true,hist:()=>calls.push("history"),
-  saveNativeFinance:async()=>{calls.push("financial");if(mode==="failure")throw Error("NF inválida");return {paymentSaved:true,stateRefreshed:true}},
+  saveNativeFinance:async()=>{calls.push("financial");if(mode==="failure")throw Error("NF inválida");return {paymentSaved:true,stateRefreshed:false,invoiceRequested:true}},
   closeModals:()=>calls.push("closed"),renderAll:()=>calls.push("renderAll"),
   renderAppointmentDetail:()=>calls.push("INVALID_RERENDER"),
   toast:(msg)=>calls.push("toast:"+msg),checkAgendaRevision:()=>calls.push("sync")
@@ -72,7 +71,7 @@ test("fluxo executado fecha modal somente em sucesso e não reconstrói Detalhes
  const save=make(ctx);
  const button={dataset:{},disabled:false,isConnected:true,setAttribute(){},removeAttribute(){},textContent:"Salvar alterações"};
  await save(user.id,button);
- assert.deepEqual(calls,["financial","closed","renderAll","toast:Agendamento salvo."]);
+ assert.deepEqual(calls,["financial","closed","renderAll","toast:Solicitação de NF enviada ao faturamento.","sync"]);
  assert.equal(button.disabled,false);
  calls.length=0;mode="failure";
  await save(user.id,button);
