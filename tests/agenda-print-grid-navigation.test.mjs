@@ -37,7 +37,7 @@ test("Agenda PDF groups appointments and blocked times by day without a repeated
  assert.match(report,/const groupByDay=<T extends \{date:string\}>/);
  assert.match(report,/pdf\.section\('Atendimentos'/);
  assert.match(report,/for\(const \[date,dayAppointments\] of groupByDay\(appointments\)\)/);
- assert.match(report,/pdf\.dayHeading\(brDate\(date\)\)/);
+ assert.match(report,/pdf\.dayHeading\(agendaDateLabel\(date\)\)/);
  assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:58\},\{label:'Paciente',width:144\}/);
  assert.match(report,/for\(const \[date,dayBlocks\] of groupByDay\(blocks\)\)/);
  assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:130\},\{label:'Motivo',width:534\}/);
@@ -59,6 +59,16 @@ test("Agenda PDF displays date, time and authenticated generator in the upper ri
  assert.match(report,/Gerado por: '\+session\.account\.name/);
  assert.match(pdf,/rightDetails:string\[\]=\[\]/);
  assert.match(pdf,/this\.width-this\.margin-labelWidth/);
+});
+
+test("Agenda PDF center heading matches day, week and month selection",()=>{
+ const report=source("app/api/reports/agenda/route.ts");
+ const pdf=source("lib/reports/pdf.ts");
+ assert.match(report,/mode==='week'\?'Agenda da semana':mode==='month'\?'Agenda do mês':'Agenda do dia'/);
+ assert.match(report,/\],centerTitle\);/);
+ assert.match(pdf,/centerTitle\?:string/);
+ assert.match(pdf,/this\.text\(centerTitle,\(this\.width-labelWidth\)\/2,this\.y-1,size,true\)/);
+ assert.match(pdf,/centerTitle\?'RN Integra':'RN Integra · '\+title/);
 });
 
 test("Agenda printable data, period filters and permissions remain unchanged",()=>{
