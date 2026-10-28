@@ -786,6 +786,26 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 #appointmentModal .appointment-status-editor.detail-pending-target{padding-right:16px}
 #appointmentModal .native-finance.pending-finance{position:relative;padding-right:40px}
 #appointmentModal .native-finance.pending-finance::after{content:"!";display:grid;place-items:center;position:absolute;top:14px;right:14px;box-sizing:border-box;width:19px;height:19px;border:1px solid #daae24;border-radius:50%;background:#ffdf61;color:#684900;font-size:13px;font-weight:950;line-height:1;box-shadow:0 1px 3px rgba(88,66,12,.22)}
+/* Discreet attention cue: a lightly tilted ! with a brief nudge, not a constant pulse. */
+@keyframes rn-pending-nudge{
+ 0%,14%,100%{transform:rotate(-10deg) scale(1)}
+ 19%{transform:translateY(-1px) rotate(-16deg) scale(1.06)}
+ 24%{transform:rotate(-6deg) scale(1)}
+ 29%{transform:rotate(-10deg) scale(1)}
+}
+.appointment-pending-mark,
+#appointmentModal .native-finance.pending-finance::after{
+ transform:rotate(-10deg);
+ transform-origin:center;
+ animation:rn-pending-nudge 7s ease-in-out infinite;
+}
+@media(prefers-reduced-motion:reduce){
+ .appointment-pending-mark,
+ #appointmentModal .native-finance.pending-finance::after{
+  animation:none;
+  transform:rotate(-10deg);
+ }
+}
 @media(max-width:720px){
  .mobile-appointment .card-pending-mark{top:-5px;right:-5px}
  #appointmentModal .detail-pending-target .detail-pending-mark{right:10px;top:8px}
