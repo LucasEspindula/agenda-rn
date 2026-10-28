@@ -990,7 +990,7 @@ function validateNativeFinance(){
  const amount=window.RNMoney.parseBRL(f.draft.received_amount);if(f.draft.payment_status==='PAGO'&&(amount==null||!f.draft.paid_at))throw Error('Para registrar como pago, informe o valor e a data de pagamento.');
  if(f.row&&!f.draft.billing_entity_id&&(amount!=null||f.draft.payment_status==='PAGO'||f.row.record))throw Error('Selecione uma entidade recebedora vinculada ao médico.');
 }
-async function saveNativeFinance(id){
+async function saveNativeFinance(id,onProgress=()=>{}){
  if((window.AgendaAuth||{}).role==='doctor')return;captureNativeFinance();let f=nativeFinance;const method=nativeMethod();if(f?.row?.invoice)return;
  if(!f?.row){if(method!=='PARTICULAR'||window.RNMoney.parseBRL(f?.draft.received_amount)==null&&f?.draft.payment_status!=='PAGO')return;const proofFile=f.proofFile,proofTargetId=f.proofTargetId,proofReplacesId=f.proofReplacesId;await loadNativeFinance(id,f.draft);f=nativeFinance;if(f){f.proofFile=proofFile;f.proofTargetId=proofTargetId;f.proofReplacesId=proofReplacesId;}captureNativeFinance()}
  validateNativeFinance();if(!f.row)throw Error('Financeiro indisponível. Tente novamente.');
@@ -1005,24 +1005,19 @@ async function saveNativeFinance(id){
   throw Error('Solicitação de NF já pendente. Para mudar o pagamento, reverta-o de forma auditada e confirme novamente. Para emitir a NF, use Faturamento → Notas Fiscais → Solicitações.');
  if(f.row.record&&!(method==='PARTICULAR'&&payload.payment_status==='PAGO'&&!(f.data.requests||[]).some(r=>r.attendance_id===id&&r.status!=='CANCELLED')&&!f.row.record.invoice_number)&&['billing_entity_id','billing_method','payment_status','received_amount','paid_at'].every(k=>(payload[k]??null)===(f.row.record[k]??null)))return;
  if(method==='PARTICULAR'&&payload.payment_status==='PAGO'&&!(f.data.requests||[]).some(r=>r.attendance_id===id&&r.status!=='CANCELLED')&&!f.row.record?.invoice_number&&(!f.row.record?.no_invoice||Number(amount)!==Number(f.row.record?.received_amount)||payload.paid_at!==f.row.record?.paid_at)){const fiscal=await window.RNFinance.confirmFiscalPayment({patient:patient(f.row.patient_id)||{id:f.row.patient_id,name:f.row.patient},amount,paidAt:payload.paid_at,noInvoice:!!f.row.record?.no_invoice});if(!fiscal)throw Error('Confirmação cancelada. O pagamento não foi alterado.');payload.no_invoice=!!fiscal.no_invoice;if(!fiscal.no_invoice)payload.fiscal=fiscal;payload.payment_parts=fiscal.payment_parts;}
+ onProgress('Salvando financeiro…');
  const r=await fetch('/api/billing',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'record',data:payload})}),result=await r.json();if(!r.ok)throw Error(result.error||'Não foi possível salvar o pagamento.');
- if(f.proofFile&&payload.payment_status==='PAGO'&&result.id){try{await window.RNFinance.uploadPaymentProof(result.id,f.proofFile,f.proofReplacesId);f.proofFile=null;f.proofTargetId=null;f.proofReplacesId=null}catch(error){f.proofTargetId=result.id;proofUploadFailed=true}}
+ if(f.proofFile&&payload.payment_status==='PAGO'&&result.id){
+  onProgress('Enviando comprovante…');
+  try{await window.RNFinance.uploadPaymentProof(result.id,f.proofFile,f.proofReplacesId);f.proofFile=null;f.proofTargetId=null;f.proofReplacesId=null}catch(error){f.proofTargetId=result.id;proofUploadFailed=true}
+ }
  window.RNFinance.notifyFinancialChange();
-  // Após resposta de sucesso da API, recarregar o estado é apenas sincronização,
-  // não parte da confirmação do recebimento.
-  let stateRefreshed=false;
-  try{
-   const response=await fetch('/api/state',{cache:'no-store',signal:AbortSignal.timeout(12000)});
-   if(response.ok){
-    const snapshot=await response.json();
-    window.AgendaRevision=snapshot.revision;
-    state=Storage.migrate(snapshot.state);
-    stateRefreshed=true;
-    reconcileRemoteAgendaUpdate();
-   }
-  }catch{/* Sincronismo de agenda recupera eventual falha de leitura. */}
-  if(proofUploadFailed){paintNativeFinance();throw Error('✓ Pagamento salvo. O comprovante não foi enviado. Tente novamente.');}
-  return {paymentSaved:true,stateRefreshed};
+ financialRefreshAt=0;void refreshFinancialAlerts();
+ // A releitura da agenda é feita em segundo plano após fechar a janela.
+ // O único trabalho aguardado aqui é o que precisa estar efetivamente gravado:
+ // financeiro e, se selecionado, seu comprovante.
+ if(proofUploadFailed){paintNativeFinance();throw Error('✓ Pagamento salvo. O comprovante não foi enviado. Tente novamente.');}
+ return {paymentSaved:true,stateRefreshed:false,invoiceRequested:!!payload.fiscal};
 }
 
 async function saveAppointmentDetailChanges(id,button){
@@ -1061,11 +1056,11 @@ async function saveAppointmentDetailChanges(id,button){
   if((window.AgendaAuth||{}).role==="doctor"){const sent=await sendAgendaSuggestion("update",updated,id,button);if(sent){closeModals();toast("Sugestão enviada, aguarde aprovação.")}return}
   if(changed){const previousStatus=a.status;Object.assign(a,updated);if(otherChanged)hist(a.patientId,"Agendamento alterado",`${a.procedure} · ${a.date} às ${a.time}`,id);if(statusChanged)hist(a.patientId,"Status alterado",`${statusLabel(previousStatus)} → ${statusLabel(a.status)}`,id);if(await persist()===false)return}
   let financeResult;
-  try{financeResult=await saveNativeFinance(id)}catch(error){nativeFinanceError((changed?"Agendamento salvo. ":"")+error.message);return}
+  try{financeResult=await saveNativeFinance(id,stage=>{if(button?.isConnected)button.textContent=stage})}catch(error){nativeFinanceError((changed?"Agendamento salvo. ":"")+error.message);return}
   closeModals();
   renderAll();
   if(financeResult?.paymentSaved&&!financeResult.stateRefreshed){
-   toast("Pagamento salvo. A agenda será atualizada automaticamente.");
+   toast(financeResult.invoiceRequested?"Solicitação de NF enviada ao faturamento.":"Pagamento salvo. A agenda será atualizada automaticamente.");
    void checkAgendaRevision();
   }else toast("Agendamento salvo.");
  }finally{if(button.isConnected){delete button.dataset.saving;button.disabled=false;button.removeAttribute("aria-busy");button.textContent=oldText}}
@@ -1179,8 +1174,9 @@ $("appointmentForm").onsubmit=async e=>{
   if(old.careType!==a.careType)hist(a.patientId,"Tipo de atendimento alterado",a.careType==="inpatient"?"Internado":"Ambulatorial",id);
  }
  if(await persist()===false)return;
- try{await saveNativeFinance(id)}catch(error){captureNativeFinance();const kept={...nativeFinance?.draft},proofFile=nativeFinance?.proofFile||null,proofTargetId=nativeFinance?.proofTargetId||null,proofReplacesId=nativeFinance?.proofReplacesId||null;$("appointmentId").value=id;setAppointmentViewMode(true);renderAppointmentDetail(state.appointments.find(x=>x.id===id)||a);await loadNativeFinance(id,kept);if(nativeFinance){nativeFinance.proofFile=proofFile;nativeFinance.proofTargetId=proofTargetId;nativeFinance.proofReplacesId=proofReplacesId;paintNativeFinance()}nativeFinanceError("Agendamento salvo. "+error.message);return}
- closeModals();toast("Agendamento salvo.")
+ let financeResult;
+ try{financeResult=await saveNativeFinance(id,stage=>{if(submitButton?.isConnected)submitButton.textContent=stage})}catch(error){captureNativeFinance();const kept={...nativeFinance?.draft},proofFile=nativeFinance?.proofFile||null,proofTargetId=nativeFinance?.proofTargetId||null,proofReplacesId=nativeFinance?.proofReplacesId||null;$("appointmentId").value=id;setAppointmentViewMode(true);renderAppointmentDetail(state.appointments.find(x=>x.id===id)||a);await loadNativeFinance(id,kept);if(nativeFinance){nativeFinance.proofFile=proofFile;nativeFinance.proofTargetId=proofTargetId;nativeFinance.proofReplacesId=proofReplacesId;paintNativeFinance()}nativeFinanceError("Agendamento salvo. "+error.message);return}
+ closeModals();toast(financeResult?.invoiceRequested?"Solicitação de NF enviada ao faturamento.":"Agendamento salvo.");if(financeResult?.paymentSaved)void checkAgendaRevision();
  }finally{delete form.dataset.saving;form.removeAttribute("aria-busy");if(submitButton?.isConnected){submitButton.disabled=false;submitButton.textContent=oldSubmitText}}
 };
 async function openCancellation(id){const a=state.appointments.find(x=>x.id===id);if(!a)return;await refreshFinancialAlerts();if(financialIssuedAppointments.has(id))return appNotice("Nota Fiscal emitida","Não é possível cancelar ou excluir este atendimento, pois existe uma Nota Fiscal emitida vinculada a ele.");$("cancelAppointmentForm").reset();$("cancelAppointmentId").value=id;$("cancelReasonOtherLabel").classList.add("hidden");$("cancelAppointmentSummary").innerHTML=`<strong>${esc(patient(a.patientId)?.name||"Paciente")}</strong><br>${parseDate(a.date).toLocaleDateString("pt-BR")} às ${esc(a.time)} · ${esc(a.procedure)}`;closeModals();openModal("cancelAppointmentModal")}
