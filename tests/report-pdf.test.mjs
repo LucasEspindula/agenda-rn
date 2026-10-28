@@ -28,26 +28,68 @@ test('PdfReport generates a valid multipage A4 landscape PDF',async()=>{
  assert.throws(()=>report.table([{label:'Excede',width:report.contentWidth+1}],[]),/área útil/);
 });
 
-test('agenda day headers and generator metadata render into a valid multipage PDF',async()=>{
+test('agenda PDF draws one chronological grid per day with inline highlighted blocks',async()=>{
  const {PdfReport,brDateTime}=await importTypeScript('lib/reports/pdf.ts');
- const {agendaDateLabel}=await importTypeScript('lib/agenda-report.ts');
+ const {agendaDateLabel,agendaTimeline}=await importTypeScript('lib/agenda-report.ts');
  const pdf=await new PdfReport().init();
- pdf.header('Agenda','Dr. Exemplo · CRM: 12345',['Período: 28/10/2026 a 29/10/2026'],[
+ pdf.header('Agenda','Dr. Exemplo · CRM: 12345',['Período: 26/10/2026 a 27/10/2026'],[
   'Gerado em: '+brDateTime('2026-10-28T13:45:00.000Z'),
   'Gerado por: Secretaria Exemplo'
  ],'Agenda da semana');
  pdf.section('Programação',undefined,{reserve:48});
- for(const date of ['2026-10-28','2026-10-29']){
+ const appointments=Array.from({length:37},(_,index)=>({
+  date:'2026-10-27',time:index===0?'08:00':index===1?'09:00':'11:00',
+  patient:index===0?'Lucas':index===1?'Vitória':'Paciente '+String(index+1)
+ }));
+ const blocks=[
+  {date:'2026-10-26',start:'08:00',end:'09:00',reason:'Sem atendimento'},
+  {date:'2026-10-27',start:'08:30',end:'09:00',reason:'Reunião médica'}
+ ];
+ const timeline=agendaTimeline(appointments,blocks);
+ assert.deepEqual(timeline.slice(0,4).map(item=>[item.date,item.start,item.kind]),[
+  ['2026-10-26','08:00','block'],['2026-10-27','08:00','appointment'],
+  ['2026-10-27','08:30','block'],['2026-10-27','09:00','appointment']
+ ]);
+ const byDay=new Map();
+ for(const entry of timeline){if(!byDay.has(entry.date))byDay.set(entry.date,[]);byDay.get(entry.date).push(entry)}
+ for(const [date,items] of byDay){
   pdf.dayHeading(agendaDateLabel(date));
-  pdf.gridTable([{label:'Horário',width:80},{label:'Paciente',width:250},{label:'Procedimento',width:250}],
-   Array.from({length:35},(_,i)=>['08:00','Paciente '+String(i+1),'Procedimento agendado']));
-  pdf.section('Horários bloqueados',undefined,{reserve:40});
-  pdf.gridTable([{label:'Horário',width:130},{label:'Motivo',width:534}],[['10:00 - 11:00','Bloqueio profissional']]);
+  pdf.gridTable([
+   {label:'Horário',width:69},{label:'Paciente',width:144},
+   {label:'Anestesista',width:108},{label:'Procedimento / Motivo',width:153},
+   {label:'Convênio',width:96},{label:'Hospital',width:117},{label:'Status',width:71}
+  ],items.map(item=>item.kind==='block'
+    ?[item.block.start+' - '+item.block.end,'HORÁRIO BLOQUEADO','—','Motivo: '+item.block.reason,'—','—','Bloqueado']
+    :[item.appointment.time,item.appointment.patient,'—','Consulta','Particular','Hospital','Agendado']),
+   items.map(item=>item.kind==='block'?'blocked':null));
  }
  const bytes=await pdf.bytes();
  const document=await PDFDocument.load(bytes);
  assert.ok(document.getPageCount()>1);
  assert.equal(Buffer.from(bytes).subarray(0,5).toString('ascii'),'%PDF-');
+});
+
+test('agendaTimeline preserves chronological order including block-only days and tied times',async()=>{
+ const {agendaTimeline}=await importTypeScript('lib/agenda-report.ts');
+ const appointments=[
+  {date:'2026-10-27',time:'09:00',patient:'Vitória'},
+  {date:'2026-10-27',time:'08:00',patient:'Lucas'},
+  {date:'2026-10-27',time:'08:30',patient:'Conflito de teste'}
+ ];
+ const blocks=[
+  {date:'2026-10-27',start:'08:30',end:'09:00',reason:'Bloqueio'},
+  {date:'2026-10-26',start:'14:00',end:'15:00',reason:'Sem agenda'}
+ ];
+ const result=agendaTimeline(appointments,blocks);
+ assert.deepEqual(result.map(x=>[x.date,x.start,x.kind]),[
+  ['2026-10-26','14:00','block'],
+  ['2026-10-27','08:00','appointment'],
+  ['2026-10-27','08:30','block'],
+  ['2026-10-27','08:30','appointment'],
+  ['2026-10-27','09:00','appointment']
+ ]);
+ assert.equal(result[2].kind,'block');
+ assert.equal(result[3].kind,'appointment');
 });
 
 test('agenda report preserves historical insurance and human status labels',async()=>{
