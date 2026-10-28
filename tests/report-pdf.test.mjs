@@ -28,6 +28,25 @@ test('PdfReport generates a valid multipage A4 landscape PDF',async()=>{
  assert.throws(()=>report.table([{label:'Excede',width:report.contentWidth+1}],[]),/área útil/);
 });
 
+test('agenda day headers and generator metadata render into a valid multipage PDF',async()=>{
+ const {PdfReport,brDateTime}=await importTypeScript('lib/reports/pdf.ts');
+ const pdf=await new PdfReport().init();
+ pdf.header('Agenda','Dr. Exemplo · CRM: 12345',['Período: 28/10/2026 a 29/10/2026'],[
+  'Gerado em: '+brDateTime('2026-10-28T13:45:00.000Z'),
+  'Gerado por: Secretaria Exemplo'
+ ]);
+ pdf.section('Atendimentos',undefined,{reserve:48});
+ for(const date of ['28/10/2026','29/10/2026']){
+  pdf.dayHeading(date);
+  pdf.gridTable([{label:'Horário',width:80},{label:'Paciente',width:250},{label:'Procedimento',width:250}],
+   Array.from({length:35},(_,i)=>['08:00','Paciente '+String(i+1),'Procedimento agendado']));
+ }
+ const bytes=await pdf.bytes();
+ const document=await PDFDocument.load(bytes);
+ assert.ok(document.getPageCount()>1);
+ assert.equal(Buffer.from(bytes).subarray(0,5).toString('ascii'),'%PDF-');
+});
+
 test('agenda report preserves historical insurance and human status labels',async()=>{
  const {appointmentInsurance,appointmentStatusLabel}=await importTypeScript('lib/agenda-report.ts');
  assert.equal(appointmentInsurance({insurance:''},{insurance:'UNIMED'}),'');
