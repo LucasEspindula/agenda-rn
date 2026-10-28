@@ -40,37 +40,41 @@ export async function GET(request:Request){
    'Gerado em: '+brDateTime(new Date().toISOString()),
    'Gerado por: '+session.account.name
   ],centerTitle);
-  pdf.section('Atendimentos',undefined,{reserve:48});
-  for(const [date,dayAppointments] of groupByDay(appointments)){
+  const appointmentsByDay=new Map(groupByDay(appointments));
+  const blocksByDay=new Map(groupByDay(blocks));
+  const days=[...new Set([...appointmentsByDay.keys(),...blocksByDay.keys()])].sort();
+  pdf.section('Programação',undefined,{reserve:48});
+  for(const date of days){
+   const dayAppointments=appointmentsByDay.get(date)||[];
+   const dayBlocks=blocksByDay.get(date)||[];
    pdf.dayHeading(agendaDateLabel(date));
-   pdf.gridTable([
-    {label:'Horário',width:58},{label:'Paciente',width:144},
-    {label:anesthesiologist?'Médico':'Anestesista',width:108},
-    {label:'Procedimento',width:139},{label:'Convênio',width:96},
-    {label:'Hospital',width:117},{label:'Status',width:71}
-   ],dayAppointments.map(item=>[
-    item.time||'—',
-    patients.get(item.patientId)?.name||'Não informado',
-    professionals.get(anesthesiologist?item.doctorId||'':item.anesthetistId||'')?.name||'—',
-    item.procedure||'—',
-    appointmentInsurance(item,patients.get(item.patientId))||'—',
-    hospitals.get(item.hospitalId||'')?.name||'—',
-    appointmentStatusLabel(item.status)
-   ]));
-  }
-  if(!appointments.length){
-   pdf.ensureSpace(16);
-   pdf.text('Nenhum atendimento no período selecionado.',pdf.margin,pdf.y,9);
-   pdf.y-=22;
-  }
-  if(blocks.length){
-   pdf.section('Horários bloqueados',undefined,{reserve:48});
-   for(const [date,dayBlocks] of groupByDay(blocks)){
-    pdf.dayHeading(agendaDateLabel(date));
+   if(dayAppointments.length){
+    pdf.gridTable([
+     {label:'Horário',width:58},{label:'Paciente',width:144},
+     {label:anesthesiologist?'Médico':'Anestesista',width:108},
+     {label:'Procedimento',width:139},{label:'Convênio',width:96},
+     {label:'Hospital',width:117},{label:'Status',width:71}
+    ],dayAppointments.map(item=>[
+     item.time||'—',
+     patients.get(item.patientId)?.name||'Não informado',
+     professionals.get(anesthesiologist?item.doctorId||'':item.anesthetistId||'')?.name||'—',
+     item.procedure||'—',
+     appointmentInsurance(item,patients.get(item.patientId))||'—',
+     hospitals.get(item.hospitalId||'')?.name||'—',
+     appointmentStatusLabel(item.status)
+    ]));
+   }
+   if(dayBlocks.length){
+    pdf.section('Horários bloqueados',undefined,{reserve:40});
     pdf.gridTable([
      {label:'Horário',width:130},{label:'Motivo',width:534}
     ],dayBlocks.map(block=>[block.start+' - '+block.end,block.reason]));
    }
+  }
+  if(!days.length){
+   pdf.ensureSpace(16);
+   pdf.text('Nenhum atendimento ou bloqueio no período selecionado.',pdf.margin,pdf.y,9);
+   pdf.y-=22;
   }
   return pdfResponse(pdf,'agenda-'+professionalId+'-'+period.start+'.pdf');
  }catch{
