@@ -18,8 +18,28 @@ export class PdfReport{
  ensureSpace(height:number):void{this.ensure(height)}
  text(value:string,x:number,y:number,size=8,bold=false,color=green):void{this.page.drawText(value||'—',{x,y,size,font:bold?this.bold:this.font,color})}
  line(y:number):void{this.page.drawLine({start:{x:this.margin,y},end:{x:this.width-this.margin,y},thickness:.5,color:line})}
- header(title:string,subtitle:string,details:string[]=[]):void{this.text('RN Integra · '+title,this.margin,this.y,17,true);this.y-=21;this.text(subtitle,this.margin,this.y,9,false,muted);for(const detail of details){this.y-=11;this.text(detail,this.margin,this.y,7,false,muted)}this.y-=14;this.line(this.y);this.y-=14}
+ header(title:string,subtitle:string,details:string[]=[],rightDetails:string[]=[]):void{
+  this.text('RN Integra · '+title,this.margin,this.y,17,true);
+  for(const [index,detail] of rightDetails.slice(0,2).entries()){
+   const size=7,maxWidth=this.contentWidth*.45;
+   let label=detail;
+   while(label.length>3&&this.font.widthOfTextAtSize(label,size)>maxWidth)label=label.slice(0,-4)+'…';
+   const labelWidth=this.font.widthOfTextAtSize(label,size);
+   this.text(label,this.width-this.margin-labelWidth,this.y-index*11,size,false,muted);
+  }
+  this.y-=21;
+  this.text(subtitle,this.margin,this.y,9,false,muted);
+  for(const detail of details){this.y-=11;this.text(detail,this.margin,this.y,7,false,muted)}
+  this.y-=14;this.line(this.y);this.y-=14;
+ }
  section(title:string,subtitle?:string,options:PdfSectionOptions={}):void{this.ensureSpace((subtitle?43:28)+(options.reserve||0));this.text(title,this.margin,this.y,11,true);this.y-=13;if(subtitle){this.text(subtitle,this.margin,this.y,7,false,muted);this.y-=12}}
+ dayHeading(value:string):void{
+  this.ensureSpace(82);
+  const top=this.y,height=20;
+  this.page.drawRectangle({x:this.margin,y:top-height,width:this.contentWidth,height,color:rgb(.93,.96,.96)});
+  this.text(value,this.margin+8,top-13,10,true);
+  this.y=top-height-5;
+ }
  private wrap(value:string,width:number,size=7):string[]{const words=String(value||'—').split(/\s+/),lines:string[]=[];let current='';for(const word of words){const next=current?current+' '+word:word;if(this.font.widthOfTextAtSize(next,size)<=width)current=next;else{if(current)lines.push(current);current=word}}if(current)lines.push(current);return lines.length?lines:['—']}
  table(columns:PdfColumn[],rows:readonly string[][]):void{const x=this.margin,total=pdfColumnsWidth(columns);if(total>this.contentWidth)throw new RangeError('A largura da tabela excede a área útil do PDF.');const head=()=>{this.ensureSpace(20);let left=x;this.page.drawRectangle({x,y:this.y-12,width:total,height:14,color:rgb(.94,.97,.97)});for(const col of columns){this.text(col.label.toUpperCase(),left+3,this.y-8,6,true,muted);left+=col.width}this.y-=16};head();for(const row of rows){const cells=row.map((value,index)=>this.wrap(value,columns[index].width-6)),height=Math.max(15,...cells.map(cell=>cell.length*9+6));if(this.y-height<this.margin+12){this.addPage();head()}let left=x;cells.forEach((cell,index)=>{cell.forEach((value,lineIndex)=>{const textWidth=this.font.widthOfTextAtSize(value,7),px=columns[index].align==='right'?left+columns[index].width-3-textWidth:left+3;this.text(value,px,this.y-9-lineIndex*9,7)});left+=columns[index].width});this.y-=height;this.line(this.y)}this.y-=12}
  // Grid de largura integral para relatórios financeiros. Mantém os relatórios legados intactos.

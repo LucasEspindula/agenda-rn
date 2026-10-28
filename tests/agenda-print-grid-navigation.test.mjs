@@ -31,18 +31,34 @@ test("Agenda hamburger reuses real view handlers and respects role-specific sect
  assert.match(app,/function showView\(view\)\{/);
 });
 
-test("Agenda PDF uses edge-to-edge landscape grid tables with repeated headers",()=>{
+test("Agenda PDF groups appointments and blocked times by day without a repeated Data column",()=>{
  const report=source("app/api/reports/agenda/route.ts");
  const pdf=source("lib/reports/pdf.ts");
- assert.match(report,/pdf\.section\('Atendimentos'\);pdf\.gridTable\(/);
- assert.match(report,/pdf\.section\('Horários bloqueados'/);
- assert.match(report,/pdf\.gridTable\(\[\{label:'Data',width:110\}/);
+ assert.match(report,/const groupByDay=<T extends \{date:string\}>/);
+ assert.match(report,/pdf\.section\('Atendimentos'/);
+ assert.match(report,/for\(const \[date,dayAppointments\] of groupByDay\(appointments\)\)/);
+ assert.match(report,/pdf\.dayHeading\(brDate\(date\)\)/);
+ assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:58\},\{label:'Paciente',width:144\}/);
+ assert.match(report,/for\(const \[date,dayBlocks\] of groupByDay\(blocks\)\)/);
+ assert.match(report,/pdf\.gridTable\(\[\s*\{label:'Horário',width:130\},\{label:'Motivo',width:534\}/);
+ assert.doesNotMatch(report,/\{label:'Data',width:/);
  assert.doesNotMatch(report,/pdf\.table\(/);
+ assert.match(pdf,/dayHeading\(value:string\)/);
+ assert.match(pdf,/this\.ensureSpace\(82\)/);
  assert.match(pdf,/const factor=this\.contentWidth\/sum/);
  assert.match(pdf,/const widths=columns\.map\(c=>c\.width\*factor\)/);
  assert.match(pdf,/width:this\.contentWidth,height:headerHeight/);
  assert.match(pdf,/drawHeader\(\);\s*for\(const \[rowIndex,values\] of rows\.entries\(\)\)/);
  assert.match(pdf,/this\.addPage\(\);\s*drawHeader\(\)/);
+});
+
+test("Agenda PDF displays date, time and authenticated generator in the upper right",()=>{
+ const report=source("app/api/reports/agenda/route.ts");
+ const pdf=source("lib/reports/pdf.ts");
+ assert.match(report,/Gerado em: '\+brDateTime\(new Date\(\)\.toISOString\(\)\)/);
+ assert.match(report,/Gerado por: '\+session\.account\.name/);
+ assert.match(pdf,/rightDetails:string\[\]=\[\]/);
+ assert.match(pdf,/this\.width-this\.margin-labelWidth/);
 });
 
 test("Agenda printable data, period filters and permissions remain unchanged",()=>{
