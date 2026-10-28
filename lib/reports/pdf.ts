@@ -38,7 +38,7 @@ export class PdfReport{
  }
  section(title:string,subtitle?:string,options:PdfSectionOptions={}):void{this.ensureSpace((subtitle?43:28)+(options.reserve||0));this.text(title,this.margin,this.y,11,true);this.y-=13;if(subtitle){this.text(subtitle,this.margin,this.y,7,false,muted);this.y-=12}}
  dayHeading(value:string):void{
-  this.ensureSpace(82);
+  this.ensureSpace(96);
   const top=this.y,height=20;
   this.page.drawRectangle({x:this.margin,y:top-height,width:this.contentWidth,height,color:rgb(.93,.96,.96)});
   this.text(value,this.margin+8,top-13,10,true);
