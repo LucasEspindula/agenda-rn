@@ -4,6 +4,7 @@ import {dbError,getSupabaseAdmin} from '@/lib/supabase-admin';
 
 export const dynamic='force-dynamic';
 const PAGE_SIZE=25;
+type AgendaAuditRow={id:string;actor_name:string|null;actor_role:string|null;action:string;professional_id:string|null;appointment_id:string|null;patient_id:string|null;created_at:string;metadata:Record<string,unknown>|null};
 
 export async function GET(request:Request){
  const session=await getSession();
@@ -17,11 +18,11 @@ export async function GET(request:Request){
  if(cursor)query=query.lt('created_at',cursor);
  const result=await query.order('created_at',{ascending:false}).limit(PAGE_SIZE+1);
  dbError(result.error,'Read agenda logs');
- const rows=(result.data||[]).filter(row=>isManager(session.account.role)||session.agendaIds.includes(String(row.professional_id))).slice(0,PAGE_SIZE),hasMore=(result.data||[]).length>PAGE_SIZE;
- const requestIds=[...new Set(rows.map(row=>{
+ const rows=(result.data||[]).filter((row:AgendaAuditRow)=>isManager(session.account.role)||session.agendaIds.includes(String(row.professional_id))).slice(0,PAGE_SIZE),hasMore=(result.data||[]).length>PAGE_SIZE;
+ const requestIds=[...new Set(rows.map((row:AgendaAuditRow)=>{
   const metadata=row.metadata as Record<string,unknown>|null;
   return typeof metadata?.requestId==='string'?metadata.requestId:null;
- }).filter((id):id is string=>!!id))];
+ }).filter((id:string|null):id is string=>!!id))];
  const requestPayloads=new Map<string,{before:unknown;after:unknown;action:string}>();
  if(requestIds.length){
   let linkedQuery=db.from('agenda_requests').select('id,professional_id,action,previous_payload,proposed_payload').in('id',requestIds);
@@ -30,7 +31,7 @@ export async function GET(request:Request){
   dbError(linked.error,'Read audit request snapshots');
   for(const row of linked.data||[])requestPayloads.set(String(row.id),{before:row.previous_payload||null,after:row.proposed_payload||null,action:String(row.action||'')});
  }
- const logs=rows.map(row=>{
+ const logs=rows.map((row:AgendaAuditRow)=>{
   const metadata=(row.metadata||{}) as Record<string,unknown>;
   const linked=typeof metadata.requestId==='string'?requestPayloads.get(metadata.requestId):null;
   return {...row,actorName:row.actor_name,actorRole:row.actor_role,professionalId:row.professional_id,appointmentId:row.appointment_id,patientId:row.patient_id,createdAt:row.created_at,requestAction:linked?.action??metadata.requestAction??null,before:linked?.before??metadata.before??null,after:linked?.after??metadata.after??null};
