@@ -363,8 +363,11 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 
 
 /* Agenda logs follow the same concise audit-summary pattern as Billing. */
-.agenda-log-event .agenda-log-summary{display:grid;gap:5px;margin:10px 0 8px;font-size:12px;line-height:1.5;color:#395564}
-.agenda-log-event .agenda-log-summary>div{overflow-wrap:anywhere}
+.agenda-log-event .agenda-log-summary{display:grid;gap:7px;margin:12px 0 10px;font-size:12px;line-height:1.45;color:#395361}
+.agenda-log-event .agenda-log-summary-row{display:grid;grid-template-columns:minmax(115px,148px) minmax(0,1fr);column-gap:12px;align-items:start;min-width:0;font-size:12px;line-height:1.5}
+.agenda-log-event .agenda-log-summary-row>strong{display:block;margin:0;color:#4b6070;font-size:11.5px;line-height:1.5;font-weight:750}
+.agenda-log-event .agenda-log-summary-row>span{display:block;min-width:0;margin:0;color:#213f51;font-size:12px;line-height:1.5;font-weight:450;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+@media(max-width:560px){.agenda-log-event .agenda-log-summary-row{grid-template-columns:minmax(92px,106px) minmax(0,1fr);column-gap:9px}}
 .agenda-log-event .agenda-log-details{padding:9px 0 0;border-top:1px solid #e7edf0;margin-top:9px}
 .agenda-log-event .agenda-log-details>summary{cursor:pointer;color:#157b82;font-size:11px;font-weight:750;line-height:1.5;list-style-position:inside;width:max-content;max-width:100%}
 .agenda-log-event .agenda-log-details>summary:hover{text-decoration:underline}
