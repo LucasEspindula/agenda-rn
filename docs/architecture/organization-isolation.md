@@ -10,7 +10,7 @@ A organização (*tenant*) é quem opera o RN Integra, não o local do atendimen
 
 Hospital ou clínica **onde ocorre um procedimento** continua sendo uma informação da agenda; não é automaticamente um tenant. A **entidade recebedora** (CPF/CNPJ que recebe os pagamentos ou emite NF) também não é o tenant. Um profissional pode ter contratos/serviços diferentes dentro da mesma organização.
 
-## Estado de produção em 28/10/2026 (preflight por catálogo)
+## Estado antes da fundação (28/10/2026)
 
 - 46 tabelas de aplicação no esquema `public`.
 - Nenhuma coluna de tenant (`organization_id`, `tenant_id` ou `workspace_id`) antes da fase 1.
@@ -19,9 +19,11 @@ Hospital ou clínica **onde ocorre um procedimento** continua sendo uma informa�
 - Contas em `users` possuem um papel global; sessões em `sessions` não selecionam organização.
 - O servidor acessa o Supabase com credencial privilegiada. Portanto, isolamento apenas por RLS **não** resolve: APIs e funções SQL devem validar a organização.
 
-## Fase 1 — fundação (esta PR)
+## Fase 1 — fundação (aplicada em 28/10/2026)
 
-A migration `20261028210000_organization_foundation.sql` cria `organizations` e `organization_memberships` privadas (RLS habilitada, sem políticas para clientes e privilégios `anon`/`authenticated` revogados), associa os usuários existentes à organização inicial **RN Gestão**, sem atualizar ou mover dados clínicos/financeiros.
+A migration `20261028203004_organization_foundation.sql` cria `organizations` e `organization_memberships` privadas (RLS habilitada, sem políticas para clientes e privilégios `anon`/`authenticated` revogados), associa os usuários existentes à organização inicial **RN Gestão**, sem atualizar ou mover dados clínicos/financeiros.
+
+**Aplicação confirmada:** o Supabase registrou a migration como `20261028203004:organization_foundation`. A consulta pós-migração confirmou 1 organização, 4 memberships ativos para 4 usuários, RLS habilitada em ambas as tabelas e ausência de permissões de leitura `anon`/`authenticated`. A agenda legada permanece com 1 registro.
 
 **Porta fechada:** esta fase NÃO habilita o cadastro de uma segunda organização, NÃO altera o acesso atual e NÃO significa que há isolamento operacional. Usuários criados depois do backfill precisam ser associados por um fluxo transacional e auditável quando a etapa seguinte for ativada.
 
