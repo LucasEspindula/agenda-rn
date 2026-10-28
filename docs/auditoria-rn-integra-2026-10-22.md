@@ -19,7 +19,7 @@ GitHub Actions [auditoria](https://github.com/LucasEspindula/agenda-rn/actions/r
 
 ### Segurança de dependências — **BLOQUEADOR**
 - `next@16.3.5` — *critical*; atualizar e homologar versão corrigida (npm recomendou `16.4.2`).
-- `fast-xml-parser@5.2.5` — *critical*; corrigir limites de parser/XML e testar o módulo Perseu e importações (npm recomendou `5.11.2`).
+- `fast-xml-parser@5.2.5` — *critical*; corrigir limites de parser/XML e testar os fluxos de importação ainda utilizados (npm recomendou `5.11.2`).
 - `sharp@0.35.4` — *high*; corrigir versão (npm recomendou `0.35.5`).
 - `source-map-js` — *high*; atualizar versão transitiva conforme lockfile.
 Os alertas não comprovam exploração prática no projeto, mas **não devem ser ignorados**. O upgrade do `package-lock.json` não foi implantado nesta auditoria.
@@ -56,7 +56,7 @@ Os alertas não comprovam exploração prática no projeto, mas **não devem ser
 - `public/legacy-app.js` ~148 KB e `public/legacy.css` ~71 KB coexistem com React/Next e outras folhas de estilo; fluxo de sobreposição visual e scripts antigos requer refatoração incremental e testes visuais.
 - `app/billing/billing.css` ~75 KB; CSS monolítico. Extração somente com verificações de interface.
 - **Fechamento mensal, divisão por profissionais, glosas, despesas e NF compartilhada:** existem testes automatizados, mas a execução integral não passou. Requerem conciliação manual com amostras controladas e testes de impressão em navegador autenticado.
-- Dependências e funcionalidades experimentais precisam de atualização de vulnerabilidades; evitar liberar o Perseu/controle de convênios sem revisar limites de arquivos e parser XML.
+- Dependências e funcionalidades experimentais precisam de atualização de vulnerabilidades; revisar limites de arquivos e parsers nos recursos ainda utilizados.
 - Não foi possível certificar cinco logins reais, navegadores de secretária/médico/anestesista com credenciais de homologação, impressão física, responsividade em dispositivos físicos ou pentest externo.
 
 ## Critérios para homologação final

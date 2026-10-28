@@ -55,7 +55,7 @@ A ativação depende da flag de servidor `RN_MONTHLY_CLOSING_ENABLED=true`. Ause
 4. `20261016220000_billing_denials_and_appeals.sql` — glosas e recuperações.
 5. `20261016230000_monthly_entity_closing.sql` — fechamento mensal por PJ/PF.
 
-Não aplicar no banco principal antes de homologar as cinco em ordem, testando a migração dos dados históricos em uma cópia isolada. As migrations do Perseu não fazem parte deste pacote.
+Não aplicar no banco principal antes de homologar as cinco em ordem, testando a migração dos dados históricos em uma cópia isolada.
 
 ## Cenários indispensáveis de homologação
 

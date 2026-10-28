@@ -11,10 +11,10 @@
 
 ## Divergências anteriores, que permanecem pendentes
 
+Os dois arquivos experimentais de migrations nunca aplicados foram retirados durante a desativação do antigo módulo documental. Os registros históricos de migrations já aplicadas foram preservados para reconciliação e recuperação do banco.
+
 | Arquivo/registro | Verificação | Próximo tratamento |
 | --- | --- | --- |
-| `20261015190000_perseus_global_documents.sql` | Arquivo GitHub; não registrado. Tabela `perseus_documents` ausente. | Manter pendente (módulo Perseu); não aplicar por conta própria. |
-| `20261015210000_perseus_conversational_assistant.sql` | Arquivo GitHub; não registrado. Tabela `perseus_conversations` ausente. | Dependente da fase anterior; não aplicar até homologação. |
 | `20261019235000_cash_paid_nonrealized_and_invoice_request_idempotence.sql` | GitHub; há entrada remota com nome semelhante `20261019185720:cash_paid_nonrealized_invoice_request_idempotence`. | Comparar definições e efeitos antes de marcar equivalente; nomes sozinhos não bastam. |
 | `20261028123000_agenda_update_before_insert_trigger.sql` | Arquivo GitHub; ausência no histórico remoto. Corpo atual de `commit_agenda_change` no banco é **idêntico** ao SQL desse arquivo (comparação sem diferenças de espaçamento). | Reconciliar metadados da migration com ferramenta apropriada sem reaplicar função. |
 | `20261019184531:archived_agenda_cancellations_uuid_repair` | Consta no histórico remoto, mas não há arquivo correspondente no GitHub. | Recuperar a definição histórica antes de declarar os ambientes sincronizados. |
