@@ -362,6 +362,18 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 .agenda-log-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) minmax(180px,1.5fr) auto;gap:10px;align-items:end;margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff}.agenda-log-filters label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:700;color:#314b5b}.agenda-log-filters input,.agenda-log-filters select{width:100%;min-width:0}.agenda-log-filters .agenda-log-search{margin:0}.agenda-log-filters button{white-space:nowrap}@media(max-width:1000px){.agenda-log-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.agenda-log-filters .agenda-log-search{grid-column:span 2}.agenda-log-filters button{justify-self:start}}@media(max-width:700px){.agenda-log-filters{grid-template-columns:1fr 1fr;padding:12px;gap:9px}.agenda-log-filters .agenda-log-search{grid-column:1/-1}.agenda-log-filters button{grid-column:1/-1;width:100%}}
 
 
+/* Agenda logs follow the same concise audit-summary pattern as Billing. */
+.agenda-log-event .agenda-log-summary{display:grid;gap:5px;margin:10px 0 8px;font-size:12px;line-height:1.5;color:#395564}
+.agenda-log-event .agenda-log-summary>div{overflow-wrap:anywhere}
+.agenda-log-event .agenda-log-details{padding:9px 0 0;border-top:1px solid #e7edf0;margin-top:9px}
+.agenda-log-event .agenda-log-details>summary{cursor:pointer;color:#157b82;font-size:11px;font-weight:750;line-height:1.5;list-style-position:inside;width:max-content;max-width:100%}
+.agenda-log-event .agenda-log-details>summary:hover{text-decoration:underline}
+.agenda-log-event .agenda-log-details>summary:focus-visible{outline:2px solid #147d86;outline-offset:3px;border-radius:3px}
+.agenda-log-pagination-note{margin:10px 0 0;color:#758792;font-size:11px;line-height:1.5}
+#auditLoadMore{display:block;margin:13px auto 0}
+#auditLoadMore.hidden{display:none}
+#auditLoadError{margin-top:10px;color:#a43c41;font-size:12px}
+
 /* Deferred remote agenda refresh: notice only, never interrupts an open editor. */
 .remote-agenda-update-notice{position:fixed;right:18px;bottom:18px;z-index:80;max-width:min(420px,calc(100vw - 36px));padding:11px 14px;border:1px solid #d8b865;border-radius:10px;background:#fff8df;color:#694b08;font-size:12px;line-height:1.4;box-shadow:0 8px 24px #1b334326}.remote-agenda-update-notice[hidden]{display:none}@media(max-width:700px){.remote-agenda-update-notice{right:12px;bottom:12px;max-width:calc(100vw - 24px)}}
 
