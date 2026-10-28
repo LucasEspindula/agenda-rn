@@ -36,11 +36,13 @@ test('agenda day headers and generator metadata render into a valid multipage PD
   'Gerado em: '+brDateTime('2026-10-28T13:45:00.000Z'),
   'Gerado por: Secretaria Exemplo'
  ],'Agenda da semana');
- pdf.section('Atendimentos',undefined,{reserve:48});
+ pdf.section('Programação',undefined,{reserve:48});
  for(const date of ['2026-10-28','2026-10-29']){
   pdf.dayHeading(agendaDateLabel(date));
   pdf.gridTable([{label:'Horário',width:80},{label:'Paciente',width:250},{label:'Procedimento',width:250}],
    Array.from({length:35},(_,i)=>['08:00','Paciente '+String(i+1),'Procedimento agendado']));
+  pdf.section('Horários bloqueados',undefined,{reserve:40});
+  pdf.gridTable([{label:'Horário',width:130},{label:'Motivo',width:534}],[['10:00 - 11:00','Bloqueio profissional']]);
  }
  const bytes=await pdf.bytes();
  const document=await PDFDocument.load(bytes);
