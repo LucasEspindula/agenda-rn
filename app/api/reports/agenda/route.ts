@@ -1,11 +1,12 @@
 import {getSession} from '@/app/authz';
 import {loadBillingData} from '@/lib/billing-data';
+import {individualReceived} from '@/lib/billing-reports';
 import {isAnesthesiologist} from '@/lib/medical-specialties';
 import {agendaDateLabel,agendaTimeline,appointmentInsurance,appointmentStatusLabel} from '@/lib/agenda-report';
-import {PdfReport,brDate,brDateTime,pdfResponse} from '@/lib/reports/pdf';
+import {PdfReport,brDate,brDateTime,brl,pdfResponse} from '@/lib/reports/pdf';
 
 export const dynamic='force-dynamic';
-type Professional={id:string;name:string;crm?:string;specialty?:string};type Appointment={doctorId?:string;anesthetistId?:string;date:string;time?:string;patientId:string;procedure?:string;insurance?:string|null;hospitalId?:string;status?:string};type ScheduleBlock={professionalId:string;date:string;start:string;end:string;reason:string};type Patient={id:string;name:string;insurance?:string};type Hospital={id:string;name:string};
+type Professional={id:string;name:string;crm?:string;specialty?:string};type Appointment={id:string;doctorId?:string;anesthetistId?:string;date:string;time?:string;patientId:string;procedure?:string;insurance?:string|null;hospitalId?:string;status?:string};type ScheduleBlock={professionalId:string;date:string;start:string;end:string;reason:string};type Patient={id:string;name:string;insurance?:string};type Hospital={id:string;name:string};
 const date=/^\d{4}-\d{2}-\d{2}$/;
 const add=(value:string,days:number)=>{const result=new Date(value+'T12:00:00');result.setDate(result.getDate()+days);return result.toISOString().slice(0,10)};
 const periodFor=(mode:string,day:string)=>{if(mode==='week'){const weekday=new Date(day+'T12:00:00').getDay();return {start:add(day,-weekday),end:add(day,6-weekday)}}if(mode==='month'){const current=new Date(day+'T12:00:00');return {start:day.slice(0,7)+'-01',end:new Date(current.getFullYear(),current.getMonth()+1,0).toISOString().slice(0,10)}}return {start:day,end:day}};
@@ -21,7 +22,7 @@ export async function GET(request:Request){
  if(!session)return Response.json({error:'Acesso negado.'},{status:403});
  if(!professionalId||!date.test(day)||!['day','week','month'].includes(mode))return Response.json({error:'Parâmetros de impressão inválidos.'},{status:400});
  try{
-  const {state}=await loadBillingData();
+  const {state,data}=await loadBillingData();
   const snapshot=state as {professionals?:Professional[];patients?:Patient[];hospitals?:Hospital[];appointments?:Appointment[];scheduleBlocks?:ScheduleBlock[]};
   const professional=snapshot.professionals?.find(item=>item.id===professionalId);
   if(!professional)return Response.json({error:'Agenda não encontrada.'},{status:404});
@@ -40,6 +41,20 @@ export async function GET(request:Request){
    'Gerado em: '+brDateTime(new Date().toISOString()),
    'Gerado por: '+session.account.name
   ],centerTitle);
+  // The financial record is the source of truth; the legacy appointment.payment field is not.
+  // Doctors can print the agenda without being shown payment amounts.
+  const valuesByAppointment=new Map<string,number>();
+  if(session.account.role!=='doctor'){
+   const countedRecords=new Set<string>();
+   for(const row of data.rows){
+    if(!row.appointment_id||!row.record||countedRecords.has(row.record.id))continue;
+    if(row.record.professional_id&&row.record.professional_id!==professionalId)continue;
+    const received=individualReceived(row);
+    if(received==null||!Number.isFinite(received))continue;
+    countedRecords.add(row.record.id);
+    valuesByAppointment.set(row.appointment_id,(valuesByAppointment.get(row.appointment_id)||0)+received);
+   }
+  }
   const timeline=agendaTimeline(appointments,blocks);
   pdf.section('Programação',undefined,{reserve:48});
   for(const [date,entries] of groupByDay(timeline)){
@@ -49,7 +64,7 @@ export async function GET(request:Request){
      entry.block.start+' - '+entry.block.end,
      'HORÁRIO BLOQUEADO','—',
      'Motivo: '+(entry.block.reason||'Indisponibilidade do profissional'),
-     '—','—','Bloqueado'
+     '—','—','—','Bloqueado'
     ];
     const item=entry.appointment;
     return [
@@ -59,15 +74,17 @@ export async function GET(request:Request){
      item.procedure||'—',
      appointmentInsurance(item,patients.get(item.patientId))||'—',
      hospitals.get(item.hospitalId||'')?.name||'—',
+     brl(valuesByAppointment.get(item.id)),
      appointmentStatusLabel(item.status)
     ];
    });
    const rowTints=entries.map(entry=>entry.kind==='block'?'blocked' as const:null);
    pdf.gridTable([
-    {label:'Horário',width:69},{label:'Paciente',width:144},
-    {label:anesthesiologist?'Médico':'Anestesista',width:108},
-    {label:'Procedimento / Motivo',width:153},{label:'Convênio',width:96},
-    {label:'Hospital',width:117},{label:'Status',width:71}
+    {label:'Horário',width:69},{label:'Paciente',width:130},
+    {label:anesthesiologist?'Médico':'Anestesista',width:99},
+    {label:'Procedimento / Motivo',width:144},{label:'Convênio',width:90},
+    {label:'Hospital',width:104},{label:'Valor',width:69,align:'right'},
+    {label:'Status',width:70}
    ],rows,rowTints);
   }
   if(!timeline.length){
