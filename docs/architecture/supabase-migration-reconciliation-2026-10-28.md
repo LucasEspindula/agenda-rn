@@ -21,6 +21,13 @@ Os dois arquivos experimentais de migrations nunca aplicados foram retirados dur
 
 Observação: várias migrations mais antigas possuem versões numéricas diferentes entre nome do arquivo GitHub e versão remota, apesar de nomes correspondentes. A reconciliação completa requer o mapeamento por versão, nome e conteúdo; **não** se deve simplesmente reexecutar arquivos.
 
+## Desativação do workspace documental legado
+
+- Migration aplicada no banco: **`20261028210300:retire_legacy_document_workspace`**; as sete tabelas e as quatro funções exclusivas foram excluídas com `RESTRICT`, sem afetar estruturas de faturamento, glosas ou agendas.
+- O SQL aplicado foi incorporado em `supabase/migrations/20261028210300_retire_legacy_document_workspace.sql` para reconstituição do estado do schema.
+- A limpeza dos arquivos físicos do bucket antigo `insurance-documents` ainda exige operação pela API oficial de Storage; não executar SQL contra `storage.objects` para simular a exclusão de arquivos.
+- As seis migrations históricas já executadas continuam no repositório para preservar a reconstrução e o histórico técnico.
+
 ## Verificações de segurança da fundação
 
 - `organizations`: 1 registro (`rn-gestao`), tipo `MANAGEMENT_COMPANY`.
