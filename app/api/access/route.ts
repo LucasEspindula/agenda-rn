@@ -16,7 +16,7 @@ export async function GET() {
   dbError(organization.error,"Read organization");
   const membershipResult = await db.from("organization_memberships").select("user_id").eq("organization_id",organization.data.id);
   dbError(membershipResult.error,"Read organization members");
-  const memberIds=(membershipResult.data||[]).map(m=>m.user_id);
+  const memberIds=(membershipResult.data||[]).map((m:{user_id:number})=>m.user_id);
   if (!memberIds.length) return Response.json({ users: [] });
   const [accountsResult, grantsResult] = await Promise.all([db.from("users").select("id,email,name,role,doctor_id,active,created_at,updated_at").in("id",memberIds).order("name").order("email"), db.from("agenda_access").select("user_id,professional_id").in("user_id",memberIds)]);
   dbError(accountsResult.error, "Read users"); dbError(grantsResult.error, "Read grants");
