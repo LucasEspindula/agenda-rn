@@ -76,3 +76,15 @@ Este marco protege e documenta o estado existente, mas **não declara isolamento
 ### Próximo marco — 2B/2b
 
 Inventário, ordem técnica e critérios de aceite: [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72). Dez funções financeiras ainda dependem de referências globais ao documento legado; tabelas essenciais como `attendances`, `billing_records`, `invoices`, `billing_entities`, `doctors`, `financial_attachments` e `invoice_requests` não possuem `organization_id` no catálogo atual. A 2B/2b deve migrar esquema, FKs, RPCs e rotas de modo verificável. **Não liberar novos tenants.**
+
+## Fase 2B/2b1 — chaves físicas no núcleo financeiro (proposta em revisão)
+
+Esta primeira subetapa da [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72) adiciona `organization_id` em nove tabelas centrais: `doctors`, `billing_entities`, `billing_doctor_entities`, `attendances`, `billing_records`, `invoices`, `invoice_billing_records`, `invoice_requests` e `financial_attachments`. A **organização cliente** é diferente da **entidade recebedora**.
+
+O SQL cria vínculos à organização e chaves `(id, organization_id)` que permitem **20 FKs compostas**. Isso impede vincular filhos de uma organização a registros pais de outra; as FKs de itens de NF preservam a cascata. Os campos são obrigatórios, preenchidos nos registros antigos pelo *default* validado no banco, sem atualizar dados clínicos e sem disparar os triggers de negócio por uma operação de UPDATE em massa.
+
+**Compatibilidade temporária:** enquanto o backend ainda opera apenas a RN Gestão, o default e os triggers recusam qualquer escrita se houver uma segunda organização cadastrada. O cliente não escolhe tenant. O cadastro de novos tenants **permanece bloqueado**. O serviço com credencial privilegiada ainda precisará ser escopado em todas as rotas; RLS isoladamente não resolve o problema.
+
+A migration e os testes em PGlite foram adicionados na branch `feat/rn-financial-organization-foundation-2b2b1-20261029`. **Não tratar esta proposta como publicada antes de validar CI, migrar o banco, alinhar o número da migration ao histórico remoto, fazer merge e confirmar Vercel.**
+
+**Pendências após a 2B/2b1:** estender `organization_id` às demais tabelas operacionais, validar relacionamentos adicionais, migrar as dez funções SQL legadas, escopar APIs financeiras/reports/Storage e comprovar segregação com duas organizações em testes isolados. Como os registros existentes são de teste, os registros incompatíveis podem ser limpos pontualmente, mas documentar a exclusão e não reduzir a segurança para contornar o problema.
