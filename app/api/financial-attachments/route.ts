@@ -44,7 +44,7 @@ async function canReadFinancialAttachment(session:Session,attachment:Attachment)
  return doctorCanReadFinancialAttachment(data,session,attachment);
 }
 async function attachmentFor(id:string){
- const {data,error}=await getSupabaseAdmin().from('financial_attachments').select('*').eq('id',id).maybeSingle();
+ const {data,error}=await getSupabaseAdmin().from('financial_attachments').select('*,organizations!inner(slug,active)').eq('id',id).eq('organizations.slug','rn-gestao').eq('organizations.active',true).maybeSingle();
  if(error)throw error;
  return data as Attachment|null;
 }
@@ -59,7 +59,7 @@ async function rejectPending(session:Session,attachment:Attachment){
 }
 async function cleanOldPending(session:Session){
  const db=getSupabaseAdmin(),cutoff=new Date(Date.now()-60*60*1000).toISOString();
- const {data,error}=await db.from('financial_attachments').select('id,invoice_id,billing_record_id,storage_path,created_by,status').eq('created_by',session.account.id).eq('status','PENDING').lt('created_at',cutoff);
+ const {data,error}=await db.from('financial_attachments').select('id,invoice_id,billing_record_id,storage_path,created_by,status,organizations!inner(slug,active)').eq('organizations.slug','rn-gestao').eq('organizations.active',true).eq('created_by',session.account.id).eq('status','PENDING').lt('created_at',cutoff);
  if(error)return;
  for(const row of data||[]){try{await rejectPending(session,row as Attachment);}catch{/* Keep rows whose authorization changed for audit. */}}
 }
@@ -106,7 +106,7 @@ async function complete(request:Request){
  const db=getSupabaseAdmin(),download=await db.storage.from(BUCKET).download(attachment.storage_path);
  if(download.error||!download.data)throw new HttpError(409,'O envio não terminou. Tente novamente.');
  const file=download.data,bytes=new Uint8Array(await file.slice(0,8).arrayBuffer());
- const meta=await db.from('financial_attachments').select('mime_type,file_size').eq('id',id).maybeSingle();
+ const meta=await db.from('financial_attachments').select('mime_type,file_size,organizations!inner(slug,active)').eq('organizations.slug','rn-gestao').eq('organizations.active',true).eq('id',id).maybeSingle();
  if(meta.error||!meta.data)throw new HttpError(404,'Comprovante não disponível.');
  if(file.size!==Number(meta.data.file_size)||file.size>MAX_SIZE||file.type!==meta.data.mime_type||!bytesMatch(bytes,meta.data.mime_type)){
   await db.storage.from(BUCKET).remove([attachment.storage_path]);await db.rpc('reject_financial_attachment',{p_actor:session.account.id,p_id:id});
