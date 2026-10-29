@@ -128,6 +128,14 @@ Critérios mínimos para avanço:
 - Testes em `tests/financial-legacy-rpcs-organization.test.mjs`; nenhuma operação de exclusão de dados.
 - **Estado confirmado:** as quatro funções usam escopo de organização, permanecem `SECURITY INVOKER` e só aceitam execução direta de `service_role`; não restam referências `app_state.id=1` nessas quatro rotinas. Teste de leitura em PostgreSQL real passou. Nenhum registro de teste foi excluído. Próxima fatia: cinco RPCs fiscais/cobranças restantes, além de APIs, Storage e tabelas auxiliares. Manter bloqueio de novas empresas; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
+
+### 2B/2b2b-2 — Cinco RPCs financeiras (PR em análise)
+
+- Migration **aplicada e verificada**: `20261029203540_financial_five_legacy_rpc_org_scope.sql`; Supabase versão `20261029203540`. Catálogo confirmou 5 funções com validação de membership, sem predicados globais da agenda, `SECURITY INVOKER` e execução direta negada a `anon`/`authenticated`. CI inicial **546/546 testes aprovados**, ainda falta conferir CI do commit reconciliado e deploy final.
+- Funções: `save_professional_charge`, `save_professional_charge_core`, `save_billing_legacy_single_charge`, `save_billing_fiscal_core`, `preview_billing_month`.
+- Contexto de organização vem de `require_rn_agenda_actor_organization(p_actor)`, sem `app_state.id=1`. Testes em `tests/remaining-financial-org-rpcs.test.mjs`.
+- Migração aplicada em produção, PR #76 ainda em revisão: conferir CI final, integrar e verificar Vercel. Outros domínios, APIs e Storage precisam de isolamento antes de habilitar novos tenants.
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
