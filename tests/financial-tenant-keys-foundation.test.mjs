@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 
-const migration = readFileSync(new URL('../supabase/migrations/20261029204000_financial_tenant_keys_foundation.sql', import.meta.url), 'utf8');
+const migration = readFileSync(new URL('../supabase/migrations/20261029194356_financial_tenant_keys_foundation.sql', import.meta.url), 'utf8');
 const tables = ['doctors','billing_entities','billing_doctor_entities','attendances','billing_records','invoices','invoice_billing_records','invoice_requests','financial_attachments'];
 const ids = {
   org:'11111111-1111-4111-8111-111111111111',other:'99999999-9999-4999-8999-999999999999',
