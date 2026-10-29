@@ -114,7 +114,7 @@ test('directory write works for valid RN Gestão manager and updates scoped stat
 
 test('all app_state predicates in migrated functions use organization_id rather than id=1', () => {
   for (const functionName of ['save_doctor_directory','save_manual_attendance']) {
-    const body = directoryScope.match(new RegExp('CREATE OR REPLACE FUNCTION public\\.' + functionName + '\\([\\s\\S]*?\\$function\\$;', 'i'))?.[0];
+    const body = directoryScope.match(new RegExp('CREATE OR REPLACE FUNCTION public\\.' + functionName + '\\([\\s\\S]*?\\$function\\$\\s*;', 'i'))?.[0];
     assert.ok(body, functionName);
     assert.match(body,/rn_org_id:=public.require_rn_agenda_actor_organization\(p_actor\)/);
     assert.match(body,/organization_id=rn_org_id/);
