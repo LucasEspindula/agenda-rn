@@ -96,3 +96,12 @@ A primeira subetapa de [#72](https://github.com/LucasEspindula/agenda-rn/issues/
 Novos comprovantes passam a receber prefixo de Storage com `org/<organization_id>/payment-proofs/`. Comprovantes antigos permanecem válidos e legíveis: não apagar objetos nem quebrar o histórico. As consultas privilegiadas de metadados no endpoint recebem filtro de organização ativa. O frontend não determina o tenant.
 
 **Escopo parcial:** continuamos com a RN Gestão como única organização e ainda restam rotas financeiras, funções SQL e tabelas auxiliares a migrar. O guard singleton é intencional e não deve ser removido. Migração **aplicada e conferida** no Supabase como `20261029200153 financial_attachment_organization_authorization`: as funções continuam `SECURITY INVOKER`, com execução pública revogada e sem referência direta a `app_state.id=1`. CI do commit reconciliado com **533/533 testes aprovados**, lint, tipos e build aprovados. PR [#74](https://github.com/LucasEspindula/agenda-rn/pull/74) mergeada no commit `cc7cc5b18eb63886edd02d0ee01d4248dfd3bb2b`. Deploy de produção da Vercel `dpl_HegVbow8mWUckkXDntW4wzogPwBq` confirmado **READY**. Esta etapa NÃO é isolamento multiempresa completo.
+
+
+## Etapa 2B/2b2b-1 — escopo das RPCs financeiras legadas (em revisão)
+
+Migração proposta `20261029213000_financial_legacy_rpcs_org_scope.sql`: quatro funções hoje dependentes de `app_state.id=1` passam a consultar a organização validada no PostgreSQL: `finish_private_payment`, `update_pending_invoice_request`, `attribute_financial_attendance` e `financial_log_snapshot`. Cobrança, atendimento, entidade recebedora, solicitações de NF e nomes de auditoria recebem validação de escopo, inclusive durante escritas. Nas funções com `p_actor`, a organização vem da conta e vínculo ativos; nas funções internas sem ator, aplica-se o guard RN Gestão-only no servidor. As funções permanecem `SECURITY INVOKER` e apenas `service_role` pode executá-las diretamente.
+
+Testes PGlite: conta desativada, cobrança inexistente, edição de solicitação, atribuição por anestesista, nomes de auditoria e falha segura com segunda organização.
+
+**Atenção:** esta etapa não elimina todas as funções financeiras legadas. Restam rotinas volumosas de faturamento e fechamento mensal, além de tabelas auxiliares e rotas privilegiadas. Não habilitar cadastro de outras organizações. Este checkpoint é de uma PR em preparação; só declarar publicado após CI, migration, merge e Vercel READY.
