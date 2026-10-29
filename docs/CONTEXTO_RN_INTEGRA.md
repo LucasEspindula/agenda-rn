@@ -77,9 +77,9 @@ Fontes: [PR #69](https://github.com/LucasEspindula/agenda-rn/pull/69), [PR #70](
 - O código experimental do **Perseu** foi retirado do repositório em 28/10 (commit `9c4c058...`) segundo histórico GitHub. Documentos mais antigos podem descrevê-lo como ativo: **prevalece o estado atual do código**, sem reintroduzir automaticamente funcionalidades removidas.
 - Há histórico de problemas de alinhamento entre migrações aplicadas e arquivos versionados. Sempre confrontar as versões e não repetir migrations aplicadas.
 
-## 6. Próxima etapa: preparar 2B/2 antes de implementá-la
+## 6. Etapa 2B/2 — isolamento progressivo em execução
 
-**Prioridade:** inventariar as 12 funções que ainda usam `app_state.id=1`, avaliar cada caminho de leitura/gravação, transações, auditoria, RLS e limites de organização. Criar plano incremental seguro de substituição por escopo servidor-side. Confirmar que ações de RN Gestão continuam funcionando sem regressão.
+**Prioridade:** concluir o isolamento progressivo. A Etapa 2B/2a migrou duas funções SQL para escopo por organização; a próxima 2B/2b abrange dez funções financeiras ainda com referências a `app_state.id=1`, além de tabelas, APIs e anexos globais. Conferir o inventário na [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 Critérios mínimos para avanço:
 - Organização derivada da autenticação/vínculo validado no servidor, nunca de parâmetro arbitrário do cliente.
@@ -88,12 +88,12 @@ Critérios mínimos para avanço:
 - Migrations aditivas, plano de rollback, CI, revisão de PR e confirmação do deploy em produção.
 - **Não criar ou liberar clientes adicionais antes de fechar esses critérios.**
 
-**Status desta etapa:** planejamento documentado; **nenhuma alteração funcional da 2B/2 foi executada por este documento**.
+**Estado verificado (29/10/2026):** a 2B/2a foi integrada pela PR #71 no commit `639c2b22d6c6098ff50996b73167f4489c691284`. Migração `20261029192723 legacy_agenda_directory_org_scope` registrada no Supabase; validação dos privilégios de execução e predicados organizacionais concluída; GitHub Actions **521/521 testes, 0 falhas**, lint e tipos aprovados. Deploy de produção posterior ao merge deve ser conferido separadamente antes de declarar publicação. O onboarding de novos tenants continua **bloqueado**.
 
 
-### Atualização de continuidade — 2B/2a (branch de trabalho, 29/10/2026)
+### Atualização de continuidade — 2B/2a (mergeada, 29/10/2026)
 
-- Branch: `feat/rn-organization-agenda-legacy-2b2a-20261029`.
+- Branch: `feat/rn-organization-agenda-legacy-2b2a-20261029`; PR #71 **mergeada** em `main`, commit `639c2b22d6c6098ff50996b73167f4489c691284`.
 - Escopo proposto: validar o vínculo RN Gestão no banco e isolar as operações de cadastro médico/agenda e atendimento manual por `app_state.organization_id`.
 - Migração **aplicada e conferida** no Supabase produção: `20261029192723 legacy_agenda_directory_org_scope`, com funções protegidas por membership e referências por `organization_id`; testes PGlite aprovados (521/521) antes do alinhamento do arquivo. Os testes CI da versão final devem ser novamente conferidos antes do merge.
 - Antes de integrar: revisar CI, contrato com triggers e disponibilidade, cobertura PGlite e comportamento real de pagamentos/cadastros. Só registrar como publicada após merge, migração e deploy confirmados.
@@ -106,6 +106,7 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2A — acesso organizacional | PR #69 / `55be362...` | Isolamento da agenda |
 | 29/10/2026 | Etapa 2B/1 — escopo RN Gestão da agenda, produção READY | PR #70 / `353de1ef...` | Inventário e plano 2B/2 |
 | 29/10/2026 | Criação deste documento central | Commit que adiciona este arquivo | Atualizar a cada etapa com evidências |
+| 29/10/2026 | Etapa 2B/2a — funções de cadastro e atendimento manual com membership e organization_id | PR #71 / `639c2b22...` / migration `20261029192723` / 521 testes | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 2B/2b, financeiras e tabelas globais |
 
 ## 8. Protocolo para o assistente em futuros chats
 
