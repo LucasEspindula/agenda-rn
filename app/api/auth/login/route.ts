@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/app/authz";
+import { SESSION_COOKIE, hasActiveRnGestaoMembership, type Role } from "@/app/authz";
 import { hashPassword, hashToken, verifyPassword } from "@/app/passwords";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { readJson, secureMutation } from "@/lib/security/http";
@@ -15,9 +15,9 @@ async function login(request: Request) {
   // Vercel owns this header. The global/account limits remain effective without it.
   if (process.env.VERCEL === "1") await consumeLimit("login-ip", request.headers.get("x-vercel-forwarded-for") || "unknown", 30, 300);
   const db = getSupabaseAdmin();
-  const found = await db.from("users").select("id,role,password_hash,password_salt").eq("email", email).maybeSingle();
+  const found = await db.from("users").select("id,role,active,password_hash,password_salt").eq("email", email).maybeSingle();
   dbError(found.error, "Read account"); const account = found.data;
-  if (!account?.password_hash || !account?.password_salt || !["general_manager","secretary","doctor"].includes(account.role)) {
+  if (!account?.active || !account.password_hash || !account.password_salt || !["general_manager","secretary","doctor"].includes(account.role)) {
     await hashPassword(password); // No distinguishable fast path for unknown accounts.
     return invalid();
   }
@@ -25,6 +25,7 @@ async function login(request: Request) {
     if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) await hashPassword(password,undefined,500_000);
     return invalid();
   }
+  if (!await hasActiveRnGestaoMembership(db,Number(account.id),account.role as Role)) return invalid();
   if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) {
     const credentials = await hashPassword(password);
     const upgraded = await db.from("users").update({ password_hash: credentials.hash, password_salt: credentials.salt }).eq("id",account.id).eq("password_hash",account.password_hash).select("id").maybeSingle();

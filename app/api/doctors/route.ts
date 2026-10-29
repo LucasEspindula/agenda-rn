@@ -5,11 +5,11 @@ import {hashPassword} from '@/app/passwords';
 import {canonicalSpecialty} from '@/lib/medical-specialties';
 import {z} from 'zod';
 export const dynamic='force-dynamic';
-type DoctorAccount={id:number;email:string;doctor_id:string|null;updated_at:string};
+type DoctorAccount={id:number;email:string;doctor_id:string|null;updated_at:string;active:boolean};
 type AgendaGrant={user_id:number;professional_id:string};
 export async function GET(){
  const session=await getSession();if(!session||session.account.role!=='general_manager')return Response.json({error:'Acesso restrito à gerência.'},{status:403});
- const db=getSupabaseAdmin();const [doctors,agendas,accounts,grants]=await Promise.all([db.from('doctors').select('*').order('name'),db.from('doctor_agendas').select('*'),db.from('users').select('id,email,doctor_id,updated_at').eq('role','doctor'),db.from('agenda_access').select('user_id,professional_id')]);
+ const db=getSupabaseAdmin();const [doctors,agendas,accounts,grants]=await Promise.all([db.from('doctors').select('*').order('name'),db.from('doctor_agendas').select('*'),db.from('users').select('id,email,doctor_id,active,updated_at').eq('role','doctor'),db.from('agenda_access').select('user_id,professional_id')]);
  if(doctors.error||agendas.error||accounts.error||grants.error)return Response.json({error:'Não foi possível carregar os médicos.'},{status:503});
  return Response.json({doctors:doctors.data,agendas:agendas.data,accounts:((accounts.data||[]) as DoctorAccount[]).map(a=>({...a,agendaIds:((grants.data||[]) as AgendaGrant[]).filter(g=>g.user_id===a.id).map(g=>g.professional_id)}))},{headers:{'Cache-Control':'private, no-store'}});
 }
@@ -19,7 +19,7 @@ export const POST=secureMutation(async request=>{
  if(kind==='doctor'){const specialty=canonicalSpecialty(String(data.specialty||''));if(!specialty)throw new HttpError(400,'Selecione uma especialidade da lista.');data.specialty=specialty;delete data.category;}
  let account=null,credentials=null;
  if(access!=null){
-  const parsed=z.object({id:z.number().positive().optional(),email:z.string().trim().email().max(254),password:z.string().min(12).max(128).optional(),updated_at:z.string().optional(),agendaIds:z.array(z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)).max(500).optional()}).strict().safeParse(access);
+  const parsed=z.object({id:z.number().positive().optional(),email:z.string().trim().email().max(254),password:z.string().min(12).max(128).optional(),active:z.boolean().optional(),updated_at:z.string().optional(),agendaIds:z.array(z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)).max(500).optional()}).strict().safeParse(access);
   if(!parsed.success||kind!=='doctor')throw new HttpError(400,'Confira e-mail e senha (12 a 128 caracteres).');
   const {password,...metadata}=parsed.data;account=metadata;credentials=password?await hashPassword(password):null;
  }

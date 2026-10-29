@@ -44,3 +44,11 @@ A migration `20261028203004_organization_foundation.sql` cria `organizations` e 
 - Backup restaurável validado. O backup anterior do esquema `public` **não** é um backup dos dados.
 
 Até que todos esses critérios sejam atendidos, **não habilitar onboarding multiempresa**.
+
+## Fase 2A — ciclo de vida dos acessos RN Gestão (29/10/2026)
+
+- Cadastro de contas via `save_user_access` passa a incluir o vínculo `organization_memberships` na **mesma transação**; o cadastro de médicos usa essa mesma função.
+- Papel e ativação ficam sincronizados entre `users` e `organization_memberships`; a API de gestão lista apenas membros RN Gestão, inclusive inativos.
+- Remoção física de usuários substituída por desativação auditável. Sessões existentes são revogadas, e login e validação de sessão conferem `users.active`, o vínculo ativo e o papel da organização.
+- Reativação exige ação explícita do gerente; históricos financeiros, agendamentos, auditoria e permissões são preservados.
+- Ainda **não** há segunda organização operando: cadastro e sessões falham se a tabela de organizações deixar de conter apenas RN Gestão. A próxima etapa deve isolar agenda/dados financeiros de ponta a ponta e substituir os papéis globais antes do onboarding de terceiros.
