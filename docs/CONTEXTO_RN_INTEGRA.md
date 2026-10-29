@@ -88,7 +88,7 @@ Critérios mínimos para avanço:
 - Migrations aditivas, plano de rollback, CI, revisão de PR e confirmação do deploy em produção.
 - **Não criar ou liberar clientes adicionais antes de fechar esses critérios.**
 
-**Estado verificado (29/10/2026):** a 2B/2a foi integrada pela PR #71 no commit `639c2b22d6c6098ff50996b73167f4489c691284`. Migração `20261029192723 legacy_agenda_directory_org_scope` registrada no Supabase; validação dos privilégios de execução e predicados organizacionais concluída; GitHub Actions **521/521 testes, 0 falhas**, lint e tipos aprovados. Deploy de produção posterior ao merge deve ser conferido separadamente antes de declarar publicação. O onboarding de novos tenants continua **bloqueado**.
+**Estado verificado (29/10/2026):** a 2B/2a foi integrada pela PR #71 no commit `639c2b22d6c6098ff50996b73167f4489c691284`. Migração `20261029192723 legacy_agenda_directory_org_scope` registrada no Supabase; validação dos privilégios de execução e predicados organizacionais concluída; GitHub Actions **521/521 testes, 0 falhas**, lint e tipos aprovados. Deploy funcional de produção **READY** na Vercel, `dpl_F2XUGL59JRhofsYYFmj8ohwi49dN`, associado ao commit `639c2b22...` da PR #71; os commits documentais posteriores geram novos deployments automáticos e devem ser avaliados em separado. O onboarding de novos tenants continua **bloqueado**.
 
 
 ### Atualização de continuidade — 2B/2a (mergeada, 29/10/2026)
