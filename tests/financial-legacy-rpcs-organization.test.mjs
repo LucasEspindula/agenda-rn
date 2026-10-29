@@ -86,7 +86,7 @@ test('attribution derives tenant from persisted entity, not from a caller-suppli
  const db=await fixture();try{
   const result=await db.query('SELECT public.attribute_financial_attendance($1,$2) AS result',['a-attribute',entity]);
   assert.equal(result.rows[0].result.id,'a-attribute');
-  assert.equal((await db.query("SELECT doctor_id FROM public.attendances WHERE id='a-1'")).rows[0].doctor_id,'dr-anesthesia');
+  assert.equal((await db.query("SELECT doctor_id FROM public.attendances WHERE id='a-attribute'")).rows[0].doctor_id,'dr-anesthesia');
   await assert.rejects(db.query('SELECT public.attribute_financial_attendance($1,$2)',['a-1','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']),/Entidade recebedora não encontrada/);
  }finally{await db.close();}
 });
