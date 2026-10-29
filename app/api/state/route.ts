@@ -11,7 +11,7 @@ type AgendaState = Record<string, unknown> & { appointments?: Record<string, unk
 export async function GET() {
   const session = await getSession();
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
-  const { data: row, error } = await getSupabaseAdmin().from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle();
+  const { data: row, error } = await getSupabaseAdmin().from("app_state").select("payload,updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
   dbError(error, "Read application state");
   const state = row ? row.payload as AgendaState : null;
   return Response.json({ state: state ? visibleState(state, session) : null, revision: row?.updated_at ?? null }, { headers: { "Cache-Control": "private, no-store" } });
@@ -22,7 +22,7 @@ async function putState(request: Request) {
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const proposed = (await readJson(request, 4 * 1024 * 1024)) as AgendaState;
   const db = getSupabaseAdmin();
-  const stateResult = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle();
+  const stateResult = await db.from("app_state").select("payload,updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
   dbError(stateResult.error, "Read application state");
   const row = stateResult.data;
   const suppliedRevision = request.headers.get("if-match");

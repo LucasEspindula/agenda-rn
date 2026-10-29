@@ -20,7 +20,7 @@ async function context() {
  const session = await getSession();
  if (!session || !canUseAgenda(session)) throw new Error('unauthorized');
  const db = getSupabaseAdmin();
- const { data, error } = await db.from('app_state').select('payload').eq('id',1).maybeSingle();
+ const { data, error } = await db.from('app_state').select('payload,organizations!inner(slug,active)').eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
  if (error || !data) throw new Error('state');
  const surgeries: Surgery[] = [...(data.payload.appointments || []), ...(data.payload.cancelledAppointments || [])];
  return { session, db, surgeries };
