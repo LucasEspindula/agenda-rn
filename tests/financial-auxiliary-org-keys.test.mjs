@@ -28,6 +28,8 @@ async function fixture(){
   'CREATE TABLE public.organizations(id uuid PRIMARY KEY,slug text,active boolean);',
   'CREATE TABLE public.billing_records(id uuid PRIMARY KEY,organization_id uuid NOT NULL);',
   'CREATE TABLE public.invoices(id uuid PRIMARY KEY,organization_id uuid NOT NULL);',
+  'CREATE UNIQUE INDEX billing_records_id_org_unique ON public.billing_records(id,organization_id);',
+  'CREATE UNIQUE INDEX invoices_id_org_unique ON public.invoices(id,organization_id);',
   'CREATE TABLE public.payment_parts(id uuid PRIMARY KEY,billing_record_id uuid,invoice_id uuid,method text);',
   'CREATE TABLE public.billing_portal_submissions(id uuid PRIMARY KEY,billing_record_id uuid NOT NULL,status text);',
   'CREATE TABLE public.billing_portal_submission_events(id uuid PRIMARY KEY,submission_id uuid NOT NULL,event_type text);'
@@ -100,7 +102,6 @@ test('composite FKs independently prevent cross-organization payment and portal 
 });
 
 test('migration has three immutable organization associations and four scoped FKs',()=>{
- assert.equal((migration.match(/ADD COLUMN organization_id uuid NOT NULL DEFAULT/g)||[]).length,0); // dynamic SQL, not literal DDL
  assert.match(migration,/ADD COLUMN organization_id uuid NOT NULL DEFAULT public\.rn_finance_single_organization_id\(\)/);
  assert.equal((migration.match(/ADD CONSTRAINT org_link_/g)||[]).length,4);
  assert.match(migration,/guard_rn_finance_organization/);
