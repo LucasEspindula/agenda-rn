@@ -99,6 +99,18 @@ Critérios mínimos para avanço:
 - Antes de integrar: revisar CI, contrato com triggers e disponibilidade, cobertura PGlite e comportamento real de pagamentos/cadastros. Só registrar como publicada após merge, migração e deploy confirmados.
 - Restam as demais funções legadas e o isolamento das tabelas, APIs, anexos, relatórios e RLS. Novos tenants continuam proibidos.
 
+
+### Etapa 2B/2b1 — fundação do isolamento financeiro (PR em desenvolvimento)
+
+- Branch: `feat/rn-financial-organization-foundation-2b2b1-20261029`.
+- Migração **aplicada e verificada**: `20261029194356_financial_tenant_keys_foundation.sql`, Supabase `20261029194356 financial_tenant_keys_foundation`; consulta de catálogo confirmou 9 colunas obrigatórias, 20 FKs compostas, 9 triggers, 9 índices compostos e RLS ativo nas 9 tabelas.
+- Nove tabelas do núcleo financeiro recebem `organization_id`, chaves e 20 FKs compostas para prevenir referências cruzadas; RLS e privilégios existentes são mantidos. O default é temporário, derivado exclusivamente da organização RN Gestão e rejeita uma segunda organização.
+- Testes novos: `tests/financial-tenant-keys-foundation.test.mjs`, incluindo backfill, bloqueio de transferências, vínculos entre organizações e comportamento de cascata das NFs.
+- Risco: mudanças em tabelas com triggers existentes e dependências em outros fluxos. CI inicial **528/528 testes**, lint e tipos aprovados. Migração já aplicada e verificada em PostgreSQL. A PR ainda requer CI após reconciliação da migration, merge e Vercel produção antes de ser considerada concluída.
+- Depois: dez funções SQL legadas, demais tabelas, APIs com service_role, relatórios, Storage e testes end-to-end de duas empresas. Consultar [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
+- Dados atuais são de teste e registros pontualmente problemáticos podem ser descartados com registro técnico; nunca desabilitar as restrições de isolamento em produção para contornar os testes.
+
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
