@@ -137,10 +137,10 @@ Critérios mínimos para avanço:
 - **Conclusão verificada:** as cinco RPCs foram publicadas e não restam referências a `app_state.id=1` em funções financeiras; `commit_agenda_change` mantém esse ID apenas com validação de organização por compatibilidade. Nenhum registro de teste foi excluído. Próxima fase: tabelas auxiliares, APIs `service_role`, Storage, relatórios e testes de separação entre organizações. O onboarding multiempresa segue bloqueado.
 
 
-### Etapa 2B/3a — chaves de organização em pagamentos e envios ao portal (PR em revisão)
+### Etapa 2B/3a — chaves de organização em pagamentos e envios ao portal (concluída e publicada em 29/10/2026)
 
 - Branch `feat/rn-financial-child-tenant-keys-2b3a`.
-- Migração **aplicada e validada**: `20261029205127_finance_auxiliary_tenant_keys.sql`. Confirmados 3 colunas obrigatórias, 4 FKs compostas validadas, 3 triggers e RLS ativo. Dez parcelas existentes vinculadas à RN Gestão, nenhuma excluída. CI inicial **552/552 testes**; falta validar o último commit reconciliado, merge e deploy.
+- Migração **aplicada e validada**: `20261029205127_finance_auxiliary_tenant_keys.sql`. Confirmados 3 colunas obrigatórias, 4 FKs compostas validadas, 3 triggers e RLS ativo. Dez parcelas existentes vinculadas à RN Gestão, nenhuma excluída. CI do commit final **552/552 testes aprovados, zero falhas**, lint, tipos e build aprovados. PR [#77](https://github.com/LucasEspindula/agenda-rn/pull/77) mergeada em `5d3426f6dbe7f23a64cdd502e090dfd2a6490a07`; Vercel produção **READY** (`dpl_FP4trqrWf5vNZc5mZjXbcQg7Se7L`).
 - Adiciona `organization_id` a `payment_parts`, `billing_portal_submissions` e `billing_portal_submission_events`, com três FKs para organização, quatro FKs compostas para vínculos com o mesmo tenant, índices únicos e trigger existente de bloqueio de outras organizações.
 - Preserva RLS e a compatibilidade com RN Gestão, inclusive os registros de teste existentes; não faz UPDATE em massa, evitando triggers de auditoria/pagamentos.
 - Testes PGlite: preenchimento de registros anteriores, escrita default, second-tenant fail-closed, FKs cruzadas e privilégios.
@@ -160,6 +160,8 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2B/2b2b-1 — quatro RPCs de pagamento, NF, atribuição e auditoria por organização | PR #75 / `41fdce6e...` / migration `20261029202018` / 540 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 5 RPCs restantes e isolamento de APIs/Storage |
 
 | 29/10/2026 | Etapa 2B/2b2b-2 — cinco RPCs de faturamento e fechamento escopadas | PR #76 / `770f0f25...` / migração `20261029203540` / 546 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): tabelas auxiliares, APIs/Storage e testes multiempresa |
+
+| 29/10/2026 | Etapa 2B/3a — parcelas e envios ao portal com chaves de organização | PR #77 / `5d3426f6...` / migration `20261029205127` / 552 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): glosas, despesas, fechamento e isolamento de APIs |
 
 ## 8. Protocolo para o assistente em futuros chats
 
