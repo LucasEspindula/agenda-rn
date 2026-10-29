@@ -48,6 +48,7 @@ async function fixture(){
  await db.query("INSERT INTO public.billing_entities VALUES ($1,$2,'Empresa Teste','123')",[entity,org]);
  await db.query("INSERT INTO public.billing_doctor_entities VALUES ($1,'dr-anesthesia',$2,$3,true)",[invoice,entity,org]);
  await db.query("INSERT INTO public.attendances VALUES ('a-1',$1,'dr-1','appointment-1','p-1','2026-10-29','Consulta')",[org]);
+ await db.query("INSERT INTO public.attendances VALUES ('a-attribute',$1,'dr-1','appointment-1','p-1','2026-10-29','Consulta')",[org]);
  await db.query("INSERT INTO public.billing_records(id,organization_id,attendance_id,billing_entity_id,appointment_id,payment_status,billing_method,no_invoice,received_amount,paid_at) VALUES ($1,$2,'a-1',$3,'appointment-1','PENDENTE','PARTICULAR',true,100,'2026-10-29')",[payment,org,entity]);
  await db.query("INSERT INTO public.invoices VALUES ($1,$2,'NF-123')",[invoice,org]);
  await db.query("INSERT INTO public.invoice_requests(id,organization_id,attendance_id,billing_record_id,billing_entity_id,status,updated_at,taker_kind,taker_name,taker_tax_id,received_amount_snapshot,paid_at_snapshot,patient_id) VALUES ($1,$2,'a-1',$3,$4,'PENDING','2026-10-29T12:00:00Z','OTHER','Nome Antigo','12345678901',100,'2026-10-29','p-1')",[requestId,org,payment,entity]);
@@ -83,8 +84,8 @@ test('invoice request editing accepts valid manager and checks membership before
 });
 test('attribution derives tenant from persisted entity, not from a caller-supplied organization',async()=>{
  const db=await fixture();try{
-  const result=await db.query('SELECT public.attribute_financial_attendance($1,$2) AS result',['a-1',entity]);
-  assert.equal(result.rows[0].result.id,'a-1');
+  const result=await db.query('SELECT public.attribute_financial_attendance($1,$2) AS result',['a-attribute',entity]);
+  assert.equal(result.rows[0].result.id,'a-attribute');
   assert.equal((await db.query("SELECT doctor_id FROM public.attendances WHERE id='a-1'")).rows[0].doctor_id,'dr-anesthesia');
   await assert.rejects(db.query('SELECT public.attribute_financial_attendance($1,$2)',['a-1','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']),/Entidade recebedora não encontrada/);
  }finally{await db.close();}
