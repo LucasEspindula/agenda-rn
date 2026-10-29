@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
 const foundation=readFileSync(new URL('../supabase/migrations/20261028203004_organization_foundation.sql',import.meta.url),'utf8');
-const migration=readFileSync(new URL('../supabase/migrations/20261029190000_agenda_organization_scope.sql',import.meta.url),'utf8');
+const migration=readFileSync(new URL('../supabase/migrations/20261029184300_agenda_organization_scope.sql',import.meta.url),'utf8');
 
 async function fixture(){
  const db=new PGlite();
@@ -96,7 +96,7 @@ test('all server-side agenda readers filter by RN Gestão organization, not glob
   assert.match(source,/\.eq\("organizations.slug","rn-gestao"\)/,path);
   assert.doesNotMatch(source,/from\(['"]app_state['"]\)\.select\([^;]*?\.eq\(['"]id['"],\s*1\)/,path);
  }
- const sql=readFileSync(new URL('../supabase/migrations/20261029190000_agenda_organization_scope.sql',import.meta.url),'utf8');
+ const sql=readFileSync(new URL('../supabase/migrations/20261029184300_agenda_organization_scope.sql',import.meta.url),'utf8');
  assert.match(sql,/where id=1 and organization_id=rn_org_id/i);
  assert.match(sql,/effective_actor.*coalesce\(p_actor/i);
 });
