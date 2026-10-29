@@ -115,10 +115,10 @@ Critérios mínimos para avanço:
 ### Etapa 2B/2b2a — proteção de comprovantes financeiros (PR em revisão)
 
 - Branch `feat/rn-attachment-org-authorization-2b2b2-20261029`.
-- Migração proposta `20261029210500_financial_attachment_organization_authorization.sql`: endurece `authorized_financial_attachment_actor` com vínculo de organização e alvo existente; substitui dois acessos globais a `app_state.id=1` por `organization_id`; autoriza todos os itens de uma NF para secretárias; atualiza `begin_financial_attachment` para criar novos Storage paths `org/<organization-uuid>/payment-proofs/<target-uuid>/<attachment-uuid>`.
+- Migração **aplicada e conferida** `20261029200153_financial_attachment_organization_authorization.sql` (Supabase `20261029200153 financial_attachment_organization_authorization`); catálogo comprovou escopo de organização, nova estrutura de caminhos e privilégios restritos.: endurece `authorized_financial_attachment_actor` com vínculo de organização e alvo existente; substitui dois acessos globais a `app_state.id=1` por `organization_id`; autoriza todos os itens de uma NF para secretárias; atualiza `begin_financial_attachment` para criar novos Storage paths `org/<organization-uuid>/payment-proofs/<target-uuid>/<attachment-uuid>`.
 - Leituras de metadados em `app/api/financial-attachments/route.ts` filtram a organização RN Gestão ativa antes de gerar URLs assinadas. Arquivos legados continuam em seus caminhos originais (não são migrados nem apagados).
 - Testes PGlite em `tests/financial-attachment-organization.test.mjs` cobrem autorizações, vínculos desativados, nota compartilhada, acesso do anestesista, ausência de alvo, segundo tenant bloqueado e namespace de Storage.
-- **Ainda não publicado:** concluir CI, verificar SQL no Supabase, reconciliar versão da migration, merge/deploy e registrar evidências. Não habilitar segunda organização antes de isolar todo o sistema.
+- **Estado:** SQL aplicado e validado, CI inicial **533/533 testes** (lint e TypeScript aprovados). Ainda faltam CI do commit reconciliado, merge, Vercel produção e atualização final. Não habilitar segunda organização antes de isolar todo o sistema.
 
 ## 7. Log de continuidade
 
