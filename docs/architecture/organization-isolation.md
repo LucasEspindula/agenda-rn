@@ -63,3 +63,12 @@ Até que todos esses critérios sejam atendidos, **não habilitar onboarding mul
 - **Próxima etapa obrigatória:** parametrizar as consultas/gravações remanescentes das funções SQL por organização e remover o `id=1` fixo; só então evoluir as demais tabelas e arquivos para escopo independente por tenant.
 
 Este marco protege e documenta o estado existente, mas **não declara isolamento multi-tenant completo nem libera onboarding de terceiros**.
+
+## Fase 2B/2a — primeira migração das rotinas legadas (PR em revisão)
+
+- Proposta versionada em `20261029192000_legacy_agenda_directory_org_scope.sql`: atualizar `save_doctor_directory` e `save_manual_attendance`.
+- Nova função `require_rn_agenda_actor_organization(p_actor)`: verifica organização RN Gestão ativa, exclusivamente uma organização operando, conta e membership ativos com papéis coerentes e estado da agenda correspondente. Função restrita ao `service_role`.
+- As duas rotinas passam a pesquisar/atualizar `app_state` por `organization_id` do vínculo validado, removendo o `id=1` desses caminhos. A consulta de convênio do atendimento manual também fica limitada ao documento da organização.
+- Testes PGlite e inspeção estática adicionados em `tests/agenda-legacy-organization-scope.test.mjs`, cobrindo acesso ativo/inativo, divergência de papel, gerente vs secretária e bloqueio se surgir uma segunda organização.
+- **Ainda não é isolamento multiempresa completo.** Permanecem funções financeiras legadas, tabelas globais, APIs privilegiadas e anexos a migrar.
+- **Não aplicar sem CI e revisão:** o banco de produção não foi alterado durante a preparação desta PR. Dados atuais são de teste, mas proteção contra exposição cruzada e regressões funcionais continua obrigatória.
