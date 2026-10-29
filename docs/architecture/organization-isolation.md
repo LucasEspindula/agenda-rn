@@ -66,7 +66,7 @@ Este marco protege e documenta o estado existente, mas **não declara isolamento
 
 ## Fase 2B/2a — primeira migração das rotinas legadas (PR em revisão)
 
-- Proposta versionada em `20261029192000_legacy_agenda_directory_org_scope.sql`: atualizar `save_doctor_directory` e `save_manual_attendance`.
+- Proposta versionada em `20261029192723_legacy_agenda_directory_org_scope.sql`: atualizar `save_doctor_directory` e `save_manual_attendance`.
 - Nova função `require_rn_agenda_actor_organization(p_actor)`: verifica organização RN Gestão ativa, exclusivamente uma organização operando, conta e membership ativos com papéis coerentes e estado da agenda correspondente. Função restrita ao `service_role`.
 - As duas rotinas passam a pesquisar/atualizar `app_state` por `organization_id` do vínculo validado, removendo o `id=1` desses caminhos. A consulta de convênio do atendimento manual também fica limitada ao documento da organização.
 - Testes PGlite e inspeção estática adicionados em `tests/agenda-legacy-organization-scope.test.mjs`, cobrindo acesso ativo/inativo, divergência de papel, gerente vs secretária e bloqueio se surgir uma segunda organização.
