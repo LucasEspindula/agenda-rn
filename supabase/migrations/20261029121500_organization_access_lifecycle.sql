@@ -65,8 +65,7 @@ begin
  if did is not null and not exists(select 1 from public.agenda_access where user_id=uid and professional_id=did) then insert into public.agenda_access(user_id,professional_id) values(uid,did); end if;
  insert into public.directory_audit(actor_id,kind,record_id,before_data,after_data) values(p_actor,'user_access',uid::text,case when old_account.id is not null then jsonb_build_object('email',old_account.email,'role',old_account.role,'doctor_id',old_account.doctor_id,'active',old_account.active) end,jsonb_build_object('email',email_value,'role',role_value,'doctor_id',did,'active',desired_active,'password_changed',p_credentials is not null,'agendaIds',(select coalesce(jsonb_agg(professional_id),'[]') from public.agenda_access where user_id=uid)));
  return uid;
-end;$function$
-
+end;$function$;
 
 CREATE OR REPLACE FUNCTION public.deactivate_user_access(p_actor bigint,p_target bigint)
 RETURNS boolean
