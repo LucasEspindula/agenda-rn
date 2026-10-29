@@ -112,13 +112,13 @@ Critérios mínimos para avanço:
 
 
 
-### Etapa 2B/2b2a — proteção de comprovantes financeiros (PR em revisão)
+### Etapa 2B/2b2a — proteção de comprovantes financeiros (integrada e publicada em 29/10/2026)
 
-- Branch `feat/rn-attachment-org-authorization-2b2b2-20261029`.
-- Migração **aplicada e conferida** `20261029200153_financial_attachment_organization_authorization.sql` (Supabase `20261029200153 financial_attachment_organization_authorization`); catálogo comprovou escopo de organização, nova estrutura de caminhos e privilégios restritos.: endurece `authorized_financial_attachment_actor` com vínculo de organização e alvo existente; substitui dois acessos globais a `app_state.id=1` por `organization_id`; autoriza todos os itens de uma NF para secretárias; atualiza `begin_financial_attachment` para criar novos Storage paths `org/<organization-uuid>/payment-proofs/<target-uuid>/<attachment-uuid>`.
+- PR [#74](https://github.com/LucasEspindula/agenda-rn/pull/74) **mergeada** em `main`, commit `cc7cc5b18eb63886edd02d0ee01d4248dfd3bb2b`.
+- Migração **aplicada e conferida** `20261029200153_financial_attachment_organization_authorization.sql` (Supabase `20261029200153 financial_attachment_organization_authorization`); catálogo comprovou escopo de organização, nova estrutura de caminhos e privilégios restritos. A migration endurece `authorized_financial_attachment_actor` com vínculo de organização e alvo existente; substitui dois acessos globais a `app_state.id=1` por `organization_id`; autoriza todos os itens de uma NF para secretárias; atualiza `begin_financial_attachment` para criar novos Storage paths `org/<organization-uuid>/payment-proofs/<target-uuid>/<attachment-uuid>`.
 - Leituras de metadados em `app/api/financial-attachments/route.ts` filtram a organização RN Gestão ativa antes de gerar URLs assinadas. Arquivos legados continuam em seus caminhos originais (não são migrados nem apagados).
 - Testes PGlite em `tests/financial-attachment-organization.test.mjs` cobrem autorizações, vínculos desativados, nota compartilhada, acesso do anestesista, ausência de alvo, segundo tenant bloqueado e namespace de Storage.
-- **Estado:** SQL aplicado e validado, CI inicial **533/533 testes** (lint e TypeScript aprovados). Ainda faltam CI do commit reconciliado, merge, Vercel produção e atualização final. Não habilitar segunda organização antes de isolar todo o sistema.
+- **Fechamento validado:** CI do commit reconciliado **533/533 testes, zero falhas**; build, lint e TypeScript aprovados. Supabase migração `20261029200153` aplicada, função `SECURITY INVOKER`, execução `anon`/`authenticated` negada; Vercel produção `dpl_HegVbow8mWUckkXDntW4wzogPwBq` em **READY** para o commit da PR #74. Nenhum registro de teste precisou ser excluído. Restam outras funções/rotas e o onboarding de segunda organização continua bloqueado.
 
 ## 7. Log de continuidade
 
@@ -128,8 +128,8 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2B/1 — escopo RN Gestão da agenda, produção READY | PR #70 / `353de1ef...` | Inventário e plano 2B/2 |
 | 29/10/2026 | Criação deste documento central | Commit que adiciona este arquivo | Atualizar a cada etapa com evidências |
 | 29/10/2026 | Etapa 2B/2a — funções de cadastro e atendimento manual com membership e organization_id | PR #71 / `639c2b22...` / migration `20261029192723` / 521 testes | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 2B/2b, financeiras e tabelas globais |
-
 | 29/10/2026 | Etapa 2B/2b1 — nove tabelas financeiras com escopo físico, 20 FKs e guards | PR #73 / `86c7cf90...` / migration `20261029194356` / 528 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): ampliar isolamento das demais funções, tabelas, APIs e Storage |
+| 29/10/2026 | Etapa 2B/2b2a — autorização de comprovantes e Storage por organização | PR #74 / `cc7cc5b1...` / migration `20261029200153` / 533 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 9 funções SQL restantes e escopo completo das APIs/Storage |
 
 ## 8. Protocolo para o assistente em futuros chats
 
