@@ -120,6 +120,14 @@ Critérios mínimos para avanço:
 - Testes PGlite em `tests/financial-attachment-organization.test.mjs` cobrem autorizações, vínculos desativados, nota compartilhada, acesso do anestesista, ausência de alvo, segundo tenant bloqueado e namespace de Storage.
 - **Fechamento validado:** CI do commit reconciliado **533/533 testes, zero falhas**; build, lint e TypeScript aprovados. Supabase migração `20261029200153` aplicada, função `SECURITY INVOKER`, execução `anon`/`authenticated` negada; Vercel produção `dpl_HegVbow8mWUckkXDntW4wzogPwBq` em **READY** para o commit da PR #74. Nenhum registro de teste precisou ser excluído. Restam outras funções/rotas e o onboarding de segunda organização continua bloqueado.
 
+
+### 2B/2b2b-1 — RPCs financeiras por organização (em preparação)
+
+- Branch `feat/rn-financial-rpcs-org-scope-2b2b2b-20261029`; migração `20261029202018 financial_legacy_rpcs_org_scope` **aplicada** no Supabase e conferida em catálogo. CI inicial **540/540 testes**; reconciliação de filename feita. PR #75 ainda requer CI final, merge e Vercel produção.
+- Quatro funções: `attribute_financial_attendance`, `financial_log_snapshot`, `finish_private_payment`, `update_pending_invoice_request`. Removem leituras da agenda por `id=1`, validam `organization_id` nas operações e mantêm bloqueio de segundo tenant.
+- Testes em `tests/financial-legacy-rpcs-organization.test.mjs`; nenhuma operação de exclusão de dados.
+- **Banco atualizado, PR ainda em revisão:** quatro funções já usam escopo de organização e estão restritas a `service_role`, invoker, sem o predicado `app_state.id=1`. Não considerar publicada até merge/deploy READY. Continuar pelas RPCs fiscais e mensais restantes na [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
