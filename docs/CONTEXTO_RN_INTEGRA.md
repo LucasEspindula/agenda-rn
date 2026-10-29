@@ -100,13 +100,13 @@ Critérios mínimos para avanço:
 - Restam as demais funções legadas e o isolamento das tabelas, APIs, anexos, relatórios e RLS. Novos tenants continuam proibidos.
 
 
-### Etapa 2B/2b1 — fundação do isolamento financeiro (PR em desenvolvimento)
+### Etapa 2B/2b1 — fundação física financeira (concluída e publicada em 29/10/2026)
 
-- Branch: `feat/rn-financial-organization-foundation-2b2b1-20261029`.
+- PR [#73](https://github.com/LucasEspindula/agenda-rn/pull/73) **mergeada** na `main`, commit `86c7cf901fcc1df10a66f6f81c131e55944b26bc`.
 - Migração **aplicada e verificada**: `20261029194356_financial_tenant_keys_foundation.sql`, Supabase `20261029194356 financial_tenant_keys_foundation`; consulta de catálogo confirmou 9 colunas obrigatórias, 20 FKs compostas, 9 triggers, 9 índices compostos e RLS ativo nas 9 tabelas.
 - Nove tabelas do núcleo financeiro recebem `organization_id`, chaves e 20 FKs compostas para prevenir referências cruzadas; RLS e privilégios existentes são mantidos. O default é temporário, derivado exclusivamente da organização RN Gestão e rejeita uma segunda organização.
 - Testes novos: `tests/financial-tenant-keys-foundation.test.mjs`, incluindo backfill, bloqueio de transferências, vínculos entre organizações e comportamento de cascata das NFs.
-- Risco: mudanças em tabelas com triggers existentes e dependências em outros fluxos. CI inicial **528/528 testes**, lint e tipos aprovados. Migração já aplicada e verificada em PostgreSQL. A PR ainda requer CI após reconciliação da migration, merge e Vercel produção antes de ser considerada concluída.
+- Validações finais: CI do último commit da PR com **528/528 testes aprovados, zero falhas**, lint, tipos e build aprovados. Migração PostgreSQL aplicada/verificada; **20 FKs validadas**, 9 FKs de organização validadas, nenhuma leitura direta das 9 tabelas para `anon`/`authenticated`. Vercel produção **READY**: deployment `dpl_7vsZbHHjTdjaHa36MGwNnnUatQV2`, commit `86c7cf9...`. Nenhum registro de teste precisou ser excluído.
 - Depois: dez funções SQL legadas, demais tabelas, APIs com service_role, relatórios, Storage e testes end-to-end de duas empresas. Consultar [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 - Dados atuais são de teste e registros pontualmente problemáticos podem ser descartados com registro técnico; nunca desabilitar as restrições de isolamento em produção para contornar os testes.
 
@@ -119,6 +119,8 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2B/1 — escopo RN Gestão da agenda, produção READY | PR #70 / `353de1ef...` | Inventário e plano 2B/2 |
 | 29/10/2026 | Criação deste documento central | Commit que adiciona este arquivo | Atualizar a cada etapa com evidências |
 | 29/10/2026 | Etapa 2B/2a — funções de cadastro e atendimento manual com membership e organization_id | PR #71 / `639c2b22...` / migration `20261029192723` / 521 testes | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 2B/2b, financeiras e tabelas globais |
+
+| 29/10/2026 | Etapa 2B/2b1 — nove tabelas financeiras com escopo físico, 20 FKs e guards | PR #73 / `86c7cf90...` / migration `20261029194356` / 528 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): ampliar isolamento das demais funções, tabelas, APIs e Storage |
 
 ## 8. Protocolo para o assistente em futuros chats
 
