@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 
 const foundation = readFileSync(new URL('../supabase/migrations/20261028203004_organization_foundation.sql', import.meta.url), 'utf8');
 const agendaScope = readFileSync(new URL('../supabase/migrations/20261029184300_agenda_organization_scope.sql', import.meta.url), 'utf8');
-const directoryScope = readFileSync(new URL('../supabase/migrations/20261029192000_legacy_agenda_directory_org_scope.sql', import.meta.url), 'utf8');
+const directoryScope = readFileSync(new URL('../supabase/migrations/20261029192723_legacy_agenda_directory_org_scope.sql', import.meta.url), 'utf8');
 
 async function fixture() {
   const db = new PGlite();
