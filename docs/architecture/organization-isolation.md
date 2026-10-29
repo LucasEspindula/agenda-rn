@@ -77,7 +77,7 @@ Este marco protege e documenta o estado existente, mas **não declara isolamento
 
 Inventário, ordem técnica e critérios de aceite: [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72). Dez funções financeiras ainda dependem de referências globais ao documento legado; tabelas essenciais como `attendances`, `billing_records`, `invoices`, `billing_entities`, `doctors`, `financial_attachments` e `invoice_requests` não possuem `organization_id` no catálogo atual. A 2B/2b deve migrar esquema, FKs, RPCs e rotas de modo verificável. **Não liberar novos tenants.**
 
-## Fase 2B/2b1 — chaves físicas no núcleo financeiro (proposta em revisão)
+## Fase 2B/2b1 — chaves físicas no núcleo financeiro (publicada em 29/10/2026)
 
 Esta primeira subetapa da [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72) adiciona `organization_id` em nove tabelas centrais: `doctors`, `billing_entities`, `billing_doctor_entities`, `attendances`, `billing_records`, `invoices`, `invoice_billing_records`, `invoice_requests` e `financial_attachments`. A **organização cliente** é diferente da **entidade recebedora**.
 
@@ -85,6 +85,6 @@ O SQL cria vínculos à organização e chaves `(id, organization_id)` que permi
 
 **Compatibilidade temporária:** enquanto o backend ainda opera apenas a RN Gestão, o default e os triggers recusam qualquer escrita se houver uma segunda organização cadastrada. O cliente não escolhe tenant. O cadastro de novos tenants **permanece bloqueado**. O serviço com credencial privilegiada ainda precisará ser escopado em todas as rotas; RLS isoladamente não resolve o problema.
 
-A migration e os testes em PGlite foram adicionados na branch `feat/rn-financial-organization-foundation-2b2b1-20261029`. **Migração aplicada no Supabase:** `20261029194356 financial_tenant_keys_foundation`. Banco verificado: 9 colunas NOT NULL com defaults, 20 FKs compostas, 9 triggers, 9 índices compostos e RLS ativo nas 9 tabelas. CI anterior à reconciliação do arquivo: 528/528 testes aprovados. Conferir os testes no commit final, merge e produção Vercel antes de declarar publicação da etapa.
+A migration e os testes em PGlite foram adicionados na branch `feat/rn-financial-organization-foundation-2b2b1-20261029`. **Migração aplicada no Supabase:** `20261029194356 financial_tenant_keys_foundation`. Banco verificado: 9 colunas NOT NULL com defaults, 20 FKs compostas, 9 triggers, 9 índices compostos e RLS ativo nas 9 tabelas. A PR [#73](https://github.com/LucasEspindula/agenda-rn/pull/73) foi mergeada em `86c7cf901fcc1df10a66f6f81c131e55944b26bc`: **528/528 testes aprovados no commit final**, lint e tipos aprovados; deploy de produção Vercel `dpl_7vsZbHHjTdjaHa36MGwNnnUatQV2` **READY**. As 20 FKs foram confirmadas validadas e as tabelas mantêm RLS sem exposição direta a `anon` ou `authenticated`.
 
 **Pendências após a 2B/2b1:** estender `organization_id` às demais tabelas operacionais, validar relacionamentos adicionais, migrar as dez funções SQL legadas, escopar APIs financeiras/reports/Storage e comprovar segregação com duas organizações em testes isolados. Como os registros existentes são de teste, os registros incompatíveis podem ser limpos pontualmente, mas documentar a exclusão e não reduzir a segurança para contornar o problema.
