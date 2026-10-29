@@ -31,7 +31,7 @@ async function confirmAttendanceStatus(request: Request) {
   // O limite aplica-se também a senhas erradas; a senha nunca é persistida ou auditada.
   await consumeLimit("attendance-status-password", String(session.account.id), 20, 300);
   const db = getSupabaseAdmin();
-  const result = await db.from("app_state").select("payload,updated_at").eq("id", 1).maybeSingle();
+  const result = await db.from("app_state").select("payload,updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
   dbError(result.error, "Read appointment state");
   const row = result.data;
   if (!row) return Response.json({ error: "Agenda indisponível." }, { status: 409 });

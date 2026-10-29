@@ -21,7 +21,7 @@ export async function loadBillingData(){
  }
  const names=['billing_entities','billing_doctor_entities','billing_records','invoices','invoice_billing_records','doctors','attendances','company_expenses','company_associates','invoice_requests'] as const;
  const attachmentColumns='id,document_type,invoice_id,billing_record_id,original_filename,mime_type,file_size,status,is_current,replaces_attachment_id,replaced_by_attachment_id,deactivated_at,deactivation_reason,created_at,created_by,updated_at,updated_by';
- const [stateResult,...results]=await Promise.all([db.from('app_state').select('payload').eq('id',1).maybeSingle(),...names.map(t=>allRows(t)),allRows('users','id,name,role'),allRows('payment_parts'),allRows('financial_attachments',attachmentColumns)]);
+ const [stateResult,...results]=await Promise.all([db.from('app_state').select('payload,organizations!inner(slug,active)').eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle(),...names.map(t=>allRows(t)),allRows('users','id,name,role'),allRows('payment_parts'),allRows('financial_attachments',attachmentColumns)]);
  if(stateResult.error||results.some(r=>r.error))throw new Error('Não foi possível carregar o faturamento.');
  const state=stateResult.data?.payload||{};
  const records=results[2].data as Financial[],invoices=results[3].data as Invoice[],items=results[4].data as BillingData['items'];

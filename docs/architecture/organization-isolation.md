@@ -52,3 +52,14 @@ Até que todos esses critérios sejam atendidos, **não habilitar onboarding mul
 - Remoção física de usuários substituída por desativação auditável. Sessões existentes são revogadas, e login e validação de sessão conferem `users.active`, o vínculo ativo e o papel da organização.
 - Reativação exige ação explícita do gerente; históricos financeiros, agendamentos, auditoria e permissões são preservados.
 - Ainda **não** há segunda organização operando: cadastro e sessões falham se a tabela de organizações deixar de conter apenas RN Gestão. A próxima etapa deve isolar agenda/dados financeiros de ponta a ponta e substituir os papéis globais antes do onboarding de terceiros.
+
+## Fase 2B/1 — estado da agenda vinculado à organização (29/10/2026)
+
+- O documento `app_state` passa a ter `organization_id` obrigatório, FK para `organizations` e índice único. A única linha anterior (`id=1`) é preservada sem alteração de `payload`, `version` ou `updated_at` e vinculada à RN Gestão.
+- As leituras da agenda, regras, pacientes e a visão auxiliar do faturamento filtram a organização por vínculo no banco; o cliente nunca fornece o tenant.
+- `commit_agenda_change` valida usuário/membership ativo e altera somente a linha RN Gestão, preservando lock, revisão, triggers, auditoria e transação já existentes.
+- Um bloqueio físico temporário impede inserir, excluir ou transferir a linha legada para outra organização. É intencional: **ainda não existe operação multiempresa**.
+- As rotinas financeiras e de cadastro médico que ainda consultam ou atualizam `app_state(id=1)` seguem usando a mesma linha vinculada à RN Gestão. Não há migração destrutiva nem duplicação do documento.
+- **Próxima etapa obrigatória:** parametrizar as consultas/gravações remanescentes das funções SQL por organização e remover o `id=1` fixo; só então evoluir as demais tabelas e arquivos para escopo independente por tenant.
+
+Este marco protege e documenta o estado existente, mas **não declara isolamento multi-tenant completo nem libera onboarding de terceiros**.

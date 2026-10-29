@@ -17,7 +17,7 @@ export async function GET() {
   const notificationReadRead = db.from("notifications").select("read_at").eq("user_id", session.account.id).not("read_at", "is", null).order("read_at", { ascending: false }).limit(1);
   const doctorRequestRead = role === "doctor" && session.agendaIds.length ? db.from("agenda_requests").select("created_at").eq("requested_by", session.account.id).in("professional_id", session.agendaIds).order("created_at", { ascending: false }).limit(1) : Promise.resolve({ data: [], error: null });
   const [stateResult, auditResult, notificationCreatedResult, notificationReadResult, doctorRequestResult] = await Promise.all([
-    db.from("app_state").select("updated_at").eq("id", 1).maybeSingle(),
+    db.from("app_state").select("updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle(),
     auditRead,
     notificationCreatedRead,
     notificationReadRead,
