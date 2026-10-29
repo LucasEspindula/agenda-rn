@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
 const foundation=readFileSync(new URL('../supabase/migrations/20261028203004_organization_foundation.sql',import.meta.url),'utf8');
-const lifecycle=readFileSync(new URL('../supabase/migrations/20261029121500_organization_access_lifecycle.sql',import.meta.url),'utf8');
+const lifecycle=readFileSync(new URL('../supabase/migrations/20261029181434_organization_access_lifecycle.sql',import.meta.url),'utf8');
 const hash='pbkdf2-sha256$600000$AbcDefGhiJklMnoPqrsTuv==';
 const salt='abcdefghijklmnopqrstuvwx123456';
 const credentials={hash,salt};
