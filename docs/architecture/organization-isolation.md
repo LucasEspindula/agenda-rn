@@ -109,3 +109,11 @@ Testes PGlite: conta desativada, cobrança inexistente, edição de solicitaçã
 ## 2B/2b2b-2 — Faturamento e relatório mensal
 
 Migration publicada `20261029203540_financial_five_legacy_rpc_org_scope.sql`. Cinco RPCs legadas recebem organização derivada do ator ativo e escopo no documento clínico, removendo `app_state.id=1`. O relatório mensal exige entidade recebedora dentro da organização. Consultas importantes de profissionais, atendimentos e vínculos são limitadas por `organization_id`. Novos clientes continuam bloqueados. Testes de API, RLS, tabelas auxiliares e segregação entre duas empresas ainda são necessários. Migração aplicada e conferida em PostgreSQL, 546/546 testes aprovados no CI final; PR #76 integrada, Vercel produção READY. Permanecem outras superfícies e rotas a isolar.
+
+## Etapa 2B/3a — isolamento do grafo de pagamentos e submissões
+
+Na primeira fatia da 2B/3, as tabelas `payment_parts`, `billing_portal_submissions` e `billing_portal_submission_events` passam a ter `organization_id` obrigatório, default RN Gestão temporário e trigger de bloqueio para outra organização. Quatro FKs compostas preservam a organização entre forma de pagamento, cobrança, NF, envio e evento de envio. O legado continua operacional sem atualizar linhas e acionar triggers históricos.
+
+Migração planejada: `20261029205127_finance_auxiliary_tenant_keys.sql`; testes: `tests/financial-auxiliary-org-keys.test.mjs`. Migração aplicada e verificada no Supabase sob a versão `20261029205127`: 3 colunas NOT NULL, 4 FKs compostas, 3 triggers, RLS ativo e 10 parcelas preservadas. CI inicial 552/552 testes. A etapa depende de CI final, merge e Vercel READY para ser considerada publicada.
+
+**Não habilitar multiempresa:** faltam escopo nas rotas que usam service_role, revisão de relatórios, Storage, demais tabelas auxiliares e testes com dois tenants. Consulte [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
