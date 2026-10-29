@@ -64,11 +64,15 @@ Até que todos esses critérios sejam atendidos, **não habilitar onboarding mul
 
 Este marco protege e documenta o estado existente, mas **não declara isolamento multi-tenant completo nem libera onboarding de terceiros**.
 
-## Fase 2B/2a — primeira migração das rotinas legadas (PR em revisão)
+## Fase 2B/2a — primeira migração das rotinas legadas (integrada)
 
 - Proposta versionada em `20261029192723_legacy_agenda_directory_org_scope.sql`: atualizar `save_doctor_directory` e `save_manual_attendance`.
 - Nova função `require_rn_agenda_actor_organization(p_actor)`: verifica organização RN Gestão ativa, exclusivamente uma organização operando, conta e membership ativos com papéis coerentes e estado da agenda correspondente. Função restrita ao `service_role`.
 - As duas rotinas passam a pesquisar/atualizar `app_state` por `organization_id` do vínculo validado, removendo o `id=1` desses caminhos. A consulta de convênio do atendimento manual também fica limitada ao documento da organização.
 - Testes PGlite e inspeção estática adicionados em `tests/agenda-legacy-organization-scope.test.mjs`, cobrindo acesso ativo/inativo, divergência de papel, gerente vs secretária e bloqueio se surgir uma segunda organização.
 - **Ainda não é isolamento multiempresa completo.** Permanecem funções financeiras legadas, tabelas globais, APIs privilegiadas e anexos a migrar.
-- **Não aplicar sem CI e revisão:** o banco de produção não foi alterado durante a preparação desta PR. Dados atuais são de teste, mas proteção contra exposição cruzada e regressões funcionais continua obrigatória.
+- **Concluído em 29/10/2026:** PR #71 mergeada em `639c2b22d6c6098ff50996b73167f4489c691284`; migração `20261029192723 legacy_agenda_directory_org_scope` aplicada no Supabase e verificada por catálogo (funções com organização, sem execução para `anon`/`authenticated`); CI com **521 testes aprovados**. Ainda resta confirmar o deploy final. Dados em uso são de teste, mas segregação real segue obrigatória.
+
+### Próximo marco — 2B/2b
+
+Inventário, ordem técnica e critérios de aceite: [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72). Dez funções financeiras ainda dependem de referências globais ao documento legado; tabelas essenciais como `attendances`, `billing_records`, `invoices`, `billing_entities`, `doctors`, `financial_attachments` e `invoice_requests` não possuem `organization_id` no catálogo atual. A 2B/2b deve migrar esquema, FKs, RPCs e rotas de modo verificável. **Não liberar novos tenants.**
