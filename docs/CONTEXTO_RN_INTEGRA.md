@@ -140,7 +140,7 @@ Critérios mínimos para avanço:
 ### Etapa 2B/3a — chaves de organização em pagamentos e envios ao portal (PR em revisão)
 
 - Branch `feat/rn-financial-child-tenant-keys-2b3a`.
-- Migração **proposta** `20261029214500_finance_auxiliary_tenant_keys.sql`, ainda não aplicada ao Supabase neste checkpoint.
+- Migração **aplicada e validada**: `20261029205127_finance_auxiliary_tenant_keys.sql`. Confirmados 3 colunas obrigatórias, 4 FKs compostas validadas, 3 triggers e RLS ativo. Dez parcelas existentes vinculadas à RN Gestão, nenhuma excluída. CI inicial **552/552 testes**; falta validar o último commit reconciliado, merge e deploy.
 - Adiciona `organization_id` a `payment_parts`, `billing_portal_submissions` e `billing_portal_submission_events`, com três FKs para organização, quatro FKs compostas para vínculos com o mesmo tenant, índices únicos e trigger existente de bloqueio de outras organizações.
 - Preserva RLS e a compatibilidade com RN Gestão, inclusive os registros de teste existentes; não faz UPDATE em massa, evitando triggers de auditoria/pagamentos.
 - Testes PGlite: preenchimento de registros anteriores, escrita default, second-tenant fail-closed, FKs cruzadas e privilégios.
