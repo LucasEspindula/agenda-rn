@@ -121,12 +121,12 @@ Critérios mínimos para avanço:
 - **Fechamento validado:** CI do commit reconciliado **533/533 testes, zero falhas**; build, lint e TypeScript aprovados. Supabase migração `20261029200153` aplicada, função `SECURITY INVOKER`, execução `anon`/`authenticated` negada; Vercel produção `dpl_HegVbow8mWUckkXDntW4wzogPwBq` em **READY** para o commit da PR #74. Nenhum registro de teste precisou ser excluído. Restam outras funções/rotas e o onboarding de segunda organização continua bloqueado.
 
 
-### 2B/2b2b-1 — RPCs financeiras por organização (em preparação)
+### 2B/2b2b-1 — quatro RPCs financeiras (concluída e publicada em 29/10/2026)
 
-- Branch `feat/rn-financial-rpcs-org-scope-2b2b2b-20261029`; migração `20261029202018 financial_legacy_rpcs_org_scope` **aplicada** no Supabase e conferida em catálogo. CI inicial **540/540 testes**; reconciliação de filename feita. PR #75 ainda requer CI final, merge e Vercel produção.
+- PR [#75](https://github.com/LucasEspindula/agenda-rn/pull/75) **mergeada** na `main`, commit `41fdce6ec22e67881e03c78c8a5dc0149a3e29f1`. Migração `20261029202018 financial_legacy_rpcs_org_scope` aplicada e conferida no Supabase. CI do último commit **540/540 testes**, lint, tipos e build aprovados. Vercel produção **READY**: `dpl_H6RHehFWAnuod72Df9njc3XbRj8Z`.
 - Quatro funções: `attribute_financial_attendance`, `financial_log_snapshot`, `finish_private_payment`, `update_pending_invoice_request`. Removem leituras da agenda por `id=1`, validam `organization_id` nas operações e mantêm bloqueio de segundo tenant.
 - Testes em `tests/financial-legacy-rpcs-organization.test.mjs`; nenhuma operação de exclusão de dados.
-- **Banco atualizado, PR ainda em revisão:** quatro funções já usam escopo de organização e estão restritas a `service_role`, invoker, sem o predicado `app_state.id=1`. Não considerar publicada até merge/deploy READY. Continuar pelas RPCs fiscais e mensais restantes na [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
+- **Estado confirmado:** as quatro funções usam escopo de organização, permanecem `SECURITY INVOKER` e só aceitam execução direta de `service_role`; não restam referências `app_state.id=1` nessas quatro rotinas. Teste de leitura em PostgreSQL real passou. Nenhum registro de teste foi excluído. Próxima fatia: cinco RPCs fiscais/cobranças restantes, além de APIs, Storage e tabelas auxiliares. Manter bloqueio de novas empresas; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 ## 7. Log de continuidade
 
@@ -138,6 +138,8 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2B/2a — funções de cadastro e atendimento manual com membership e organization_id | PR #71 / `639c2b22...` / migration `20261029192723` / 521 testes | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 2B/2b, financeiras e tabelas globais |
 | 29/10/2026 | Etapa 2B/2b1 — nove tabelas financeiras com escopo físico, 20 FKs e guards | PR #73 / `86c7cf90...` / migration `20261029194356` / 528 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): ampliar isolamento das demais funções, tabelas, APIs e Storage |
 | 29/10/2026 | Etapa 2B/2b2a — autorização de comprovantes e Storage por organização | PR #74 / `cc7cc5b1...` / migration `20261029200153` / 533 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 9 funções SQL restantes e escopo completo das APIs/Storage |
+
+| 29/10/2026 | Etapa 2B/2b2b-1 — quatro RPCs de pagamento, NF, atribuição e auditoria por organização | PR #75 / `41fdce6e...` / migration `20261029202018` / 540 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): 5 RPCs restantes e isolamento de APIs/Storage |
 
 ## 8. Protocolo para o assistente em futuros chats
 
