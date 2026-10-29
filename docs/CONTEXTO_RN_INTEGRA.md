@@ -90,6 +90,15 @@ Critérios mínimos para avanço:
 
 **Status desta etapa:** planejamento documentado; **nenhuma alteração funcional da 2B/2 foi executada por este documento**.
 
+
+### Atualização de continuidade — 2B/2a (branch de trabalho, 29/10/2026)
+
+- Branch: `feat/rn-organization-agenda-legacy-2b2a-20261029`.
+- Escopo proposto: validar o vínculo RN Gestão no banco e isolar as operações de cadastro médico/agenda e atendimento manual por `app_state.organization_id`.
+- Migração **aplicada e conferida** no Supabase produção: `20261029192723 legacy_agenda_directory_org_scope`, com funções protegidas por membership e referências por `organization_id`; testes PGlite aprovados (521/521) antes do alinhamento do arquivo. Os testes CI da versão final devem ser novamente conferidos antes do merge.
+- Antes de integrar: revisar CI, contrato com triggers e disponibilidade, cobertura PGlite e comportamento real de pagamentos/cadastros. Só registrar como publicada após merge, migração e deploy confirmados.
+- Restam as demais funções legadas e o isolamento das tabelas, APIs, anexos, relatórios e RLS. Novos tenants continuam proibidos.
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
