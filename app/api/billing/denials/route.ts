@@ -1,6 +1,7 @@
 import {getSession} from "@/app/authz";
 import {getSupabaseAdmin} from "@/lib/supabase-admin";
 import {loadBillingData} from "@/lib/billing-data";
+import {financialActorOrganizationId} from "@/lib/financial-organization";
 import {secureMutation,readJson,HttpError} from "@/lib/security/http";
 
 export const dynamic="force-dynamic";
@@ -14,10 +15,10 @@ const localToday=()=>{
 const enabled=()=>process.env.RN_DENIALS_ENABLED==="true";
 const idPattern=/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i;
 
-async function allRows(table:string){
+async function allRows(table:string,organizationId:string){
  const db=getSupabaseAdmin();const rows:Record<string,unknown>[]=[];
  for(let offset=0;;offset+=1000){
-  const result=await db.from(table).select("*").order("id").range(offset,offset+999);
+  const result=await db.from(table).select("*").eq("organization_id",organizationId).order("id").range(offset,offset+999);
   if(result.error)throw new Error("Não foi possível consultar as glosas.");
   rows.push(...(result.data||[]));
   if(!result.data||result.data.length<1000)break;
@@ -30,10 +31,12 @@ export async function GET(){
  const session=await getSession();
  if(!session||!["general_manager","secretary"].includes(session.account.role))
    return Response.json({error:"Acesso negado."},{status:403});
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)return Response.json({error:"Acesso à organização negado."},{status:403});
  try{
   const [billing,cases,appeals,recoveries,events]=await Promise.all([
-   loadBillingData(),allRows("billing_denial_cases"),allRows("billing_denial_appeals"),
-   allRows("billing_denial_recoveries"),allRows("billing_denial_events")
+   loadBillingData(),allRows("billing_denial_cases",organizationId),allRows("billing_denial_appeals",organizationId),
+   allRows("billing_denial_recoveries",organizationId),allRows("billing_denial_events",organizationId)
   ]);
   const manager=session.account.role==="general_manager";
   const authorized=billing.data.rows.filter(row=>row.record?.professional_id &&
@@ -76,6 +79,8 @@ export const POST=secureMutation(async request=>{
  const session=await getSession();
  if(!session||!["general_manager","secretary"].includes(session.account.role))
    throw new HttpError(403,"Acesso negado.");
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)throw new HttpError(403,"Acesso à organização negado.");
  const payload=await readJson(request);
  if(!payload||typeof payload!=="object"||Array.isArray(payload)||
    !payload.data||typeof payload.data!=="object"||Array.isArray(payload.data))
@@ -93,11 +98,11 @@ export const POST=secureMutation(async request=>{
   const db=getSupabaseAdmin();
   let recordId=identifier;
   if(field==="denial_id"){
-   const found=await db.from("billing_denial_cases").select("billing_record_id").eq("id",identifier).maybeSingle();
+   const found=await db.from("billing_denial_cases").select("billing_record_id").eq("id",identifier).eq("organization_id",organizationId).maybeSingle();
    if(found.error||!found.data)throw new HttpError(403,"Sem acesso à glosa.");
    recordId=found.data.billing_record_id;
   }
-  const result=await db.from("billing_records").select("professional_id,billing_method").eq("id",recordId).maybeSingle();
+  const result=await db.from("billing_records").select("professional_id,billing_method").eq("id",recordId).eq("organization_id",organizationId).maybeSingle();
   if(result.error||!result.data||!result.data.professional_id||
     !session.agendaIds.includes(result.data.professional_id)||result.data.billing_method!=="CONVENIO")
     throw new HttpError(403,"Sem acesso à cobrança deste profissional.");
