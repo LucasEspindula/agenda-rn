@@ -28,7 +28,7 @@ function bytesMatch(bytes:Uint8Array,mime:string){
 async function permitted(session:Session,invoiceId:string|null,recordId:string|null){
  if(session.account.role==='general_manager')return true;
  if(session.account.role!=='secretary')return false;
- const {data}=await loadBillingData();
+ const {data}=await loadBillingData(session.account.id);
  // Keep this in lockstep with authorized_financial_attachment_actor(): the doctor
  // is stored on attendance and the optional anesthetist comes from app_state.
  if(recordId){const row=data.rows.find(r=>r.record?.id===recordId);return !!row&&[row.doctor_id,row.anesthetist_id].some(id=>session.agendaIds.includes(id));}
@@ -40,7 +40,7 @@ async function canReadFinancialAttachment(session:Session,attachment:Attachment)
  if(session.account.role==='general_manager')return true;
  if(session.account.role==='secretary')return permitted(session,attachment.invoice_id,attachment.billing_record_id);
  if(session.account.role!=='doctor')return false;
- const {data}=await loadBillingData();
+ const {data}=await loadBillingData(session.account.id);
  return doctorCanReadFinancialAttachment(data,session,attachment);
 }
 async function attachmentFor(id:string){
