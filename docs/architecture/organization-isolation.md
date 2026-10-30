@@ -145,3 +145,11 @@ As funções `get_billing_month_closing`, `close_billing_month`, `unlock_billing
 As rotas `billing/closing`, `reports/monthly-closing/print` e `billing/portal` passam a validar a organização do ator e filtrar consultas auxiliares, inclusive as regras de prazo. Migration em revisão `20261030123323_monthly_close_portal_rules_org_scope.sql`, testes `tests/monthly-close-portal-rules-organization.test.mjs`. Migração `20261030123323` aplicada e validada em produção (4 funções, 2 FKs, 1 trigger, RLS). CI final **574/574 testes**; PR #80 integrada em `6cdf28ee5e12a580bd56a3293da3facd1a875ec7` e Vercel produção READY. Próxima prioridade: consultas privilegiadas, auditoria e Storage.
 
 **Fora do escopo:** `loadBillingData`, auditoria/logs, rotas administrativas gerais, Storage e isolamento com duas organizações. Não abrir onboarding multiempresa.
+
+## Etapa 2B/3d1 — consultas financeiras e logs imutáveis
+
+O carregador `loadBillingData(actorId)` exige o escopo de organização resolvido no backend. As consultas financeiras e `app_state` são filtradas por `organization_id`; `users` usa `organization_memberships!inner(organization_id)` para não retornar pessoal de outra empresa. Todas as rotas existentes chamam o carregador com o ID da sessão autenticada, sem receber tenant arbitrário do navegador.
+
+`financial_logs` e `financial_log_changes` ganham organização obrigatória, guard do tenant único e FK composta de filho para pai. A operação de backfill é um `ADD COLUMN DEFAULT`, sem `UPDATE`, para preservar os 43 logs e as 93 alterações de teste e os triggers históricos de imutabilidade. A rota `billing/logs` filtra por organização; usa referência explícita da FK legada no embed após adicionar a nova FK composta.
+
+Migração aplicada e validada `20261030130708_financial_logs_tenant_scope.sql`; testes `tests/financial-logs-tenant-organization.test.mjs`. Confirmação Supabase: 43 logs e 93 mudanças preservados, FK composta validada, 2 triggers imutáveis mantidos e nenhum acesso público. CI inicial **580/580 testes**; faltam CI do commit reconciliado, merge e deploy. Continua bloqueada a segunda organização. Para multiempresa, faltam outras rotas `service_role`, Storage, relatórios e testes de isolamento entre organizações.
