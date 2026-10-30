@@ -178,7 +178,7 @@ Critérios mínimos para avanço:
 - **Publicada e verificada:** não houve exclusão de dados nem alteração do cálculo financeiro. **Próxima etapa 2B/3d:** `loadBillingData`, logs e relatórios com `service_role`, auditoria e Storage. Onboarding multiempresa continua bloqueado até validação cross-tenant; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 
-### Etapa 2B/3d1 — carregamento financeiro e auditoria imutável por organização (PR em revisão)
+### Etapa 2B/3d1 — carregamento financeiro e auditoria imutável por organização (mergeada; deploy pendente de comprovação)
 
 - Branch `feat/rn-billing-logs-tenant-scope-2b3d1`.
 - `lib/billing-data.ts`: `loadBillingData(actorId)` exige organização ativa do ator no banco ANTES de consultar qualquer tabela; todas as tabelas financeiras agora recebem filtro `organization_id`, inclusive `app_state`. `users` é consultada via vínculo `organization_memberships` da organização atual, sem varredura global. As 6 APIs consumidoras passam o ator autenticado explicitamente.
@@ -186,7 +186,16 @@ Critérios mínimos para avanço:
 - Migração **aplicada e validada no Supabase** `20261030130708_financial_logs_tenant_scope.sql`: `financial_logs` e `financial_log_changes` recebem organização obrigatória, duas FKs para organização, FK composta log/organização, índices e triggers do guard RN Gestão-only. Não usa UPDATE e preserva triggers de imutabilidade; original de 43 logs e 93 mudanças de teste preservado integralmente. Catálogo confirmou 2 colunas NOT NULL, 3 FKs validadas, 2 guards, 2 triggers imutáveis, RLS e nenhum grant público. CI inicial **580/580 testes** aprovado.
 - Testes PGlite `tests/financial-logs-tenant-organization.test.mjs` cobrem histórico, append-only, segundo tenant, FK composta, grants e contratos de APIs.
 - **Ainda não libera multiempresa:** faltam demais endpoints service_role (`billing/approvers`, `billing/doctor-entities`, `billing/entity-analytics`, relatórios, exportações), Storage e testes controlados com duas organizações. Ver issue #72.
-- **Banco migrado, PR #81 em revisão:** faltam CI final após reconciliação, merge e Vercel produção READY. Não habilitar novos tenants.
+- **Banco migrado, PR #81 mergeada:** commit `e232ae9ce183a60ede6580328bd5e4e76555d74c`, 580 testes registrados. Em 30/10 a consulta à Vercel retornou como deployment READY mais recente o commit `0e11e8a...` (anterior à PR #81). A publicação exata do commit #81 ainda precisa ser comprovada; não tratar como READY sem evidência. Não habilitar novos tenants.
+
+### Etapa 2B/3d2 — isolamento inicial de APIs financeiras privilegiadas (branch/PR, NÃO publicada)
+
+- Branch `feat/rn-finance-api-tenant-scope-2b3d2`, iniciada após a PR #81.
+- `billing/approvers`: verifica organização ativa via `financialActorOrganizationId` e lista gerentes apenas por `organization_memberships` da organização autenticada.
+- `billing/doctor-entities`: valida organização ativa e restringe entidades e vínculos por `organization_id`.
+- `billing/entity-analytics`: valida organização ativa e a propriedade da entidade solicitada antes de executar a RPC de indicadores. Definição da RPC foi inspecionada em modo leitura no Supabase; a consulta agrega valores por `billing_entity_id`.
+- Contratos estáticos de proteção adicionados em `tests/financial-privileged-api-tenant-scope.test.mjs`. A execução de testes, CI e deploy desta etapa **ainda requerem confirmação**.
+- **Não concluído:** auditoria de relatórios/exportações, Storage, demais rotas `service_role`, ensaios controlados com dois tenants, homologação e publicação; manter onboarding multiempresa bloqueado.
 
 ## 7. Log de continuidade
 
