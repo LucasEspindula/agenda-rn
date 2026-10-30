@@ -1,5 +1,6 @@
 import {getSession} from "@/app/authz";
 import {getSupabaseAdmin} from "@/lib/supabase-admin";
+import {financialActorOrganizationId} from "@/lib/financial-organization";
 import {secureMutation,readJson,HttpError} from "@/lib/security/http";
 import {verifyPassword} from "@/app/passwords";
 import {consumeLimit} from "@/lib/security/rate-limit";
@@ -15,10 +16,10 @@ async function authorize(){
    throw new HttpError(403,"Somente a gerência pode consultar ou fechar uma PJ/PF.");
  return session;
 }
-async function rows(table:string,columns:string){
+async function rows(table:string,columns:string,organizationId:string){
  const db=getSupabaseAdmin();const result:Record<string,unknown>[]=[];
  for(let offset=0;offset<100000;offset+=1000){
-   const query=await db.from(table).select(columns).order("id").range(offset,offset+999);
+   const query=await db.from(table).select(columns).eq("organization_id",organizationId).order("id").range(offset,offset+999);
    if(query.error)throw new Error("Não foi possível carregar o fechamento.");
    result.push(...(query.data||[]));
    if(!query.data||query.data.length<1000)break;
@@ -29,12 +30,14 @@ export async function GET(request:Request){
  if(!enabled())return Response.json({error:"Fechamento mensal ainda não homologado."},{status:404});
  try{
   const session=await authorize();
+  const organizationId=await financialActorOrganizationId(session.account.id);
+  if(!organizationId)throw new HttpError(403,"Acesso à organização negado.");
   const params=new URL(request.url).searchParams;
   const entity=params.get("entity_id"),competence=params.get("month");
   if(!entity&&!competence){
     const [entities,closings]=await Promise.all([
-      rows("billing_entities","id,name,trade_name,tax_id,person_type,active"),
-      rows("billing_monthly_closings","id,billing_entity_id,competence_month,closed_at,closed_by,notes")
+      rows("billing_entities","id,name,trade_name,tax_id,person_type,active",organizationId),
+      rows("billing_monthly_closings","id,billing_entity_id,competence_month,closed_at,closed_by,notes",organizationId)
     ]);
     return Response.json({entities,closings},{headers:{"Cache-Control":"private, no-store"}});
   }
@@ -54,6 +57,8 @@ export async function GET(request:Request){
 export const POST=secureMutation(async request=>{
  if(!enabled())throw new HttpError(404,"Fechamento mensal ainda não homologado.");
  const session=await authorize();
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)throw new HttpError(403,"Acesso à organização negado.");
  const input=await readJson(request);
  if(!["CLOSE","UNLOCK"].includes(input.action)||
     typeof input.entity_id!=="string"||!uuid.test(input.entity_id)||

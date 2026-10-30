@@ -15,12 +15,12 @@ const localToday=()=>{
  const value=(key:string)=>parts.find(p=>p.type===key)?.value||"";
  return value("year")+"-"+value("month")+"-"+value("day");
 };
-async function allRows(table:string,organizationId?:string){
+async function allRows(table:string,organizationId:string){
  const db=getSupabaseAdmin();
  const rows:Record<string,unknown>[]=[];
  for(let start=0;;start+=1000){
   let query=db.from(table).select("*").order("id").range(start,start+999);
-  if(organizationId)query=query.eq("organization_id",organizationId);
+  query=query.eq("organization_id",organizationId);
   const result=await query;
   if(result.error)throw new Error("Não foi possível consultar as guias do portal.");
   rows.push(...(result.data||[]));
@@ -40,7 +40,7 @@ export async function GET(){
  if(!organizationId)return Response.json({error:"Acesso à organização negado."},{status:403});
  try{
   const [billing,submissions,rules]=await Promise.all([
-   loadBillingData(),allRows("billing_portal_submissions",organizationId),allRows("billing_portal_deadline_rules")
+   loadBillingData(),allRows("billing_portal_submissions",organizationId),allRows("billing_portal_deadline_rules",organizationId)
   ]);
   const byId=new Map(submissions.map(item=>[String(item.billing_record_id),item]));
   const ruleList=rules as unknown as PortalDeadlineRule[];
