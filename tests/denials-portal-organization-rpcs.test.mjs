@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
-const sql=readFileSync(new URL('../supabase/migrations/20261030150000_denial_portal_org_rpc_scope.sql',import.meta.url),'utf8');
+const sql=readFileSync(new URL('../supabase/migrations/20261030115731_denial_portal_org_rpc_scope.sql',import.meta.url),'utf8');
 const membership=readFileSync(new URL('../supabase/migrations/20261029192723_legacy_agenda_directory_org_scope.sql',import.meta.url),'utf8');
 const ORG='11111111-1111-4111-8111-111111111111';
 const OTHER='99999999-9999-4999-8999-999999999999';
