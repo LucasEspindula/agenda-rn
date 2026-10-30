@@ -147,15 +147,15 @@ Critérios mínimos para avanço:
 - **Continua incompleto para SaaS multiempresa**: pendem tabelas auxiliares de glosas/despesas/fechamento, autorizações das APIs de `service_role`, Storage e ensaios com duas organizações. Não habilitar novos clientes.
 
 
-### Etapa 2B/3b — glosas, despesas e fechamento por organização (PR em validação)
+### Etapa 2B/3b — glosas, despesas e fechamento por organização (publicada em 30/10/2026)
 
-- Branch `feat/rn-financial-support-org-keys-2b3b`.
-- Migração **aplicada e validada**: `20261030112459_financial_support_tenant_keys.sql` no Supabase. Catálogo confirmou 8 colunas obrigatórias, 13 FKs compostas, 8 FKs da organização, 8 triggers e RLS ativo. A despesa de teste foi preservada. CI inicial **559/559 testes**, zero falhas.
+- [PR #78](https://github.com/LucasEspindula/agenda-rn/pull/78) **mergeada** na `main`, commit `2b4e497b0ba0415b7c8988f25048edb187fa1c53`.
+- Migração **aplicada e validada**: `20261030112459_financial_support_tenant_keys.sql` no Supabase. Catálogo confirmou 8 colunas obrigatórias, 13 FKs compostas, 8 FKs da organização, 8 triggers e RLS ativo. A despesa de teste foi preservada. CI final **559/559 testes**, zero falhas; lint, tipos e build aprovados. Deploy funcional Vercel produção **READY**: `dpl_Hxz3umYMEVcHXzQ13MS317qkm3g4`.
 - Oito tabelas de glosas, recursos, recuperações, fechamentos, sócios e despesas recebem `organization_id` obrigatório, FK da organização, índice composto e trigger de bloqueio. Adiciona **13 FKs compostas** para impedir referências entre organizações.
 - Dados de teste no início: glosas e fechamentos vazios, 1 despesa, 0 inconsistências detectadas; nenhuma exclusão necessária. O backfill evita UPDATE em massa para não executar triggers de histórico, fechamento imutável e auditoria.
 - Testes PGlite em `tests/financial-support-tenant-keys.test.mjs`: backfill, RLS, vínculo cruzado, novas inserções, prevenção de segunda empresa e privilégios.
 - **Auditoria preliminar das APIs:** `app/api/billing/denials/route.ts`, `app/api/billing/closing/route.ts` e `app/api/billing/logs/route.ts` ainda têm consultas amplas com `getSupabaseAdmin()`; o isolamento por `organization_id` de rotas e RPCs correspondentes precisa ser demonstrado antes de permitir novos tenants. Esta PR NÃO habilita multiempresa.
-- **Banco migrado, PR em revisão:** faltam segunda execução de CI após reconciliação, merge e Vercel produção READY. Novos tenants permanecem bloqueados. Registrar conclusão na issue #72.
+- **Publicação concluída:** 8 tabelas escopadas, 13 FKs compostas validadas e despesa de teste preservada sem exclusões. **Próximo bloqueador 2B/3c:** validar membership e escopo de organização em `save_billing_denial`, `save_billing_portal_submission`, `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month`, além das APIs privilegiadas. Nenhum novo tenant liberado; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 ## 7. Log de continuidade
 
@@ -173,6 +173,8 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2B/2b2b-2 — cinco RPCs de faturamento e fechamento escopadas | PR #76 / `770f0f25...` / migração `20261029203540` / 546 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): tabelas auxiliares, APIs/Storage e testes multiempresa |
 
 | 29/10/2026 | Etapa 2B/3a — parcelas e envios ao portal com chaves de organização | PR #77 / `5d3426f6...` / migration `20261029205127` / 552 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): glosas, despesas, fechamento e isolamento de APIs |
+
+| 30/10/2026 | Etapa 2B/3b — glosas, despesas e fechamentos com organização e 13 FKs | PR #78 / `2b4e497b...` / migration `20261030112459` / 559 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): cinco RPCs e APIs privilegiadas, logs, Storage e testes multiempresa |
 
 ## 8. Protocolo para o assistente em futuros chats
 
