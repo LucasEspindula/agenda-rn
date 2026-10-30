@@ -158,14 +158,14 @@ Critérios mínimos para avanço:
 - **Publicação concluída:** 8 tabelas escopadas, 13 FKs compostas validadas e despesa de teste preservada sem exclusões. **Próximo bloqueador 2B/3c:** validar membership e escopo de organização em `save_billing_denial`, `save_billing_portal_submission`, `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month`, além das APIs privilegiadas. Nenhum novo tenant liberado; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 
-### Etapa 2B/3c1 — autorização de glosas e submissões por organização (PR em validação)
+### Etapa 2B/3c1 — autorização de glosas e submissões por organização (publicada em 30/10/2026)
 
-- Branch `feat/rn-denials-portal-organization-2b3c1`, migration **aplicada e verificada** `20261030115731_denial_portal_org_rpc_scope.sql`, versão Supabase `20261030115731 denial_portal_org_rpc_scope`. CI inicial **566/566 testes**, lint, tipos e build aprovados. PR ainda exige CI final do commit reconciliado, merge e deploy.
+- [PR #79](https://github.com/LucasEspindula/agenda-rn/pull/79) **mergeada** na `main`, commit `6ffbcc461f706e1cd6d975d45bf1cb73608401e0`. Migração `20261030115731 denial_portal_org_rpc_scope` aplicada e validada no Supabase. CI final **566/566 testes**, zero falhas; lint, tipos e build aprovados. Vercel produção **READY** no deploy `dpl_GfF8WVZbFo6zDgNHjCQ9G5AwGMMQ`.
 - RPCs `save_billing_denial` e `save_billing_portal_submission` agora exigem vínculo ativo de organização do ator em `require_rn_agenda_actor_organization` e restringem consultas/atualizações ao `organization_id` validado no servidor.
 - As APIs `app/api/billing/denials/route.ts` e `app/api/billing/portal/route.ts` fazem segunda verificação da organização no backend; leituras financeiras auxiliares (glosas e submissões) filtram `organization_id` e escritas das secretárias só aceitam registros do tenant.
 - Testes `tests/denials-portal-organization-rpcs.test.mjs` cobrem manager, secretárias autorizadas/negadas, vínculo revogado, segundo tenant bloqueado, cobrança de outro tenant, grants e rotas.
 - **Limites:** `loadBillingData` ainda usa consultas financeiras amplas sob gate singleton; as regras globais `billing_portal_deadline_rules`, fechamento mensal, logs, exportações e Storage ainda precisam de análise. Não autoriza onboarding multiempresa.
-- **Banco migrado, PR em revisão:** ambas as RPCs têm membership e escopo confirmado em PostgreSQL, `SECURITY INVOKER` e EXECUTE público negado. Nenhum registro de teste foi excluído. Faltam CI final, merge e Vercel produção READY.
+- **Publicação confirmada:** as duas RPCs têm membership ativo e escopo por organização no PostgreSQL, `SECURITY INVOKER` e EXECUTE público negado; as duas APIs reforçam o escopo. Nenhum registro de teste foi excluído. **Próxima fatia 2B/3c2:** três RPCs de fechamento mensal, regras de prazo do portal, logs e APIs com `service_role`. Multiempresa segue bloqueado; consultar [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 ## 7. Log de continuidade
 
@@ -185,6 +185,8 @@ Critérios mínimos para avanço:
 | 29/10/2026 | Etapa 2B/3a — parcelas e envios ao portal com chaves de organização | PR #77 / `5d3426f6...` / migration `20261029205127` / 552 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): glosas, despesas, fechamento e isolamento de APIs |
 
 | 30/10/2026 | Etapa 2B/3b — glosas, despesas e fechamentos com organização e 13 FKs | PR #78 / `2b4e497b...` / migration `20261030112459` / 559 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): cinco RPCs e APIs privilegiadas, logs, Storage e testes multiempresa |
+
+| 30/10/2026 | Etapa 2B/3c1 — autorizações de glosas e envio ao portal escopadas no backend | PR #79 / `6ffbcc46...` / migration `20261030115731` / 566 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): fechamento mensal, regras do portal, logs e APIs privilegiadas |
 
 ## 8. Protocolo para o assistente em futuros chats
 
