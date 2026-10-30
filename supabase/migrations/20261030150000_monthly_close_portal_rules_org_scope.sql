@@ -54,6 +54,7 @@ declare
  revisions jsonb;
 begin
  rn_org_id:=public.require_rn_agenda_actor_organization(p_actor);
+ if not exists(select 1 from public.users where id=p_actor and active and role='general_manager') then raise exception 'Somente a gerência consulta o fechamento mensal';end if;
  if not exists(select 1 from public.billing_entities where id=p_entity and organization_id=rn_org_id) then raise exception 'Entidade recebedora não encontrada na organização';end if;
  snap:=public.preview_billing_month(p_actor,p_entity,p_month);
  select * into original from public.billing_monthly_closings
