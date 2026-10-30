@@ -177,6 +177,17 @@ Critérios mínimos para avanço:
 - Testes PGlite em `tests/monthly-close-portal-rules-organization.test.mjs`: fechamento, histórico, desbloqueio, regras de prazo, papéis, membership revogado, entidade/profissional de fora e segundo tenant.
 - **Publicada e verificada:** não houve exclusão de dados nem alteração do cálculo financeiro. **Próxima etapa 2B/3d:** `loadBillingData`, logs e relatórios com `service_role`, auditoria e Storage. Onboarding multiempresa continua bloqueado até validação cross-tenant; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
+
+### Etapa 2B/3d1 — carregamento financeiro e auditoria imutável por organização (PR em revisão)
+
+- Branch `feat/rn-billing-logs-tenant-scope-2b3d1`.
+- `lib/billing-data.ts`: `loadBillingData(actorId)` exige organização ativa do ator no banco ANTES de consultar qualquer tabela; todas as tabelas financeiras agora recebem filtro `organization_id`, inclusive `app_state`. `users` é consultada via vínculo `organization_memberships` da organização atual, sem varredura global. As 6 APIs consumidoras passam o ator autenticado explicitamente.
+- `app/api/billing/logs/route.ts` valida organização do gerente e filtra `financial_logs.organization_id` antes de retornar auditoria; embed histórico usa FK explícita para evitar ambiguidade com a FK composta.
+- Migração **proposta, não aplicada** `20261030160000_financial_logs_tenant_scope.sql`: `financial_logs` e `financial_log_changes` recebem organização obrigatória, duas FKs para organização, FK composta log/organização, índices e triggers do guard RN Gestão-only. Não usa UPDATE e preserva triggers de imutabilidade; origem tinha 43 logs e 93 mudanças de teste.
+- Testes PGlite `tests/financial-logs-tenant-organization.test.mjs` cobrem histórico, append-only, segundo tenant, FK composta, grants e contratos de APIs.
+- **Ainda não libera multiempresa:** faltam demais endpoints service_role (`billing/approvers`, `billing/doctor-entities`, `billing/entity-analytics`, relatórios, exportações), Storage e testes controlados com duas organizações. Ver issue #72.
+- Pendente CI completo, migração Supabase, reconciliação de versão, PR/merge, Vercel produção e checkpoint final.
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
