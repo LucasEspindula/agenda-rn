@@ -157,6 +157,16 @@ Critérios mínimos para avanço:
 - **Auditoria preliminar das APIs:** `app/api/billing/denials/route.ts`, `app/api/billing/closing/route.ts` e `app/api/billing/logs/route.ts` ainda têm consultas amplas com `getSupabaseAdmin()`; o isolamento por `organization_id` de rotas e RPCs correspondentes precisa ser demonstrado antes de permitir novos tenants. Esta PR NÃO habilita multiempresa.
 - **Publicação concluída:** 8 tabelas escopadas, 13 FKs compostas validadas e despesa de teste preservada sem exclusões. **Próximo bloqueador 2B/3c:** validar membership e escopo de organização em `save_billing_denial`, `save_billing_portal_submission`, `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month`, além das APIs privilegiadas. Nenhum novo tenant liberado; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
+
+### Etapa 2B/3c1 — autorização de glosas e submissões por organização (PR em validação)
+
+- Branch `feat/rn-denials-portal-organization-2b3c1`, migration proposta `20261030150000_denial_portal_org_rpc_scope.sql` (ainda **não aplicada** neste checkpoint).
+- RPCs `save_billing_denial` e `save_billing_portal_submission` agora exigem vínculo ativo de organização do ator em `require_rn_agenda_actor_organization` e restringem consultas/atualizações ao `organization_id` validado no servidor.
+- As APIs `app/api/billing/denials/route.ts` e `app/api/billing/portal/route.ts` fazem segunda verificação da organização no backend; leituras financeiras auxiliares (glosas e submissões) filtram `organization_id` e escritas das secretárias só aceitam registros do tenant.
+- Testes `tests/denials-portal-organization-rpcs.test.mjs` cobrem manager, secretárias autorizadas/negadas, vínculo revogado, segundo tenant bloqueado, cobrança de outro tenant, grants e rotas.
+- **Limites:** `loadBillingData` ainda usa consultas financeiras amplas sob gate singleton; as regras globais `billing_portal_deadline_rules`, fechamento mensal, logs, exportações e Storage ainda precisam de análise. Não autoriza onboarding multiempresa.
+- Publicação pendente: CI, migration Supabase aplicada, versão reconciliada, merge e deploy Vercel READY. Nenhum registro de teste precisa ser excluído nesta proposta.
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
