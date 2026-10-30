@@ -1,6 +1,7 @@
 import {getSession} from "@/app/authz";
 import {getSupabaseAdmin} from "@/lib/supabase-admin";
 import {loadBillingData} from "@/lib/billing-data";
+import {financialActorOrganizationId} from "@/lib/financial-organization";
 import {secureMutation,readJson,HttpError} from "@/lib/security/http";
 import {calculatePortalDeadline,destinationKey,matchDeadlineRule} from "@/lib/portal-deadlines";
 import type {PortalDeadlineRule} from "@/lib/portal-deadlines";
@@ -14,11 +15,13 @@ const localToday=()=>{
  const value=(key:string)=>parts.find(p=>p.type===key)?.value||"";
  return value("year")+"-"+value("month")+"-"+value("day");
 };
-async function allRows(table:string){
+async function allRows(table:string,organizationId?:string){
  const db=getSupabaseAdmin();
  const rows:Record<string,unknown>[]=[];
  for(let start=0;;start+=1000){
-  const result=await db.from(table).select("*").order("id").range(start,start+999);
+  let query=db.from(table).select("*").order("id").range(start,start+999);
+  if(organizationId)query=query.eq("organization_id",organizationId);
+  const result=await query;
   if(result.error)throw new Error("Não foi possível consultar as guias do portal.");
   rows.push(...(result.data||[]));
   if(!result.data||result.data.length<1000)break;
@@ -33,9 +36,11 @@ export async function GET(){
  if(!enabled())return Response.json({error:"Controle de guias ainda não habilitado."},{status:404});
  const session=await getSession();
  if(!session||!["general_manager","secretary"].includes(session.account.role))return Response.json({error:"Acesso negado."},{status:403});
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)return Response.json({error:"Acesso à organização negado."},{status:403});
  try{
   const [billing,submissions,rules]=await Promise.all([
-   loadBillingData(),allRows("billing_portal_submissions"),allRows("billing_portal_deadline_rules")
+   loadBillingData(),allRows("billing_portal_submissions",organizationId),allRows("billing_portal_deadline_rules")
   ]);
   const byId=new Map(submissions.map(item=>[String(item.billing_record_id),item]));
   const ruleList=rules as unknown as PortalDeadlineRule[];
@@ -95,6 +100,8 @@ export const POST=secureMutation(async request=>{
  if(!enabled())throw new HttpError(404,"Controle de guias ainda não habilitado.");
  const session=await getSession();
  if(!session||!["general_manager","secretary"].includes(session.account.role))throw new HttpError(403,"Acesso negado.");
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)throw new HttpError(403,"Acesso à organização negado.");
  const payload=await readJson(request);
  if(!payload||typeof payload!=="object"||Array.isArray(payload))throw new HttpError(400,"Operação inválida.");
  const {action,data}=payload;
@@ -107,7 +114,7 @@ export const POST=secureMutation(async request=>{
     throw new HttpError(400,"Cobrança inválida.");
   if(session.account.role==="secretary"){
    const {data:record,error}=await getSupabaseAdmin().from("billing_records")
-      .select("professional_id,billing_method,settlement_mode").eq("id",data.billing_record_id).maybeSingle();
+      .select("professional_id,billing_method,settlement_mode").eq("id",data.billing_record_id).eq("organization_id",organizationId).maybeSingle();
    if(error||!record||!record.professional_id||!session.agendaIds.includes(record.professional_id)||
       record.billing_method!=="CONVENIO"||record.settlement_mode!=="INVOICE")
     throw new HttpError(403,"Sem acesso à cobrança desse profissional.");
