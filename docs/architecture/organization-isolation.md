@@ -138,10 +138,10 @@ As rotas `billing/denials` e `billing/portal` derivam a organização no servido
 
 Migração publicada: `20261030115731_denial_portal_org_rpc_scope.sql`; testes `tests/denials-portal-organization-rpcs.test.mjs`. Funções com membership, escopo e privilégios conferidos no PostgreSQL. CI final **566/566 testes** e build/lint/tipos aprovados. [PR #79](https://github.com/LucasEspindula/agenda-rn/pull/79) mergeada no commit `6ffbcc461f706e1cd6d975d45bf1cb73608401e0`; Vercel produção `dpl_GfF8WVZbFo6zDgNHjCQ9G5AwGMMQ` **READY**. A próxima etapa é endurecer as RPCs de fechamento mensal, regras de prazos, logs e consultas administrativas sem escopo.
 
-## Etapa 2B/3c2 — fechamento e regras de prazo do portal (em revisão)
+## Etapa 2B/3c2 — fechamento e regras de prazo do portal (publicada)
 
 As funções `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month` e `save_billing_portal_rule` passam a exigir membership e papel de gerência no PostgreSQL. Histórico e eventos de fechamento são consultados com o `organization_id` validado. O cadastro de regras de prazo recebe chave obrigatória de organização e vínculo composto com profissionais da mesma organização. O gate singleton da RN Gestão continua ativo.
 
-As rotas `billing/closing`, `reports/monthly-closing/print` e `billing/portal` passam a validar a organização do ator e filtrar consultas auxiliares, inclusive as regras de prazo. Migration em revisão `20261030123323_monthly_close_portal_rules_org_scope.sql`, testes `tests/monthly-close-portal-rules-organization.test.mjs`. Migração `20261030123323` aplicada e validada em produção (4 funções, 2 FKs, 1 trigger, RLS). CI inicial **574/574 testes** após correção do fixture. Faltam CI final do commit reconciliado, merge e Vercel READY.
+As rotas `billing/closing`, `reports/monthly-closing/print` e `billing/portal` passam a validar a organização do ator e filtrar consultas auxiliares, inclusive as regras de prazo. Migration em revisão `20261030123323_monthly_close_portal_rules_org_scope.sql`, testes `tests/monthly-close-portal-rules-organization.test.mjs`. Migração `20261030123323` aplicada e validada em produção (4 funções, 2 FKs, 1 trigger, RLS). CI final **574/574 testes**; PR #80 integrada em `6cdf28ee5e12a580bd56a3293da3facd1a875ec7` e Vercel produção READY. Próxima prioridade: consultas privilegiadas, auditoria e Storage.
 
 **Fora do escopo:** `loadBillingData`, auditoria/logs, rotas administrativas gerais, Storage e isolamento com duas organizações. Não abrir onboarding multiempresa.
