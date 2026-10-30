@@ -47,9 +47,26 @@ test('focused doctor entities endpoint only serves managers and returns no finan
   assert.equal((await endpoint.GET()).status,403);
  }
  const queried=[];
+ const organizationId='11111111-1111-4111-8111-111111111111';
  const endpoint=loadTs('app/api/billing/doctor-entities/route.ts',{
-  '@/app/authz':{getSession:async()=>({account:{role:'general_manager'}})},
-  '@/lib/supabase-admin':{getSupabaseAdmin:()=>({from(table){queried.push(table);return {select:async()=>({data:table==='billing_entities'?[{id:'e1'}]:[{id:'l1'}],error:null})}}})}
+  '@/app/authz':{getSession:async()=>({account:{id:1,role:'general_manager'}})},
+  '@/lib/supabase-admin':{getSupabaseAdmin:()=>({
+   rpc:async(name,args)=>{
+    assert.equal(name,'require_rn_agenda_actor_organization');
+    assert.equal(args.p_actor,1);
+    return {data:organizationId,error:null};
+   },
+   from(table){
+    queried.push(table);
+    return {select:()=>({
+     eq(column,value){
+      assert.equal(column,'organization_id');
+      assert.equal(value,organizationId);
+      return Promise.resolve({data:table==='billing_entities'?[{id:'e1'}]:[{id:'l1'}],error:null});
+     }
+    })};
+   }
+  })}
  });
  const response=await endpoint.GET(),payload=await response.json();
  assertSameStructure(queried,['billing_entities','billing_doctor_entities']);
