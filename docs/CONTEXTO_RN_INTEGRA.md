@@ -146,6 +146,17 @@ Critérios mínimos para avanço:
 - Testes PGlite: preenchimento de registros anteriores, escrita default, second-tenant fail-closed, FKs cruzadas e privilégios.
 - **Continua incompleto para SaaS multiempresa**: pendem tabelas auxiliares de glosas/despesas/fechamento, autorizações das APIs de `service_role`, Storage e ensaios com duas organizações. Não habilitar novos clientes.
 
+
+### Etapa 2B/3b — glosas, despesas e fechamento por organização (PR em validação)
+
+- Branch `feat/rn-financial-support-org-keys-2b3b`.
+- Migração **aplicada e validada**: `20261030112459_financial_support_tenant_keys.sql` no Supabase. Catálogo confirmou 8 colunas obrigatórias, 13 FKs compostas, 8 FKs da organização, 8 triggers e RLS ativo. A despesa de teste foi preservada. CI inicial **559/559 testes**, zero falhas.
+- Oito tabelas de glosas, recursos, recuperações, fechamentos, sócios e despesas recebem `organization_id` obrigatório, FK da organização, índice composto e trigger de bloqueio. Adiciona **13 FKs compostas** para impedir referências entre organizações.
+- Dados de teste no início: glosas e fechamentos vazios, 1 despesa, 0 inconsistências detectadas; nenhuma exclusão necessária. O backfill evita UPDATE em massa para não executar triggers de histórico, fechamento imutável e auditoria.
+- Testes PGlite em `tests/financial-support-tenant-keys.test.mjs`: backfill, RLS, vínculo cruzado, novas inserções, prevenção de segunda empresa e privilégios.
+- **Auditoria preliminar das APIs:** `app/api/billing/denials/route.ts`, `app/api/billing/closing/route.ts` e `app/api/billing/logs/route.ts` ainda têm consultas amplas com `getSupabaseAdmin()`; o isolamento por `organization_id` de rotas e RPCs correspondentes precisa ser demonstrado antes de permitir novos tenants. Esta PR NÃO habilita multiempresa.
+- **Banco migrado, PR em revisão:** faltam segunda execução de CI após reconciliação, merge e Vercel produção READY. Novos tenants permanecem bloqueados. Registrar conclusão na issue #72.
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
