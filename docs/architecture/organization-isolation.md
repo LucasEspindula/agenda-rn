@@ -118,10 +118,14 @@ Migração publicada: `20261029205127_finance_auxiliary_tenant_keys.sql`; testes
 
 **Não habilitar multiempresa:** faltam escopo nas rotas que usam service_role, revisão de relatórios, Storage, demais tabelas auxiliares e testes com dois tenants. Consulte [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
-## Etapa 2B/3b — tabelas auxiliares de glosas, fechamentos e despesas
+## Etapa 2B/3b — tabelas auxiliares de glosas, fechamentos e despesas (publicada em 30/10/2026)
 
 O novo `organization_id` físico abrange oito tabelas: `billing_denial_cases`, `billing_denial_appeals`, `billing_denial_events`, `billing_denial_recoveries`, `billing_monthly_closings`, `billing_monthly_closing_events`, `company_associates` e `company_expenses`. Adiciona **13 FKs compostas** para ligar cada filho ao pai da mesma organização. O campo obrigatório recebe temporariamente o tenant único RN Gestão pelo servidor; inserir uma segunda organização bloqueia novas escritas, até a substituição dos guards transitórios. Os relacionamentos legados e regras imutáveis de fechamento são preservados.
 
-Migration aplicada no Supabase: `20261030112459_financial_support_tenant_keys.sql`. Conferidos 8 NOT NULL, 13 FKs cruzadas validadas, RLS/guards nas 8 tabelas, nenhuma leitura pública, 1 despesa preservada; CI inicial 559/559 testes. Testes PGlite: `tests/financial-support-tenant-keys.test.mjs`. O banco inicial contém uma despesa de teste e nenhuma glosa ou fechamento, sem relacionamentos inválidos. Evitar UPDATE para não disparar triggers históricos.
+Migration aplicada no Supabase: `20261030112459_financial_support_tenant_keys.sql`. Conferidos 8 NOT NULL, 13 FKs cruzadas validadas, RLS/guards nas 8 tabelas, nenhuma leitura pública, 1 despesa preservada; CI final **559/559 testes, zero falhas**. PR [#78](https://github.com/LucasEspindula/agenda-rn/pull/78) mergeada no commit `2b4e497b0ba0415b7c8988f25048edb187fa1c53`; Vercel produção `dpl_Hxz3umYMEVcHXzQ13MS317qkm3g4` **READY**. Testes PGlite: `tests/financial-support-tenant-keys.test.mjs`. O banco inicial contém uma despesa de teste e nenhuma glosa ou fechamento, sem relacionamentos inválidos. Evitar UPDATE para não disparar triggers históricos.
 
 **Bloqueadores para liberar multiempresa:** chamadas com `getSupabaseAdmin()` ainda consultam dados sem filtro de organização em `app/api/billing/denials/route.ts`, `app/api/billing/closing/route.ts` e `app/api/billing/logs/route.ts`. É necessário endurecer autorização e consultas server-side, além de RPCs, Storage, outros relatórios e testes com duas organizações. `RLS` não protege automaticamente leituras feitas com `service_role`. Não abrir onboarding.
+
+### Prioridade de segurança: Etapa 2B/3c
+
+Consulta ao catálogo `pg_proc` em 30/10/2026 confirmou que `save_billing_denial`, `save_billing_portal_submission`, `get_billing_month_closing`, `close_billing_month` e `unlock_billing_month` não contêm validação explícita `require_rn_agenda_actor_organization` nem consultas por `organization_id`. Os privilégios `anon` e `authenticated` estão revogados, mas os endpoints privilegiados com `service_role` precisam garantir isolamento servidor-side. Auditar e corrigir junto a `billing/denials`, `billing/portal`, `billing/closing`, `billing/logs` e relatórios. Não habilitar novos tenants antes da verificação com duas organizações.
