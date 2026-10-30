@@ -40,7 +40,7 @@ export async function GET(){
  if(!organizationId)return Response.json({error:"Acesso à organização negado."},{status:403});
  try{
   const [billing,submissions,rules]=await Promise.all([
-   loadBillingData(),allRows("billing_portal_submissions",organizationId),allRows("billing_portal_deadline_rules",organizationId)
+   loadBillingData(session.account.id),allRows("billing_portal_submissions",organizationId),allRows("billing_portal_deadline_rules",organizationId)
   ]);
   const byId=new Map(submissions.map(item=>[String(item.billing_record_id),item]));
   const ruleList=rules as unknown as PortalDeadlineRule[];
