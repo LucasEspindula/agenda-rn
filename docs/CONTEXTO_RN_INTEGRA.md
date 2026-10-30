@@ -167,6 +167,16 @@ Critérios mínimos para avanço:
 - **Limites:** `loadBillingData` ainda usa consultas financeiras amplas sob gate singleton; as regras globais `billing_portal_deadline_rules`, fechamento mensal, logs, exportações e Storage ainda precisam de análise. Não autoriza onboarding multiempresa.
 - **Publicação confirmada:** as duas RPCs têm membership ativo e escopo por organização no PostgreSQL, `SECURITY INVOKER` e EXECUTE público negado; as duas APIs reforçam o escopo. Nenhum registro de teste foi excluído. **Próxima fatia 2B/3c2:** três RPCs de fechamento mensal, regras de prazo do portal, logs e APIs com `service_role`. Multiempresa segue bloqueado; consultar [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
+
+### 2B/3c2 — fechamento mensal e regras de prazo do portal por organização (em revisão)
+
+- Branch `feat/rn-month-close-portal-rules-org-2b3c2`; migration **proposta**, ainda não aplicada: `20261030150000_monthly_close_portal_rules_org_scope.sql` (versão provisória).
+- RPCs `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month` e `save_billing_portal_rule`: todas usam vínculo ativo do ator em `require_rn_agenda_actor_organization`, gerência obrigatória e consultas/alterações de organização.
+- `billing_portal_deadline_rules` recebe `organization_id` obrigatório, FK de organização, FK composta profissional+organização, índices e trigger do tenant único. Sem exclusões ou UPDATE histórico. Regras atuais: 0; fechamentos e eventos atuais: 0.
+- APIs `billing/closing`, `reports/monthly-closing/print` e `billing/portal` validam organização no servidor e filtram as listas de fechamentos/regras.
+- Testes PGlite em `tests/monthly-close-portal-rules-organization.test.mjs`: fechamento, histórico, desbloqueio, regras de prazo, papéis, membership revogado, entidade/profissional de fora e segundo tenant.
+- **Não habilitar multiempresa:** faltam `loadBillingData` e demais consultas globais com `service_role`, logs, relatórios de outros módulos, Storage, vínculo de usuários e testes de isolamento cross-tenant. CI/merge/deploy ainda pendentes.
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
