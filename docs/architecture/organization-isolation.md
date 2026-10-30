@@ -129,3 +129,11 @@ Migration aplicada no Supabase: `20261030112459_financial_support_tenant_keys.sq
 ### Prioridade de segurança: Etapa 2B/3c
 
 Consulta ao catálogo `pg_proc` em 30/10/2026 confirmou que `save_billing_denial`, `save_billing_portal_submission`, `get_billing_month_closing`, `close_billing_month` e `unlock_billing_month` não contêm validação explícita `require_rn_agenda_actor_organization` nem consultas por `organization_id`. Os privilégios `anon` e `authenticated` estão revogados, mas os endpoints privilegiados com `service_role` precisam garantir isolamento servidor-side. Auditar e corrigir junto a `billing/denials`, `billing/portal`, `billing/closing`, `billing/logs` e relatórios. Não habilitar novos tenants antes da verificação com duas organizações.
+
+## Etapa 2B/3c1 — glosas e guias: barreira de organização nas RPCs e nas APIs
+
+Na primeira fatia de 2B/3c, `save_billing_denial` e `save_billing_portal_submission` passaram a executar `require_rn_agenda_actor_organization(p_actor)` antes da lógica de negócio. Cobranças, atendimentos, glosas, recursos, recuperações e submissões têm consultas e updates restritos pelo `organization_id` autorizado. O `EXECUTE` direto permanece reservado a `service_role`, com `SECURITY INVOKER`.
+
+As rotas `billing/denials` e `billing/portal` derivam a organização no servidor e filtram leituras das tabelas auxiliares. A recuperação da agenda/sessão continua com bloqueio singleton RN Gestão. As regras de prazo do portal ainda são globais e permanecem um bloqueador; funções de fechamento, `loadBillingData`, logs, relatórios e Storage precisam de escopo explícito antes de multiempresa. Esta fatia não libera segundo tenant.
+
+Proposta: `20261030150000_denial_portal_org_rpc_scope.sql`; testes `tests/denials-portal-organization-rpcs.test.mjs`. Não declarar publicação até CI, migração, reconciliação de versão, merge e deploy confirmado.
