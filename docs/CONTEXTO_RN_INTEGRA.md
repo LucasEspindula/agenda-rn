@@ -170,12 +170,12 @@ Critérios mínimos para avanço:
 
 ### 2B/3c2 — fechamento mensal e regras de prazo do portal por organização (em revisão)
 
-- Branch `feat/rn-month-close-portal-rules-org-2b3c2`; migration **proposta**, ainda não aplicada: `20261030150000_monthly_close_portal_rules_org_scope.sql` (versão provisória).
+- Branch `feat/rn-month-close-portal-rules-org-2b3c2`; migration **aplicada e verificada**: `20261030123323_monthly_close_portal_rules_org_scope.sql`. Supabase verificou quatro RPCs com membership, escopo e EXECUTE reservado a `service_role`; tabela de prazo com organização obrigatória, duas FKs válidas, trigger e RLS ativo. CI **574/574 testes**, zero falhas; versão reconciliada.
 - RPCs `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month` e `save_billing_portal_rule`: todas usam vínculo ativo do ator em `require_rn_agenda_actor_organization`, gerência obrigatória e consultas/alterações de organização.
 - `billing_portal_deadline_rules` recebe `organization_id` obrigatório, FK de organização, FK composta profissional+organização, índices e trigger do tenant único. Sem exclusões ou UPDATE histórico. Regras atuais: 0; fechamentos e eventos atuais: 0.
 - APIs `billing/closing`, `reports/monthly-closing/print` e `billing/portal` validam organização no servidor e filtram as listas de fechamentos/regras.
 - Testes PGlite em `tests/monthly-close-portal-rules-organization.test.mjs`: fechamento, histórico, desbloqueio, regras de prazo, papéis, membership revogado, entidade/profissional de fora e segundo tenant.
-- **Não habilitar multiempresa:** faltam `loadBillingData` e demais consultas globais com `service_role`, logs, relatórios de outros módulos, Storage, vínculo de usuários e testes de isolamento cross-tenant. CI/merge/deploy ainda pendentes.
+- **Banco atualizado, PR #80 em revisão:** faltam o CI do commit reconciliado, merge e Vercel produção READY. Não habilitar multiempresa: `loadBillingData`, logs, outros relatórios, Storage, vínculo de usuários e testes cross-tenant permanecem pendentes.
 
 ## 7. Log de continuidade
 
