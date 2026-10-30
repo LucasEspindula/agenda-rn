@@ -15,7 +15,7 @@ export async function GET(request:Request){
  if(session.account.role==='doctor'&&!(params.get('view')==='invoices'?canOpenInvoices(session):canOpenBilling(session)))return Response.json({error:'Use a consulta financeira no paciente.'},{status:403});
  if(session.account.role==='secretary'&&!appointmentId&&!summary)return Response.json({error:'Área restrita à gerência.'},{status:403});
  try{
-  const {data,state}=await loadBillingData();
+  const {data,state}=await loadBillingData(session.account.id);
   if(session.account.role==='doctor')return Response.json(doctorBillingProjection(data,session,params.get('view')==='invoices'),{headers:{'Cache-Control':'private, no-store'}});
   if(session.account.role==='secretary'||appointmentId){
    const allowed=new Set((state.appointments||[]).filter((a:Row)=>canReadAppointment(session,a)&&(!appointmentId||a.id===appointmentId)).map((a:Row)=>a.id));
