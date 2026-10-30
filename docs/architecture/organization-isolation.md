@@ -136,4 +136,4 @@ Na primeira fatia de 2B/3c, `save_billing_denial` e `save_billing_portal_submiss
 
 As rotas `billing/denials` e `billing/portal` derivam a organização no servidor e filtram leituras das tabelas auxiliares. A recuperação da agenda/sessão continua com bloqueio singleton RN Gestão. As regras de prazo do portal ainda são globais e permanecem um bloqueador; funções de fechamento, `loadBillingData`, logs, relatórios e Storage precisam de escopo explícito antes de multiempresa. Esta fatia não libera segundo tenant.
 
-Proposta: `20261030150000_denial_portal_org_rpc_scope.sql`; testes `tests/denials-portal-organization-rpcs.test.mjs`. Não declarar publicação até CI, migração, reconciliação de versão, merge e deploy confirmado.
+Proposta: `20261030115731_denial_portal_org_rpc_scope.sql`; testes `tests/denials-portal-organization-rpcs.test.mjs`. Migração aplicada e verificada no Supabase (`20261030115731`), ambas as funções com membership, escopo e privilégios validados; CI inicial **566/566 testes**. A publicação da PR depende de CI final, merge e Vercel READY.
