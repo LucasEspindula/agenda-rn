@@ -1,5 +1,6 @@
 import {getSession} from '@/app/authz';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
+import {financialActorOrganizationId} from '@/lib/financial-organization';
 
 export const dynamic='force-dynamic';
 const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
@@ -12,13 +13,15 @@ export async function GET(request:Request){
  const session=await getSession();
  if(!session||session.account.role!=='general_manager')
   return Response.json({error:'Acesso restrito à Gerência Geral.'},{status:403,headers:noCache});
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)return Response.json({error:'Acesso à organização negado.'},{status:403,headers:noCache});
  const entityId=new URL(request.url).searchParams.get('entity')||'';
  if(!uuid.test(entityId))
   return Response.json({error:'Entidade recebedora inválida.'},{status:400,headers:noCache});
  const db=getSupabaseAdmin();
  const {data:entity,error:entityError}=await db.from('billing_entities')
   .select('id,name,trade_name,person_type,tax_id')
-  .eq('id',entityId).maybeSingle();
+  .eq('id',entityId).eq('organization_id',organizationId).maybeSingle();
  if(entityError)return Response.json({error:'Não foi possível consultar a entidade.'},{status:503,headers:noCache});
  if(!entity)return Response.json({error:'Entidade não encontrada.'},{status:404,headers:noCache});
 
