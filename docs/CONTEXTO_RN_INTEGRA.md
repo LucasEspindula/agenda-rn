@@ -188,13 +188,14 @@ Critérios mínimos para avanço:
 - **Ainda não libera multiempresa:** faltam demais endpoints service_role (`billing/approvers`, `billing/doctor-entities`, `billing/entity-analytics`, relatórios, exportações), Storage e testes controlados com duas organizações. Ver issue #72.
 - **Banco migrado, PR #81 mergeada:** commit `e232ae9ce183a60ede6580328bd5e4e76555d74c`, 580 testes registrados. Em 30/10 a consulta à Vercel retornou como deployment READY mais recente o commit `0e11e8a...` (anterior à PR #81). A publicação exata do commit #81 ainda precisa ser comprovada; não tratar como READY sem evidência. Não habilitar novos tenants.
 
-### Etapa 2B/3d2 — isolamento inicial de APIs financeiras privilegiadas (branch/PR, NÃO publicada)
+### Etapa 2B/3d2 — isolamento inicial de APIs financeiras privilegiadas (PR #82 mergeada, publicação bloqueada)
 
-- Branch `feat/rn-finance-api-tenant-scope-2b3d2`, iniciada após a PR #81.
+- Branch `feat/rn-finance-api-tenant-scope-2b3d2`; PR [#82](https://github.com/LucasEspindula/agenda-rn/pull/82) mergeada em 30/10/2026, commit `35a3a32ebb338705eff8f99b0e1c18380e4f531f`.
 - `billing/approvers`: verifica organização ativa via `financialActorOrganizationId` e lista gerentes apenas por `organization_memberships` da organização autenticada.
 - `billing/doctor-entities`: valida organização ativa e restringe entidades e vínculos por `organization_id`.
 - `billing/entity-analytics`: valida organização ativa e a propriedade da entidade solicitada antes de executar a RPC de indicadores. Definição da RPC foi inspecionada em modo leitura no Supabase; a consulta agrega valores por `billing_entity_id`.
-- Contratos estáticos de proteção adicionados em `tests/financial-privileged-api-tenant-scope.test.mjs`. A execução de testes, CI e deploy desta etapa **ainda requerem confirmação**.
+- Contratos estáticos de proteção adicionados em `tests/financial-privileged-api-tenant-scope.test.mjs`. CI final `41073775407` **aprovada**: lint, testes, tipos/dependências e build. O teste legado de doctor-entities foi atualizado para simular a validação da organização; 1ª CI falhou 1/586, correção aprovada na 2ª CI. Preview Vercel do head `8f6f112f...` **READY** (`dpl_55EVPvmMz2m1WTwyR4JUeMgjSkU5`).
+- **Publicação em produção bloqueada:** em 30/10 a tentativa de criar deployment Git da `main` no commit merge `35a3a32...` retornou HTTP 402, limite `api-deployments-free-per-day` (100+; retry indicado em 24h). Não afirmar que PR #82 está publicada; Vercel não confirmou deployment da PR #81. Requer liberação de cota/faturamento ou nova janela antes de confirmar READY. Nenhuma alteração feita no banco.
 - **Não concluído:** auditoria de relatórios/exportações, Storage, demais rotas `service_role`, ensaios controlados com dois tenants, homologação e publicação; manter onboarding multiempresa bloqueado.
 
 ## 7. Log de continuidade
@@ -219,6 +220,8 @@ Critérios mínimos para avanço:
 | 30/10/2026 | Etapa 2B/3c1 — autorizações de glosas e envio ao portal escopadas no backend | PR #79 / `6ffbcc46...` / migration `20261030115731` / 566 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): fechamento mensal, regras do portal, logs e APIs privilegiadas |
 
 | 30/10/2026 | Etapa 2B/3c2 — fechamentos mensais e regras de prazo por organização | PR #80 / `6cdf28ee...` / migração `20261030123323` / 574 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): consultas globais, logs, Storage e isolamento cross-tenant |
+
+| 30/10/2026 | Etapa 2B/3d2 — 3 APIs financeiras privilegiadas isoladas por organização; CI aprovada; Vercel prod bloqueada por cota HTTP 402 | PR #82 / `35a3a32...` / CI `41073775407` | Resolver publicação da main na Vercel; validar deploy e ampliar relatórios/exportações/Storage e testes cross-tenant |
 
 ## 8. Protocolo para o assistente em futuros chats
 
