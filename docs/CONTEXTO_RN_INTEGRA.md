@@ -183,10 +183,10 @@ Critérios mínimos para avanço:
 - Branch `feat/rn-billing-logs-tenant-scope-2b3d1`.
 - `lib/billing-data.ts`: `loadBillingData(actorId)` exige organização ativa do ator no banco ANTES de consultar qualquer tabela; todas as tabelas financeiras agora recebem filtro `organization_id`, inclusive `app_state`. `users` é consultada via vínculo `organization_memberships` da organização atual, sem varredura global. As 6 APIs consumidoras passam o ator autenticado explicitamente.
 - `app/api/billing/logs/route.ts` valida organização do gerente e filtra `financial_logs.organization_id` antes de retornar auditoria; embed histórico usa FK explícita para evitar ambiguidade com a FK composta.
-- Migração **proposta, não aplicada** `20261030160000_financial_logs_tenant_scope.sql`: `financial_logs` e `financial_log_changes` recebem organização obrigatória, duas FKs para organização, FK composta log/organização, índices e triggers do guard RN Gestão-only. Não usa UPDATE e preserva triggers de imutabilidade; origem tinha 43 logs e 93 mudanças de teste.
+- Migração **aplicada e validada no Supabase** `20261030130708_financial_logs_tenant_scope.sql`: `financial_logs` e `financial_log_changes` recebem organização obrigatória, duas FKs para organização, FK composta log/organização, índices e triggers do guard RN Gestão-only. Não usa UPDATE e preserva triggers de imutabilidade; original de 43 logs e 93 mudanças de teste preservado integralmente. Catálogo confirmou 2 colunas NOT NULL, 3 FKs validadas, 2 guards, 2 triggers imutáveis, RLS e nenhum grant público. CI inicial **580/580 testes** aprovado.
 - Testes PGlite `tests/financial-logs-tenant-organization.test.mjs` cobrem histórico, append-only, segundo tenant, FK composta, grants e contratos de APIs.
 - **Ainda não libera multiempresa:** faltam demais endpoints service_role (`billing/approvers`, `billing/doctor-entities`, `billing/entity-analytics`, relatórios, exportações), Storage e testes controlados com duas organizações. Ver issue #72.
-- Pendente CI completo, migração Supabase, reconciliação de versão, PR/merge, Vercel produção e checkpoint final.
+- **Banco migrado, PR #81 em revisão:** faltam CI final após reconciliação, merge e Vercel produção READY. Não habilitar novos tenants.
 
 ## 7. Log de continuidade
 
