@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
-const migration=readFileSync(new URL('../supabase/migrations/20261030150000_monthly_close_portal_rules_org_scope.sql',import.meta.url),'utf8');
+const migration=readFileSync(new URL('../supabase/migrations/20261030123323_monthly_close_portal_rules_org_scope.sql',import.meta.url),'utf8');
 const finance=readFileSync(new URL('../supabase/migrations/20261029194356_financial_tenant_keys_foundation.sql',import.meta.url),'utf8');
 const access=readFileSync(new URL('../supabase/migrations/20261029192723_legacy_agenda_directory_org_scope.sql',import.meta.url),'utf8');
 const ORG='11111111-1111-4111-8111-111111111111';
