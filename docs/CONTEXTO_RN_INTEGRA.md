@@ -168,14 +168,14 @@ Critérios mínimos para avanço:
 - **Publicação confirmada:** as duas RPCs têm membership ativo e escopo por organização no PostgreSQL, `SECURITY INVOKER` e EXECUTE público negado; as duas APIs reforçam o escopo. Nenhum registro de teste foi excluído. **Próxima fatia 2B/3c2:** três RPCs de fechamento mensal, regras de prazo do portal, logs e APIs com `service_role`. Multiempresa segue bloqueado; consultar [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 
-### 2B/3c2 — fechamento mensal e regras de prazo do portal por organização (em revisão)
+### 2B/3c2 — fechamento mensal e regras de prazo do portal por organização (concluída e publicada em 30/10/2026)
 
-- Branch `feat/rn-month-close-portal-rules-org-2b3c2`; migration **aplicada e verificada**: `20261030123323_monthly_close_portal_rules_org_scope.sql`. Supabase verificou quatro RPCs com membership, escopo e EXECUTE reservado a `service_role`; tabela de prazo com organização obrigatória, duas FKs válidas, trigger e RLS ativo. CI **574/574 testes**, zero falhas; versão reconciliada.
+- [PR #80](https://github.com/LucasEspindula/agenda-rn/pull/80) **mergeada**, commit `6cdf28ee5e12a580bd56a3293da3facd1a875ec7`. Migração `20261030123323 monthly_close_portal_rules_org_scope` aplicada e verificada no Supabase. Quatro RPCs com membership e escopo do tenant, EXECUTE apenas por `service_role`; regra de prazo com organização obrigatória, 2 FKs, trigger e RLS. CI final **574/574 testes**, zero falhas, lint/tipos/build aprovados. Vercel produção **READY** (`dpl_CwBCQ2NnXcx3d2mdhnpxwS6KoXb6`).
 - RPCs `get_billing_month_closing`, `close_billing_month`, `unlock_billing_month` e `save_billing_portal_rule`: todas usam vínculo ativo do ator em `require_rn_agenda_actor_organization`, gerência obrigatória e consultas/alterações de organização.
 - `billing_portal_deadline_rules` recebe `organization_id` obrigatório, FK de organização, FK composta profissional+organização, índices e trigger do tenant único. Sem exclusões ou UPDATE histórico. Regras atuais: 0; fechamentos e eventos atuais: 0.
 - APIs `billing/closing`, `reports/monthly-closing/print` e `billing/portal` validam organização no servidor e filtram as listas de fechamentos/regras.
 - Testes PGlite em `tests/monthly-close-portal-rules-organization.test.mjs`: fechamento, histórico, desbloqueio, regras de prazo, papéis, membership revogado, entidade/profissional de fora e segundo tenant.
-- **Banco atualizado, PR #80 em revisão:** faltam o CI do commit reconciliado, merge e Vercel produção READY. Não habilitar multiempresa: `loadBillingData`, logs, outros relatórios, Storage, vínculo de usuários e testes cross-tenant permanecem pendentes.
+- **Publicada e verificada:** não houve exclusão de dados nem alteração do cálculo financeiro. **Próxima etapa 2B/3d:** `loadBillingData`, logs e relatórios com `service_role`, auditoria e Storage. Onboarding multiempresa continua bloqueado até validação cross-tenant; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 ## 7. Log de continuidade
 
@@ -197,6 +197,8 @@ Critérios mínimos para avanço:
 | 30/10/2026 | Etapa 2B/3b — glosas, despesas e fechamentos com organização e 13 FKs | PR #78 / `2b4e497b...` / migration `20261030112459` / 559 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): cinco RPCs e APIs privilegiadas, logs, Storage e testes multiempresa |
 
 | 30/10/2026 | Etapa 2B/3c1 — autorizações de glosas e envio ao portal escopadas no backend | PR #79 / `6ffbcc46...` / migration `20261030115731` / 566 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): fechamento mensal, regras do portal, logs e APIs privilegiadas |
+
+| 30/10/2026 | Etapa 2B/3c2 — fechamentos mensais e regras de prazo por organização | PR #80 / `6cdf28ee...` / migração `20261030123323` / 574 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): consultas globais, logs, Storage e isolamento cross-tenant |
 
 ## 8. Protocolo para o assistente em futuros chats
 
