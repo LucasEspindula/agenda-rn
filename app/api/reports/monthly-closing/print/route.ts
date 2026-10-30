@@ -1,6 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {getSession} from "@/app/authz";
 import {getSupabaseAdmin} from "@/lib/supabase-admin";
+import {financialActorOrganizationId} from "@/lib/financial-organization";
 import {monthlyInvoiceStatus} from "@/lib/monthly-invoice-status";
 import {monthlyReceiptComparison} from "@/lib/monthly-receipt-comparison";
 
@@ -138,6 +139,8 @@ export async function GET(request:Request){
  const session=await getSession();
  if(!session||session.account.role!=="general_manager")
   return Response.json({error:"Acesso restrito ao Gerente Geral."},{status:403});
+ const organizationId=await financialActorOrganizationId(session.account.id);
+ if(!organizationId)return Response.json({error:"Acesso à organização negado."},{status:403});
  const q=new URL(request.url).searchParams;
  const entity=q.get("entity_id")||"",month=q.get("month")||"",view=q.get("view")||"current";
  if(!UUID.test(entity)||!MONTH.test(month)||!["current","closed"].includes(view))
