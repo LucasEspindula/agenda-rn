@@ -5,6 +5,9 @@ import { consumeLimit } from "@/lib/security/rate-limit";
 import { readJson, secureMutation } from "@/lib/security/http";
 import { getSession, isManager } from "@/app/authz";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
+import { HttpError } from "@/lib/security/http";
+import { canonical } from "@/lib/agenda/diff";
+import { commitAgendaState, loadAgendaState } from "@/lib/agenda/store";
 
 type Appointment = Record<string, unknown> & { id: string; doctorId?: string; anesthetistId?: string | null; patientId?: string; date?: string; time?: string; duration?: number; status?: string };
 type AgendaState = Record<string, unknown> & { appointments?: Appointment[]; cancelledAppointments?: Appointment[]; patients?: Array<Record<string, unknown>>; professionals?: Array<Record<string, unknown>> };
@@ -85,9 +88,7 @@ async function handlePOST(request: Request) {
   const body = await readJson(request) as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
   if (!body.action || !["create", "update", "delete"].includes(body.action)) return Response.json({ error: "Solicitação inválida" }, { status: 400 });
   const db = getSupabaseAdmin();
-  const stateResult = await db.from("app_state").select("payload,updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
-  if (!stateRow) return Response.json({ error: "Agenda indisponível" }, { status: 409 });
-  const state = stateRow.payload as AgendaState;
+  const state = (await loadAgendaState(session.account.id)).state as AgendaState;
   const previous = state.appointments?.find((item) => item.id === (body.appointmentId || body.appointment?.id)) || null;
   const proposed = body.appointment || null;
   if (body.action !== "create" && previous && !canReadAppointment(session, previous)) return Response.json({ error: "Agendamento sem permissão" }, { status: 403 });
@@ -133,16 +134,16 @@ async function handlePATCH(request: Request) {
   const requestResult = await db.from("agenda_requests").select("*").eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
   if (!row) return Response.json({ error: "Esta solicitação já foi decidida ou não existe" }, { status: 409 });
   if (!allowed(session, row.professional_id)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
-  const stateResult = await db.from("app_state").select("payload,updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle(); dbError(stateResult.error, "Read state"); const stateRow = stateResult.data;
-  if (!stateRow) return Response.json({ error: "Agenda indisponível" }, { status: 409 });
-  const state = stateRow.payload as AgendaState;
+  const snapshot = await loadAgendaState(session.account.id);
+  const before = snapshot.state as AgendaState;
+  const state = structuredClone(before) as AgendaState;
   const proposed = row.proposed_payload as Appointment | null;
   const previous = row.previous_payload as Appointment | null;
-  const now = new Date(Math.max(Date.now(),Date.parse(stateRow.updated_at)+1)).toISOString();
+  const now = new Date().toISOString();
   if (body.decision === "accepted") {
     const current = state.appointments || [];
     const original = current.find(a=>a.id===row.appointment_id);
-    if (original && (!canReadAppointment(session,original) || JSON.stringify(original)!==JSON.stringify(previous))) return Response.json({error:"Agendamento mudou ou acesso foi revogado; envie uma nova sugestão"},{status:409});
+    if (original && (!canReadAppointment(session,original) || !previous || canonical("appointments",original)!==canonical("appointments",previous))) return Response.json({error:"Agendamento mudou ou acesso foi revogado; envie uma nova sugestão"},{status:409});
     if (!proposed) return Response.json({error:"Solicitação inválida"},{status:400});
     validateAppointment(proposed);
     if (row.action !== "delete" && proposed.status === "realized" && previous?.status !== "realized") return Response.json({ error: "A mudança para/de Atendido exige confirmação por senha diretamente no agendamento." }, { status: 403 });
@@ -159,23 +160,23 @@ async function handlePATCH(request: Request) {
     else state.appointments = [...current, proposed!];
   }
   if(body.decision==="accepted"){
-    const unavailable=changedAppointmentIssues(stateRow.payload as AvailabilityState,state as AvailabilityState);
+    const unavailable=changedAppointmentIssues(before as AvailabilityState,state as AvailabilityState);
     if(unavailable.length)return Response.json({error:"Horário indisponível: "+unavailable[0].problem},{status:409});
   }
   const actor = session.account.name || session.account.email;
   const patient = personName(state, "patients", (proposed || previous)?.patientId) || "paciente";
   const accepted = body.decision === "accepted";
   const description = `${actor} ${accepted ? "aceitou" : "negou"} a sugestão de ${row.action === "delete" ? "desagendamento" : "alteração"} de ${patient}.`;
-  const result = await db.rpc("commit_agenda_change", {
-    p_expected: stateRow.updated_at, p_payload: accepted ? state : null, p_revision: now,
-    p_request_id: row.id, p_decision: body.decision, p_actor: session.account.id, p_note: body.note?.trim() || null,
-    p_notification: { id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` },
-    p_audit: [{ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: (proposed || previous)?.patientId || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null } }],
-  });
-  if(result.error?.code==='P0001'&&result.error.message?.includes('Horário indisponível'))return Response.json({error:result.error.message},{status:409});
-  if(result.error?.code==='P0001'&&result.error.message?.includes('Nota Fiscal emitida'))return Response.json({error:result.error.message},{status:409});
-  dbError(result.error,"Commit workflow decision");
-  if (!result.data) return Response.json({error:"Agenda ou solicitação mudou. Atualize e tente novamente."},{status:409});
+  let result: { ok: boolean };
+  try { result = await commitAgendaState(session.account.id, snapshot.revision, before, accepted ? state : before, {
+    requestId: row.id, decision: body.decision as "accepted" | "denied", note: body.note?.trim() || null,
+    notification: { id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` },
+    audit: [{ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: (proposed || previous)?.patientId || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null } }],
+  }); } catch (error) {
+    if (error instanceof HttpError) return Response.json({ error: error.message }, { status: error.status });
+    throw error;
+  }
+  if (!result.ok) return Response.json({error:"Agenda ou solicitação mudou. Atualize e tente novamente."},{status:409});
   return Response.json({ ok: true, message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` });
 }
 

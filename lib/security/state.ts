@@ -43,7 +43,12 @@ export function validateState(s: State) {
       if(key==='patients')for(const field of ['address','addressZip','addressNumber','addressComplement','addressNeighborhood','addressCity','addressState']){
        if(row[field]!=null&&(typeof row[field]!=='string'||row[field].length>1000))throw new HttpError(400,'Endereço inválido.');
       }
-      for (const field of ['name','email','phone','insurance','cardNumber','crm','specialty','category','notes','procedure','invoiceNumber','reason','text','type','at','severity','start','end','date','time','cancelReason','suggestionReason','rescheduleReason','abbreviation']) if (row[field] !== undefined && row[field] !== null && typeof row[field] !== 'string') throw new HttpError(400, 'Texto inválido.');
+      for (const field of ['guardianName','name','email','phone','insurance','cardNumber','crm','specialty','category','notes','procedure','invoiceNumber','reason','text','type','at','severity','start','end','date','time','cancelReason','suggestionReason','rescheduleReason','abbreviation']) if (row[field] !== undefined && row[field] !== null && typeof row[field] !== 'string') throw new HttpError(400, 'Texto inválido.');
+      if(key==='patients'){
+       if(row.newborn!=null&&typeof row.newborn!=='boolean')throw new HttpError(400,'Campo RN inválido.');
+       if(row.guardianName!=null&&(typeof row.guardianName!=='string'||row.guardianName.length>300))throw new HttpError(400,'Responsável inválido.');
+       if(row.newborn===true&&!String(row.guardianName||'').trim())throw new HttpError(400,'Informe o responsável pelo recém-nascido.');
+      }
       if(key==='hospitals'&&row.abbreviation!=null&&String(row.abbreviation).length>16)throw new HttpError(400,'Abreviação inválida.');
       for (const field of ['doctorId','anesthetistId','patientId','professionalId','hospitalId','appointmentId']) if (row[field] && !validId(row[field])) throw new HttpError(400, 'Vínculo inválido.');
     }
@@ -77,9 +82,11 @@ export function visibleState(s: State, p: Principal): State {
     schedulingRules:(s.schedulingRules || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)),
     scheduleBlocks:(s.scheduleBlocks || []).filter((a: Row) => p.agendaIds.includes(a.professionalId)) };
 }
-function mergeOwned(current: Row[], proposed: Row[], editable: (row: Row) => boolean, originals = current): Row[] {
+// Linhas ausentes do envio são preservadas: pacientes e consultas nunca são
+// removidos por omissão (arquivamento só por operação explícita).
+function mergeOwned(current: Row[], proposed: Row[], editable: (row: Row) => boolean, originals = current, present = new Set(proposed.map(row => row.id))): Row[] {
   const original = new Map(originals.map(row => [row.id,row]));
-  const retained = current.filter(row => !editable(row));
+  const retained = current.filter(row => !editable(row) || !present.has(row.id));
   const accepted = [];
   for (const row of proposed) {
     const old = original.get(row.id);
@@ -96,7 +103,17 @@ function mergeOwned(current: Row[], proposed: Row[], editable: (row: Row) => boo
 }
 export function mergeState(current: State | null, proposed: State, p: Principal): State {
   validateState(proposed);
-  if (p.account.role === 'general_manager') return current ? {...proposed,professionals:current.professionals} : proposed;
+  if (p.account.role === 'general_manager') {
+    if (!current) return proposed;
+    const patientIds = new Set(proposed.patients.map((a: Row) => a.id));
+    const appointmentIds = new Set([...proposed.appointments,...proposed.cancelledAppointments].map((a: Row) => a.id));
+    const historyIds = new Set((current.patientHistory || []).map((h: Row) => h.id));
+    return {...proposed,professionals:current.professionals,
+      patients:[...proposed.patients,...(current.patients || []).filter((a: Row) => !patientIds.has(a.id))],
+      appointments:[...proposed.appointments,...(current.appointments || []).filter((a: Row) => !appointmentIds.has(a.id))],
+      cancelledAppointments:[...proposed.cancelledAppointments,...(current.cancelledAppointments || []).filter((a: Row) => !appointmentIds.has(a.id))],
+      patientHistory:[...(current.patientHistory || []),...proposed.patientHistory.filter((h: Row) => !historyIds.has(h.id))]};
+  }
   if (!current) throw new HttpError(403, 'Somente a gerência inicializa a agenda.');
   if (p.account.role === 'doctor') {
     const scheduleBlocks = mergeOwned(current.scheduleBlocks || [], proposed.scheduleBlocks, b => p.agendaIds.includes(b.professionalId));
@@ -105,8 +122,9 @@ export function mergeState(current: State | null, proposed: State, p: Principal)
   }
   if (p.account.role !== 'secretary') throw new HttpError(403, 'Papel inválido.');
   const all = [...(current.appointments || []),...(current.cancelledAppointments || [])];
-  const appointments = mergeOwned(current.appointments || [],proposed.appointments,a=>canReadAppointment(p,a),all);
-  const cancelledAppointments = mergeOwned(current.cancelledAppointments || [],proposed.cancelledAppointments,a=>canReadAppointment(p,a),all);
+  const sent = new Set([...proposed.appointments,...proposed.cancelledAppointments].map((a: Row) => a.id));
+  const appointments = mergeOwned(current.appointments || [],proposed.appointments,a=>canReadAppointment(p,a),all,sent);
+  const cancelledAppointments = mergeOwned(current.cancelledAppointments || [],proposed.cancelledAppointments,a=>canReadAppointment(p,a),all,sent);
   const patients = mergeOwned(current.patients || [],proposed.patients,a=>ownedPatient(p,a));
   const ownedIds = new Set(patients.filter(a=>ownedPatient(p,a)).map(a=>a.id));
   const originalAppointments = new Map(all.map((a: Row)=>[a.id,a]));

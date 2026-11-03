@@ -25,7 +25,8 @@ test('cadastro de paciente tem endereço opcional e mantém edição de informa�
   assert.match(form,new RegExp('id="'+field+'"'));
   assert.match(agenda,new RegExp('\\$\\("'+field+'"\\)'));
  }
- assert.match(form,/id="patientDoctor" required/);
+ // O seletor obrigatório de médico é inserido pelo legacy-app.js; o markup não o repete.
+ assert.equal(((form+agenda).match(/<select id="patientDoctor" required>/g)||[]).length,1);
  assert.match(form,/id="detailAddress"/);
  assert.match(agenda,/patientFullAddress\(p\)/);
  assert.doesNotMatch(form,/id="patientAddress"[^>]*required/);

@@ -1,3 +1,4 @@
+import { loadAgendaState } from '@/lib/agenda/store';
 import {canUseAgenda} from "@/lib/doctor-services";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { HttpError } from "@/lib/security/http";
@@ -20,9 +21,8 @@ async function context() {
  const session = await getSession();
  if (!session || !canUseAgenda(session)) throw new Error('unauthorized');
  const db = getSupabaseAdmin();
- const { data, error } = await db.from('app_state').select('payload,organizations!inner(slug,active)').eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
- if (error || !data) throw new Error('state');
- const surgeries: Surgery[] = [...(data.payload.appointments || []), ...(data.payload.cancelledAppointments || [])];
+ const { state } = await loadAgendaState(session.account.id);
+ const surgeries: Surgery[] = [...(state.appointments || []), ...(state.cancelledAppointments || [])];
  return { session, db, surgeries };
 }
 function failure(error: unknown) {

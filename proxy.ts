@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
+import { BILLING_PAUSED, BILLING_PAUSED_MESSAGE, billingPausedResponse, isBillingPath } from './lib/billing-paused';
 
 export function proxy(request: NextRequest) {
+  if (BILLING_PAUSED && isBillingPath(request.nextUrl.pathname)) {
+    if (request.nextUrl.pathname.startsWith('/api/')) return billingPausedResponse();
+    return new NextResponse(`<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RN Integra</title><body style="font-family:system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#f6f7f9;color:#1f2937"><main style="max-width:28rem;padding:1.5rem;text-align:center"><h1 style="font-size:1.25rem">${BILLING_PAUSED_MESSAGE}</h1><p>O módulo de faturamento está temporariamente indisponível enquanto é reconstruído. A agenda segue funcionando.</p><p><a href="/dashboard?agenda=1">Voltar para a agenda</a></p></main></body></html>`, { status: 503, headers: { 'content-type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store' } });
+  }
   const nonce = randomBytes(16).toString('base64');
   const dev = process.env.NODE_ENV !== 'production';
   const storage = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin : '';

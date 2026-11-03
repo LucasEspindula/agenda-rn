@@ -13,6 +13,7 @@ function fixture(session,doc=null){
  const exports=loadTs('app/api/documents/route.ts',{
   '@/app/authz':{getSession:async()=>session},
   '@/lib/supabase-admin':{getSupabaseAdmin:()=>db},
+  '@/lib/agenda/store':{loadAgendaState:async()=>({state:{appointments:rows,cancelledAppointments:[]},revision:'2026-10-28T00:00:00.000Z'})},
   '@/lib/security/rate-limit':{consumeLimit:async()=>{}},
   '@/lib/compress-pdf':{compressPdf:async x=>({bytes:x,reason:'unchanged'})}
  });

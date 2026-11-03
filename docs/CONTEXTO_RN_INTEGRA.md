@@ -198,6 +198,26 @@ Critérios mínimos para avanço:
 - **Publicação em produção bloqueada:** em 30/10 a tentativa de criar deployment Git da `main` no commit merge `35a3a32...` retornou HTTP 402, limite `api-deployments-free-per-day` (100+; retry indicado em 24h). Não afirmar que PR #82 está publicada; Vercel não confirmou deployment da PR #81. Requer liberação de cota/faturamento ou nova janela antes de confirmar READY. Nenhuma alteração feita no banco.
 - **Não concluído:** auditoria de relatórios/exportações, Storage, demais rotas `service_role`, ensaios controlados com dois tenants, homologação e publicação; manter onboarding multiempresa bloqueado.
 
+## 6A. Mudança de rumo — "Agenda primeiro" e etapa A1 (03/11/2026)
+
+**Deploy confirmado antes da A1:** produção Vercel `dpl_C5JdvJhovGgrcMgY3fV3QEMkJHAR` **READY** no commit `bf524cff40284eadf5b6566274f2e6cace28f0fa` (main). Como `bf524cff` é posterior aos merges das PRs #81 e #82, **o código das duas está publicado**; o bloqueio HTTP 402 registrado em 30/10 foi superado.
+
+**Decisões vigentes:**
+- Lançamento **interno**, só RN Gestão. **Agenda primeiro**; o faturamento será refeito depois em branch e banco Supabase de desenvolvimento próprios.
+- **Fase 2B (multiempresa) pausada**; guards de organização única mantidos. Tabelas novas nascem com `organization_id`.
+- **Separação agenda × faturamento:** a agenda é dona de pacientes, consultas, bloqueios, regras e hospitais. A única porta para o faturamento é `attendances` (`sync_appointment_attendance`, por linha). O faturamento não grava em tabelas da agenda. Única leitura cruzada: guarda de NF emitida antes de cancelar/arquivar consulta.
+- **Faturamento desligado** até a reconstrução: menus ocultos (`lib/billing-paused.ts`), rotas e páginas financeiras respondem 503 "Faturamento em reconstrução." (`proxy.ts`) e as RPCs financeiras acopladas ao antigo `app_state` viraram stubs com o mesmo erro.
+- Todos os dados atuais são de teste.
+
+**Etapa A1 — agenda normalizada (corte direto).** Plano detalhado em `docs/A1-plano.md`.
+- Migration **aplicada** em 03/11/2026: Supabase `20261103151428 agenda_normalized_a1` (arquivo `supabase/migrations/20261103151428_agenda_normalized_a1.sql`; md5 do texto registrado = md5 do arquivo commitado). Antes, ensaio `BEGIN…ROLLBACK` no banco real aprovado; o primeiro ensaio revelou e permitiu corrigir os defaults de `commit_agenda_change`.
+- Tabelas: `agenda_settings`, `hospitals`, `patients`, `appointments` (ativas e canceladas juntas), `appointment_reschedules`, `patient_history_events` (imutável), `schedule_blocks`, `scheduling_rules`, `agenda_row_versions`. Soft delete (`archived_at`), fim do "apagar por omissão", paciente com dono permanente, RN (`newborn`/`guardian_name`) e CPF único por médico quando não RN.
+- Dados de teste migrados sem perda: 3 pacientes, 9 consultas (2 canceladas), 35 eventos, 4 bloqueios, 1 regra, 2 hospitais; 2 sugestões pendentes negadas ("migração A1").
+- `app_state` **congelado** (trigger rejeita escrita; `commit_agenda_change` desativada). Remoção prevista na A2.
+- Concorrência por registro: merge de três vias com `agenda_row_versions` + `row_version`; 409 só quando o mesmo registro foi alterado por outra pessoa.
+- Previews da Vercel usam o **mesmo Supabase de produção** (`NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SECRET_KEY` compartilhados).
+- Validação local: build, 604/604 testes, lint (0 erros) e tsc. **Pendentes de evidência:** PR, CI, deploy de produção READY da A1 e verificação no navegador. Até o deploy, a produção antiga mostra a agenda congelada (somente leitura).
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
@@ -222,6 +242,8 @@ Critérios mínimos para avanço:
 | 30/10/2026 | Etapa 2B/3c2 — fechamentos mensais e regras de prazo por organização | PR #80 / `6cdf28ee...` / migração `20261030123323` / 574 testes / Vercel READY | [Issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72): consultas globais, logs, Storage e isolamento cross-tenant |
 
 | 30/10/2026 | Etapa 2B/3d2 — 3 APIs financeiras privilegiadas isoladas por organização; CI aprovada; Vercel prod bloqueada por cota HTTP 402 | PR #82 / `35a3a32...` / CI `41073775407` | Resolver publicação da main na Vercel; validar deploy e ampliar relatórios/exportações/Storage e testes cross-tenant |
+
+| 03/11/2026 | Agenda primeiro: deploy `bf524cff` confirmado; Fase 2B pausada; faturamento desligado; A1 agenda normalizada | migration `20261103151428` aplicada / branch `feat/agenda-normalized-a1` | PR, CI, deploy READY, contas de teste e verificação no navegador |
 
 ## 8. Protocolo para o assistente em futuros chats
 

@@ -6,6 +6,8 @@ import { touchesAttendedStatus } from "@/lib/security/attendance-status";
 import { readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
+import { HttpError } from "@/lib/security/http";
+import { commitAgendaState, loadAgendaState } from "@/lib/agenda/store";
 
 const statuses = ["scheduled", "confirmed", "authorized", "analysis", "realized"] as const;
 type Status = (typeof statuses)[number];
@@ -31,11 +33,8 @@ async function confirmAttendanceStatus(request: Request) {
   // O limite aplica-se também a senhas erradas; a senha nunca é persistida ou auditada.
   await consumeLimit("attendance-status-password", String(session.account.id), 20, 300);
   const db = getSupabaseAdmin();
-  const result = await db.from("app_state").select("payload,updated_at,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
-  dbError(result.error, "Read appointment state");
-  const row = result.data;
-  if (!row) return Response.json({ error: "Agenda indisponível." }, { status: 409 });
-  const state = row.payload as AgendaState;
+  const snapshot = await loadAgendaState(session.account.id);
+  const state = snapshot.state as AgendaState;
   const current = (state.appointments || []).find((appointment) => appointment.id === body.appointmentId);
   if (!current) return Response.json({ error: "Agendamento não encontrado ou cancelado." }, { status: 404 });
   if (!canReadAppointment(session, current)) return Response.json({ error: "Você não tem acesso a este agendamento." }, { status: 403 });
@@ -50,7 +49,7 @@ async function confirmAttendanceStatus(request: Request) {
     return Response.json({ error: "Senha incorreta. Confira a senha da sua própria conta." }, { status: 401 });
   }
 
-  const now = new Date(Math.max(Date.now(), Date.parse(row.updated_at) + 1)).toISOString();
+  const now = new Date().toISOString();
   const updated: Appointment = { ...current, status, statusUpdatedAt: now };
   const next: AgendaState = {
     ...state,
@@ -63,12 +62,9 @@ async function confirmAttendanceStatus(request: Request) {
       : state.patientHistory,
   };
   const actor = session.account.name || session.account.email;
-  const saved = await db.rpc("commit_agenda_change", {
-    p_actor: session.account.id,
-    p_expected: row.updated_at,
-    p_payload: next,
-    p_revision: now,
-    p_audit: [{
+  let saved: { ok: boolean; revision?: string };
+  try { saved = await commitAgendaState(session.account.id, snapshot.revision, state, next, {
+    audit: [{
       id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor,
       actor_role: session.account.role, action: "appointment_updated",
       professional_id: current.doctorId || current.anesthetistId || null,
@@ -76,11 +72,12 @@ async function confirmAttendanceStatus(request: Request) {
       description: `${actor} alterou o status do agendamento com confirmação por senha.`,
       metadata: { before: current, after: updated, passwordConfirmed: true },
     }],
-  });
-  if (saved.error?.code === "P0001") return Response.json({ error: saved.error.message }, { status: 409 });
-  dbError(saved.error, "Confirm attendance status");
-  if (!saved.data) return Response.json({ error: "A agenda mudou. Atualize e tente novamente." }, { status: 409 });
-  return Response.json({ ok: true, revision: now, status });
+  }); } catch (error) {
+    if (error instanceof HttpError) return Response.json({ error: error.message }, { status: error.status });
+    throw error;
+  }
+  if (!saved.ok) return Response.json({ error: "A agenda mudou. Atualize e tente novamente." }, { status: 409 });
+  return Response.json({ ok: true, revision: saved.revision, status });
 }
 
 export const POST = secureMutation(confirmAttendanceStatus);

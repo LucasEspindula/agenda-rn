@@ -2,7 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
 import {readFileSync} from 'node:fs';
-const {moduleLinks}=loadTs('lib/navigation.ts');
+// Comportamento do faturamento ativo (restaurado na branch do faturamento); A1 pausado em agenda-billing-paused.test.mjs.
+const {moduleLinks}=loadTs('lib/navigation.ts',{'./billing-paused':{BILLING_PAUSED:false},});
 const session=(role,scheduling=false,billing=false,invoice=false)=>({account:{role,doctorId:role==='doctor'?'d1':null},services:{scheduling_enabled:scheduling,billing_enabled:billing,invoice_enabled:invoice}});
 for(const [name,s,expected] of [
  ['manager',session('general_manager'),['/dashboard?agenda=1','/billing','/doctors']],
@@ -47,7 +48,7 @@ test('Cadastros keeps only Médicos and Hospitais and redirects the former compa
 
 
 test('former Hub URL redirects through the permitted home, including unauthenticated users',async()=>{
- const {doctorHome}=loadTs('lib/doctor-services.ts');
+ const {doctorHome}=loadTs('lib/doctor-services.ts',{'./billing-paused':{BILLING_PAUSED:false},});
  for(const [name,s,target] of [
   ['manager',session('general_manager'),'/dashboard?agenda=1'],
   ['secretary',session('secretary'),'/dashboard?agenda=1'],
@@ -56,7 +57,7 @@ test('former Hub URL redirects through the permitted home, including unauthentic
   ['doctor without services',session('doctor'),'/no-services'],
   ['not signed in',null,'/']
  ]){
-  const page=loadTs('app/hub/page.tsx',{
+  const page=loadTs('app/hub/page.tsx',{'./billing-paused':{BILLING_PAUSED:false},
    '@/app/authz':{getSession:async()=>s},
    '@/lib/doctor-services':{doctorHome},
    'next/navigation':{redirect:url=>{throw Error('redirect:'+url)}}

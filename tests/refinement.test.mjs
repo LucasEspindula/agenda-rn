@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {loadTs} from './load-ts.mjs';
 const {isInsurancePending,rowEntityId,companyLabel,matchesRow,expensePayer}=loadTs('lib/billing-row.ts');
 const {buildReport}=loadTs('lib/billing-reports.ts');
-const {canOpenInvoices,canOpenBilling,doctorHome}=loadTs('lib/doctor-services.ts');
+const {canOpenInvoices,canOpenBilling,doctorHome}=loadTs('lib/doctor-services.ts',{'./billing-paused':{BILLING_PAUSED:false},});
 const {MEDICAL_SPECIALTIES,canonicalSpecialty,isAnesthesiologist}=loadTs('lib/medical-specialties.ts');
 const row={attendance_id:'a',origin:'AGENDA',status_atendimento:'realized',forma_cobranca:'CONVENIO',insurance:'IPE',date:'2026-01-10',doctor_id:'d1',patient:'Maria',record:null,invoice:null};
 const data={rows:[row],doctors:[{id:'d1',name:'Médico'}],entities:[{id:'e',name:'Razão social',trade_name:'Fantasia'}],links:[{id:'l',doctor_id:'d1',billing_entity_id:'e',active:true}],invoices:[],items:[],payers:['IPE']};
@@ -21,7 +21,7 @@ for(const billing of [true,false])test('Agenda + NF explicit readonly authorizat
  assert.equal(doctorHome(session),'/dashboard?agenda=1');assert.equal(canOpenBilling(session),false);assert.equal(canOpenInvoices(session),true);
  const invoice={id:'nf',billing_entity_id:'e',invoice_number:'1058',net_amount:9000,total_amount:10000};
  const rows=[{...row,record:{id:'b1',billing_entity_id:'e'},invoice},{...row,attendance_id:'b',patient:'Outro médico',doctor_id:'d2',record:{id:'b2'},invoice},{...row,attendance_id:'unlinked'}];
- const api=loadTs('app/api/billing/route.ts',{'@/app/authz':{getSession:async()=>session},'@/lib/billing-data':{loadBillingData:async()=>({data:{...data,rows,invoices:[invoice],items:[{invoice_id:'nf',billing_record_id:'b1'},{invoice_id:'nf',billing_record_id:'b2'}]},state:{}})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>{throw new Error('unexpected write')}}});
+ const api=loadTs('app/api/billing/route.ts',{'./billing-paused':{BILLING_PAUSED:false},'@/app/authz':{getSession:async()=>session},'@/lib/billing-data':{loadBillingData:async()=>({data:{...data,rows,invoices:[invoice],items:[{invoice_id:'nf',billing_record_id:'b1'},{invoice_id:'nf',billing_record_id:'b2'}]},state:{}})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>{throw new Error('unexpected write')}}});
  assert.equal((await api.GET(new Request('https://example.test/api/billing?doctor_id=d2'))).status,403);
  const response=await api.GET(new Request('https://example.test/api/billing?view=invoices&doctor_id=d2'));assert.equal(response.status,200);const result=await response.json();assert.equal(result.rows.length,1);assert.equal(result.rows[0].doctor_id,'d1');assert.equal(result.invoices[0].net_amount,null);assert.equal(result.invoices[0].total_amount,null);assert.equal(result.expenses.length,0);
  session.services.invoice_enabled=false;assert.equal((await api.GET(new Request('https://example.test/api/billing?view=invoices'))).status,403);
