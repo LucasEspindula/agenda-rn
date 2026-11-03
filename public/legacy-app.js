@@ -1006,18 +1006,18 @@ function paintNativeFinance(){
  if($('retryNativePaymentProof'))$('retryNativePaymentProof').onclick=async()=>{if(!f.proofFile||!f.proofTargetId)return;try{await window.RNFinance.uploadPaymentProof(f.proofTargetId,f.proofFile,f.proofReplacesId);f.proofFile=null;f.proofTargetId=null;f.proofReplacesId=null;await loadNativeFinance(f.id,f.draft);toast('Comprovante anexado.')}catch(error){nativeFinanceError(error.message||'O pagamento foi mantido, mas o comprovante não foi enviado.')}};
 }
 async function loadNativeFinance(id,draft=null){
- nativeFinanceRoot()?.replaceChildren();const f={id,draft:draft?{...draft}:{received_amount:'',payment_status:'PENDENTE',paid_at:'',billing_entity_id:''},proofFile:null,proofTargetId:null,proofReplacesId:null,loading:!!id,error:'',row:null,data:null};nativeFinance=f;paintNativeFinance();if(!id)return;
+ if(window.AgendaBillingPaused){nativeFinance=null;nativeFinanceRoot()?.replaceChildren();return}nativeFinanceRoot()?.replaceChildren();const f={id,draft:draft?{...draft}:{received_amount:'',payment_status:'PENDENTE',paid_at:'',billing_entity_id:''},proofFile:null,proofTargetId:null,proofReplacesId:null,loading:!!id,error:'',row:null,data:null};nativeFinance=f;paintNativeFinance();if(!id)return;
  try{const r=await fetch('/api/billing?appointment_id='+encodeURIComponent(id),{cache:'no-store',signal:AbortSignal.timeout(20000)}),data=await r.json();if(!r.ok)throw Error(data.error);if(nativeFinance!==f)return;f.data=data;f.row=data.rows.find(r=>r.appointment_id===id);if(!f.row)throw Error('Atendimento não encontrado no faturamento.');if(!draft){const record=f.row.record;f.draft={billing_entity_id:record?.billing_entity_id||'',received_amount:record?.received_amount==null?'':money(record.received_amount),payment_status:record?.payment_status||'PENDENTE',paid_at:record?.paid_at||'',no_invoice:!!record?.no_invoice}}}
  catch(error){f.error=error?.name==='TimeoutError'?'O financeiro demorou para responder. Tente novamente.':error.message||'Não foi possível carregar o financeiro.'}finally{f.loading=false;if(nativeFinance===f)paintNativeFinance()}
 }
 function validateNativeFinance(){
- if((window.AgendaAuth||{}).role==='doctor')return;const f=nativeFinance;if(!f||f.loading)throw Error('Aguarde o carregamento do financeiro.');if(f.error)throw Error(f.error);captureNativeFinance();if(f.row?.invoice)return;
+ if(window.AgendaBillingPaused||(window.AgendaAuth||{}).role==='doctor')return;const f=nativeFinance;if(!f||f.loading)throw Error('Aguarde o carregamento do financeiro.');if(f.error)throw Error(f.error);captureNativeFinance();if(f.row?.invoice)return;
  const direct=f.row?window.RNFinance.directPayment(f.row,f.data,nativeMethod()):nativeMethod()==='PARTICULAR';if(!direct)return;
  const amount=window.RNMoney.parseBRL(f.draft.received_amount);if(f.draft.payment_status==='PAGO'&&(amount==null||!f.draft.paid_at))throw Error('Para registrar como pago, informe o valor e a data de pagamento.');
  if(f.row&&!f.draft.billing_entity_id&&(amount!=null||f.draft.payment_status==='PAGO'||f.row.record))throw Error('Selecione uma entidade recebedora vinculada ao médico.');
 }
 async function saveNativeFinance(id,onProgress=()=>{}){
- if((window.AgendaAuth||{}).role==='doctor')return;captureNativeFinance();let f=nativeFinance;const method=nativeMethod();if(f?.row?.invoice)return;
+ if(window.AgendaBillingPaused||(window.AgendaAuth||{}).role==='doctor')return;captureNativeFinance();let f=nativeFinance;const method=nativeMethod();if(f?.row?.invoice)return;
  if(!f?.row){if(method!=='PARTICULAR'||window.RNMoney.parseBRL(f?.draft.received_amount)==null&&f?.draft.payment_status!=='PAGO')return;const proofFile=f.proofFile,proofTargetId=f.proofTargetId,proofReplacesId=f.proofReplacesId;await loadNativeFinance(id,f.draft);f=nativeFinance;if(f){f.proofFile=proofFile;f.proofTargetId=proofTargetId;f.proofReplacesId=proofReplacesId;}captureNativeFinance()}
  validateNativeFinance();if(!f.row)throw Error('Financeiro indisponível. Tente novamente.');
  const direct=window.RNFinance.directPayment(f.row,f.data,method),amount=direct?window.RNMoney.parseBRL(f.draft.received_amount):null;let proofUploadFailed=false;
@@ -1220,7 +1220,7 @@ async function renderPatientFinancialHistory(patientId){
  const section=document.createElement("section");section.className="patient-financial-history";section.dataset.patientId=patientId;target.append(section);
  try{
   const info=await fetch('/api/patient-authorship?patient_id='+encodeURIComponent(patientId),{cache:'no-store'});if(info.ok){const j=await info.json();if(section.isConnected)section.innerHTML='<h4>Cadastro do paciente</h4><p>Cadastrado por: '+esc(j.created_by_name||'Não informado')+' · '+esc(j.created_at?workflowDate(j.created_at):'Registro anterior à auditoria')+'</p><p>Última atualização por: '+esc(j.updated_by_name||'Não informado')+' · '+esc(j.updated_at?workflowDate(j.updated_at):'—')+'</p>';}
-  if(auth.role!=='doctor'||!auth.services?.billing_enabled)return;
+  if(auth.role!=='doctor'||!auth.services?.billing_enabled||window.AgendaBillingPaused)return;
   const response=await fetch('/api/patient-finance?patient_id='+encodeURIComponent(patientId),{cache:'no-store'});
   if(!response.ok)throw Error('Não foi possível consultar o financeiro.');
   const {rows}=await response.json();if(!section.isConnected)return;

@@ -43,6 +43,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
         try { localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
       }
       (window as Window & { AgendaAuth?: unknown }).AgendaAuth = session.user;
+      (window as Window & { AgendaBillingPaused?: boolean }).AgendaBillingPaused = BILLING_PAUSED;
       document.body.classList.toggle("billing-paused", BILLING_PAUSED);
       (window as Window & { AgendaInitialView?: string }).AgendaInitialView = initialView;
       if (cancelled) return;

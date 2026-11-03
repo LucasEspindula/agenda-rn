@@ -35,3 +35,19 @@ test('database billing RPCs coupled to the old agenda document are stubbed in th
  for(const fn of ['attribute_financial_attendance','finish_private_payment','preview_billing_month','save_billing_fiscal_core','save_billing_legacy_single_charge','save_manual_attendance','save_professional_charge','save_professional_charge_core','update_pending_invoice_request'])
   assert.match(sql,new RegExp(`create or replace function public\\.${fn}\\([^)]*\\)[^;]*?perform public\\.billing_paused\\(\\)`),fn);
 });
+
+test('agenda keeps saving appointments while billing is paused (finance block is skipped)',()=>{
+ const js=readFileSync('public/legacy-app.js','utf8'),host=readFileSync('app/dashboard/legacy-app.tsx','utf8');
+ assert.match(host,/AgendaBillingPaused = BILLING_PAUSED/);
+ assert.match(js,/async function loadNativeFinance\(id,draft=null\)\{\s*if\(window\.AgendaBillingPaused\)\{nativeFinance=null;/);
+ assert.match(js,/function validateNativeFinance\(\)\{\s*if\(window\.AgendaBillingPaused\|\|/);
+ assert.match(js,/async function saveNativeFinance\(id,onProgress=\(\)=>\{\}\)\{\s*if\(window\.AgendaBillingPaused\|\|/);
+});
+
+test('patient form has a single required doctor select and an aligned RN checkbox',()=>{
+ const body=readFileSync('app/dashboard/legacy-body.ts','utf8'),js=readFileSync('public/legacy-app.js','utf8'),css=readFileSync('public/legacy.css','utf8');
+ // O legacy-app.js insere o seletor de médico antes do nome; o markup não pode repetir o id.
+ assert.equal((body.match(/id="patientDoctor"/g)||[]).length+(js.match(/<select id="patientDoctor"/g)||[]).length,1);
+ assert.match(body,/id="patientNewborn" type="checkbox"/);
+ assert.match(css,/\.check-row\{display:flex;/);
+});
