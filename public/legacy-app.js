@@ -530,17 +530,21 @@ function appointmentPartner(a,owner=selectedProf()){
  return partner?doctorName(partner.name):(isAnesthesiologist(owner)?"Médico não informado":"Sem anestesista");
 }
 function appointmentCardContent(a,owner=selectedProf()){
- const p=patient(a.patientId),h=hospital(a.hospitalId);
- return `<strong>${esc(hospitalAcronym(h||"Hospital"))}: <b>${esc(a.time)} - ${esc(hhmm(mins(a.time)+Number(a.duration||0)))}</b></strong>
+ const p=patient(a.patientId),h=hospital(a.hospitalId),partner=prof(isAnesthesiologist(owner)?a.doctorId:a.anesthetistId);
+ const team=partner?`${isAnesthesiologist(owner)?"Cirurgião":"Anestesista"}: ${doctorName(partner.name)}`:appointmentPartner(a,owner);
+ return `<strong class="appointment-head"><b>${esc(a.time)} – ${esc(hhmm(mins(a.time)+Number(a.duration||0)))}</b><span class="appointment-hospital">${esc(hospitalAcronym(h||"Hospital"))}</span></strong>
  <span class="appointment-patient">${esc(p?.name||"Paciente não informado")}</span>
  <span class="appointment-procedure">${esc(a.procedure||"Procedimento")}</span>
- <span class="appointment-surgeon">${esc(appointmentPartner(a,owner))}</span>
+ <span class="appointment-surgeon${partner?"":" is-empty"}">${esc(team)}</span>
  <span class="appointment-card-footer"><span class="appointment-insurance">${esc(appointmentInsurance(a)||"Sem convênio")}</span><span class="appointment-status-badge ${esc(a.status)}">${esc(statusLabel(a.status))}</span></span>`;
 }
 function appointmentCard(a,hour,extra,conflict){
- const top=Math.max(3,((mins(a.time)-hour)/60)*64+3),height=Math.max(36,(a.duration/60)*64-6);
+ const duration=Number(a.duration||0),top=Math.max(3,((mins(a.time)-hour)/60)*64+3),height=Math.max(36,(duration/60)*64-6);
  const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
- return `<button class="appointment ${a.status} ${conflict?"anesthesia-conflict":""} ${badge?"has-pending":""}" data-id="${esc(a.id)}" style="top:${top}px;height:${height}px;background:${isAnesthesiologist(selectedProf())?surgeonColor(a.doctorId):""};${extra}">${badge}${appointmentCardContent(a)}</button>`;
+ // A altura do cartão define quanto conteúdo cabe; o resumo completo fica no title.
+ const size=height<40?"size-xs":height<50?"size-s":height<80?"size-m":"size-l",split=/width:calc\(/.test(extra||"")?"is-split":calendarMode==="day"?"is-wide":"";
+ const summary=[`${a.time} – ${hhmm(mins(a.time)+duration)}`,patient(a.patientId)?.name||"Paciente não informado",a.procedure||"Procedimento",hospital(a.hospitalId)?.name,appointmentPartner(a),appointmentInsurance(a)||"Sem convênio",statusLabel(a.status)].filter(Boolean).join(" · ");
+ return `<button class="appointment ${a.status} ${size} ${split} ${conflict?"anesthesia-conflict":""} ${badge?"has-pending":""}" data-id="${esc(a.id)}" title="${esc(summary)}" aria-label="${esc(summary)}" style="top:${top}px;height:${height}px;background:${isAnesthesiologist(selectedProf())?surgeonColor(a.doctorId):""};${extra}">${badge}${appointmentCardContent(a)}</button>`;
 }
 function renderPatients(){
  const auth=window.AgendaAuth||{},owner=selectedProf(),t=$("patientSearch").value.toLowerCase().trim(),allowed=auth.role==="doctor"?state.patients.filter(p=>(auth.agendaIds||[]).includes(p.doctorId)):(owner&&!isAnesthesiologist(owner))?state.patients.filter(p=>p.doctorId===owner.id):state.patients;
@@ -569,7 +573,7 @@ function renderRules(){
 
 let accessUsers=[];
 function roleLabel(role){return role==="general_manager"?"Gerente geral":role==="secretary"?"Secretaria":"Médico"}
-function doctorName(name){const value=String(name||"Médico").trim();return /^dr\.?\s/i.test(value)?value:`Dr. ${value}`}
+function doctorName(name){const value=String(name||"Médico").trim();return /^dra?\.?\s/i.test(value)?value:`Dr. ${value}`}
 function accountName(account){return account?.role==="doctor"?doctorName(account.name||account.email):account?.name||account?.email||"Usuário"}
 function accessAgendaLabel(user){
  const ids=user.agendaIds||[],all=state.professionals.length>0&&state.professionals.every(p=>ids.includes(p.id));
@@ -804,7 +808,7 @@ function detailDurationOptions(current){return [30,45,60,90,120].map(v=>`<option
 function detailRelatedOptions(a,owner){
  const category=isAnesthesiologist(owner)?"doctor":"anesthetist",empty=category==="anesthetist"?'<option value="">Sem anestesista</option>':"";
  const current=category==="doctor"?a.doctorId:a.anesthetistId;
- return empty+state.professionals.filter(p=>(p.active!==false||p.id===current)&&(category==="anesthetist"?isAnesthesiologist(p):!isAnesthesiologist(p))).map(p=>`<option value="${esc(p.id)}" ${p.id===current?"selected":""}>${esc(p.name)}${p.crm?` - CRM ${esc(p.crm)}`:""}</option>`).join("")
+ return empty+state.professionals.filter(p=>p.id===current||(p.active!==false&&(category==="anesthetist"?isAnesthesiologist(p)&&canAccessProfessional(p.id):!isAnesthesiologist(p)))).map(p=>`<option value="${esc(p.id)}" ${p.id===current?"selected":""}>${esc(p.name)}${p.crm?` - CRM ${esc(p.crm)}`:""}</option>`).join("")
 }
 function requestPasswordStatusChange(id,status="realized"){
  const a=state.appointments.find(item=>item.id===id),role=(window.AgendaAuth||{}).role;
@@ -1120,7 +1124,7 @@ function openAppointment(id=null,preset={}){
  renderAppointmentOptions();$("appointmentForm").reset();$("appointmentId").value="";$("deleteAppointmentBtn").classList.add("hidden");$("appointmentDate").min=ds(new Date());const isDoctor=(window.AgendaAuth||{}).role==="doctor";$("saveAppointmentBtn").textContent=isDoctor?(id?"Enviar sugestão":"Sugerir agendamento"):"Salvar";$("deleteAppointmentBtn").textContent=isDoctor?"Sugerir desagendamento":"Excluir";
  const related=$("relatedProfessional"),label=$("relatedProfessionalLabel");
  if(isAnesthesiologist(owner)){label.childNodes[0].textContent="Cirurgião";related.innerHTML=state.professionals.filter(p=>window.AgendaDoctorId?p.id===window.AgendaDoctorId:(p&&!isAnesthesiologist(p))).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");$("agendaContext").innerHTML=`Agenda de <strong>${esc(owner.name)}</strong> · anestesista selecionado automaticamente.`}
- else{label.childNodes[0].textContent="Anestesista";related.innerHTML='<option value="">Sem anestesista</option>'+state.professionals.filter(p=>p.active!==false&&isAnesthesiologist(p)).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");$("agendaContext").innerHTML=`Agenda de <strong>${esc(owner.name)}</strong> · cirurgião selecionado automaticamente.`}
+ else{label.childNodes[0].textContent="Anestesista";related.innerHTML='<option value="">Sem anestesista</option>'+state.professionals.filter(p=>p.active!==false&&isAnesthesiologist(p)&&canAccessProfessional(p.id)).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");$("agendaContext").innerHTML=`Agenda de <strong>${esc(owner.name)}</strong> · cirurgião selecionado automaticamente.`}
  {  $("appointmentPatient").value=isAnesthesiologist(owner)?"":($("appointmentPatient").options[0]?.value||"");$("appointmentInsurance").value="";$("appointmentProcedure").value="";$("appointmentHospital").value=state.hospitals[0]?.id||"";$("guideExpiry").value="";$("appointmentPayment").value="";$("appointmentInvoice").value="";$("appointmentDate").value=preset.date||ds(new Date());$("appointmentTime").value=preset.time||"08:00";$("appointmentDuration").value="60";document.querySelector('input[name="careType"][value="outpatient"]').checked=true;setFlag("flagOpme",false);setFlag("flagReports",false);setFlag("flagExams",false)
  }if((owner&&!isAnesthesiologist(owner))&&!$("appointmentPatient").value)$("appointmentPatient").value=$("appointmentPatient").options[0]?.value||"";$("appointmentInsurance").value=patient($("appointmentPatient").value)?.insurance||"";updateStandaloneInsuranceField();updatePatientSide();validatePastDate();renderRuleFeedback();setAppointmentViewMode(false);nativeFinance=null;if(!isDoctor)void loadNativeFinance(null);else $("newAppointmentFinance").replaceChildren();openModal("appointmentModal")
 }
@@ -1143,11 +1147,17 @@ function currentAppointmentDraft(){
    anesthetistId:isAnesthesiologist(owner)?owner.id:($("relatedProfessional").value||null)
  }
 }
+function anesthetistOverlapWarnings(a){
+ if(!a?.anesthetistId||!a.date||!a.time)return [];
+ const start=mins(a.time),end=start+Number(a.duration||0),editing=$("appointmentId")?.value||a.id;
+ return state.appointments.filter(b=>b.id!==editing&&b.anesthetistId===a.anesthetistId&&b.date===a.date&&b.status!=="cancelled"&&overlap(start,end,mins(b.time),mins(b.time)+Number(b.duration||0)))
+  .map(b=>({severity:"warning",name:"ANESTESISTA OCUPADO",text:`${doctorName(prof(a.anesthetistId)?.name)} já está em ${b.procedure||"procedimento"} das ${b.time} às ${hhmm(mins(b.time)+Number(b.duration||0))} com ${doctorName(prof(b.doctorId)?.name)}.`}));
+}
 function renderRuleFeedback(){
  const a=currentAppointmentDraft();
  if(!a.doctorId||!a.date||!a.time){$("ruleFeedback").innerHTML="";return}
  const rules=evaluateSchedulingRules(a),absoluteBlocks=getAbsoluteSchedulingBlocks(a);
- const msgs=[...rules,...absoluteBlocks];
+ const msgs=[...rules,...absoluteBlocks,...anesthetistOverlapWarnings(a)];
  const dedup=[...new Map(msgs.map(m=>[`${m.severity}|${m.name}|${m.text}`,m])).values()];
  $("ruleFeedback").innerHTML=dedup.map(m=>`<div class="rule-message ${m.severity}"><strong>${esc(m.name)}:</strong> ${esc(m.text)}</div>`).join("");
  const saveBtn=$("saveAppointmentBtn");
