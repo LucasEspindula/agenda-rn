@@ -178,7 +178,7 @@ Critérios mínimos para avanço:
 - **Publicada e verificada:** não houve exclusão de dados nem alteração do cálculo financeiro. **Próxima etapa 2B/3d:** `loadBillingData`, logs e relatórios com `service_role`, auditoria e Storage. Onboarding multiempresa continua bloqueado até validação cross-tenant; ver [issue #72](https://github.com/LucasEspindula/agenda-rn/issues/72).
 
 
-### Etapa 2B/3d1 — carregamento financeiro e auditoria imutável por organização (mergeada; deploy pendente de comprovação)
+### Etapa 2B/3d1 — carregamento financeiro e auditoria imutável por organização (mergeada; deploy pendente de comprovação — superado em 03/11: código publicado via `bf524cff`)
 
 - Branch `feat/rn-billing-logs-tenant-scope-2b3d1`.
 - `lib/billing-data.ts`: `loadBillingData(actorId)` exige organização ativa do ator no banco ANTES de consultar qualquer tabela; todas as tabelas financeiras agora recebem filtro `organization_id`, inclusive `app_state`. `users` é consultada via vínculo `organization_memberships` da organização atual, sem varredura global. As 6 APIs consumidoras passam o ator autenticado explicitamente.
@@ -216,7 +216,11 @@ Critérios mínimos para avanço:
 - `app_state` **congelado** (trigger rejeita escrita; `commit_agenda_change` desativada). Remoção prevista na A2.
 - Concorrência por registro: merge de três vias com `agenda_row_versions` + `row_version`; 409 só quando o mesmo registro foi alterado por outra pessoa.
 - Previews da Vercel usam o **mesmo Supabase de produção** (`NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SECRET_KEY` compartilhados).
-- Validação local: build, 604/604 testes, lint (0 erros) e tsc. **Pendentes de evidência:** PR, CI, deploy de produção READY da A1 e verificação no navegador. Até o deploy, a produção antiga mostra a agenda congelada (somente leitura).
+- **Publicada em 03/11/2026:** [PR #83](https://github.com/LucasEspindula/agenda-rn/pull/83) mergeada com squash na `main`, commit `17f6a597e2a3e9eaf887a2dc40c6a720c5949b09` (árvore idêntica à do preview testado). CI da PR: 5 checks com sucesso, 1 pulado. Validação local: build, **606/606 testes**, lint (0 erros) e tsc. Vercel produção **READY**: `dpl_9cpWgZZpsbBwJxFZfwHjguCnEXnU` (alias `agenda-rn.vercel.app`); conferido em produção: `/api/billing` e `/billing` → 503 "Faturamento em reconstrução.", `/api/state` exige login.
+- **Verificação no navegador (preview `a60efd6`, desktop e mobile):** cadastro de paciente RN (responsável obrigatório), criar/editar/cancelar consulta, bloqueio de dia inteiro (mobile mostra aviso e desabilita "+ Novo agendamento"; servidor responde 409), duas sessões simultâneas (registros diferentes salvam juntos; mesmo registro → 409 sem perda) e menus sem faturamento.
+- **Corrigido durante a verificação:** edição de consulta bloqueada pelo bloco financeiro com faturamento pausado (agora ignorado via `window.AgendaBillingPaused`); seletor "Médico responsável" duplicado e obrigatório no cadastro de paciente (bug anterior à A1, impedia salvar); alinhamento do checkbox RN.
+- **Contas de teste** (gerente, secretária com as duas agendas, médico) com domínio `@rnintegra.test`; médicos de teste Dra. Ana Teste (Cardiologia) e Dr. Bruno Teste (Ortopedia e Traumatologia); pacientes de teste incluindo o mesmo nome/CPF nos dois médicos e um RN. Senhas fora do repositório, em arquivo protegido por DPAPI na máquina do responsável.
+- Observação operacional: nos previews, o login só funciona no endereço do próprio deployment (`VERCEL_URL`), não no alias do branch (regra de origem anterior à A1).
 
 ## 7. Log de continuidade
 
@@ -243,7 +247,7 @@ Critérios mínimos para avanço:
 
 | 30/10/2026 | Etapa 2B/3d2 — 3 APIs financeiras privilegiadas isoladas por organização; CI aprovada; Vercel prod bloqueada por cota HTTP 402 | PR #82 / `35a3a32...` / CI `41073775407` | Resolver publicação da main na Vercel; validar deploy e ampliar relatórios/exportações/Storage e testes cross-tenant |
 
-| 03/11/2026 | Agenda primeiro: deploy `bf524cff` confirmado; Fase 2B pausada; faturamento desligado; A1 agenda normalizada | migration `20261103151428` aplicada / branch `feat/agenda-normalized-a1` | PR, CI, deploy READY, contas de teste e verificação no navegador |
+| 03/11/2026 | Agenda primeiro: deploy `bf524cff` confirmado; Fase 2B pausada; faturamento desligado; A1 agenda normalizada publicada | PR #83 / `17f6a597...` / migration `20261103151428` / 606 testes / Vercel READY `dpl_9cpWgZZp...` | Equipe de teste usa a agenda; A2 remove `app_state`; reconstrução do faturamento em branch e banco próprios |
 
 ## 8. Protocolo para o assistente em futuros chats
 
