@@ -156,3 +156,20 @@ test('newborn patients require a guardian and keep the RN fields',async()=>{
  const rn=f.agenda.state().patients.find(p=>p.id==='p-rn');
  assert.deepEqual([rn.newborn,rn.guardianName],[true,'Maria']);
 });
+
+test('a surgery saved with an anesthetist reaches the anesthetist session at once, with the surgeon patient but no CPF',async()=>{
+ const store=fakeAgenda(base()),manager=fixture({store}),anesthetist=fixture({role:'doctor',agendaIds:['anest'],store});
+ const {state,revision}=await read(manager.api);
+ state.professionals.push({id:'anest',name:'Dr. Carlos',specialty:'Anestesiologia',category:'anesthetist',active:true});
+ state.appointments.push({id:'surgery',doctorId:'one',anesthetistId:'anest',patientId:'p1',status:'scheduled',date:'2026-12-09',time:'09:00',duration:90,procedure:'Artroscopia'});
+ assert.equal((await put(manager.api,state,revision)).status,200);
+ const seen=(await read(anesthetist.api)).state;
+ assert.deepEqual(seen.appointments.map(a=>a.id),['surgery']);
+ assert.deepEqual(seen.patients.map(p=>p.id),['p1']);
+ assert.equal(seen.patients[0].cpf,undefined);
+ // Trocar o anestesista tira a cirurgia da agenda anterior.
+ const next=(await read(manager.api));
+ next.state.appointments.find(a=>a.id==='surgery').anesthetistId=null;
+ assert.equal((await put(manager.api,next.state,next.revision)).status,200);
+ assert.deepEqual((await read(anesthetist.api)).state.appointments,[]);
+});
