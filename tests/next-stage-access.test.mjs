@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadTs} from './load-ts.mjs';
 import {readFileSync} from 'node:fs';
-const {doctorHome,canOpenBilling,canUseAgenda}=loadTs('lib/doctor-services.ts');
+const {doctorHome,canOpenBilling,canUseAgenda}=loadTs('lib/doctor-services.ts',{'./billing-paused':{BILLING_PAUSED:false},});
 const {doctorBillingProjection}=loadTs('lib/billing-projection.ts');
 const {individualReceived,companyCash,buildReport}=loadTs('lib/billing-reports.ts');
 const {visibleState,withoutLegacyFinance}=loadTs('lib/security/state.ts');
@@ -27,7 +27,7 @@ test('shared NF projection removes other doctors, patients, totals and administr
 });
 test('NF exclusively owned by doctor can expose its totals',()=>{const result=doctorBillingProjection({...data,rows:[data.rows[0]],items:[data.items[0]]},principal(services(false,false,true)));assert.equal(result.invoices[0].net_amount,13800)});
 test('invoice-only projection excludes unlinked occurrences',()=>{const result=doctorBillingProjection({...data,rows:[...data.rows,{...row('3','d1',null),invoice:null}]},principal(services(false,false,true)));assert.equal(result.rows.length,1)});
-function route(path,p){return loadTs(path,{'@/app/authz':{getSession:async()=>p},'@/lib/billing-data':{loadBillingData:async()=>({data:structuredClone(data),state:{}})}})}
+function route(path,p){return loadTs(path,{'./billing-paused':{BILLING_PAUSED:false},'@/app/authz':{getSession:async()=>p},'@/lib/billing-data':{loadBillingData:async()=>({data:structuredClone(data),state:{}})}})}
 test('doctor billing API ignores forged doctor_id and forbids mutations',async()=>{
  const api=route('app/api/billing/route.ts',principal(services(false,true,true)));
  const response=await api.GET(new Request('https://example.test/api/billing?doctor_id=d2'));

@@ -831,5 +831,9 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 #patientModal .patient-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
 #patientModal .patient-address-title{grid-column:1/-1;border-top:1px solid var(--line);padding-top:13px;margin-top:5px;color:#36566a;font-size:12px;font-weight:700}
 #patientModal .patient-form-grid label:has(#patientAddress){grid-column:1/-1}
+#patientModal .patient-form-grid .check-row{flex-direction:row;align-items:center;gap:8px;align-self:end;min-height:40px}#patientModal .patient-form-grid .check-row input{width:auto;min-height:0}
 #patientDetailModal #detailAddress{overflow-wrap:anywhere;text-align:right;max-width:65%}
 @media(max-width:560px){#patientModal .patient-form-grid{grid-template-columns:1fr}#patientModal .patient-form-grid label:has(#patientAddress){grid-column:auto}}
+
+/* A1: faturamento em reconstrução — painéis financeiros da agenda ocultos. */
+body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.billing-paused #newAppointmentFinance,body.billing-paused #nativePaymentProof{display:none!important}

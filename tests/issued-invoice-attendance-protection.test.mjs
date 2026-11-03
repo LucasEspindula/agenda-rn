@@ -67,8 +67,11 @@ test('API handles fiscal guard conflicts and UI shows independent statuses on al
  const state=read('app/api/state/route.ts'),work=read('app/api/workflow/route.ts'),
        billing=read('app/api/billing/route.ts'),ui=read('app/billing/billing-client.tsx'),
        legacy=read('public/legacy-app.js');
- assert.match(state,/saved.error\?\.code==='P0001'/);
- assert.match(work,/result.error\?\.code==='P0001'/);
+ // A1: o store converte a guarda de NF emitida em 409 para todas as rotas da agenda.
+ const store=read('lib/agenda/store.ts');
+ assert.match(store,/"Nota Fiscal emitida"/);
+ assert.match(state,/error instanceof HttpError\) return Response\.json\(\{ error: error\.message \}, \{ status: error\.status \}\)/);
+ assert.match(work,/error instanceof HttpError\) return Response\.json\(\{ error: error\.message \}, \{ status: error\.status \}\)/);
  assert.match(billing,/issued_invoice:hasIssuedInvoiceForAttendance\(r,data\)/);
  assert.match(ui,/<th>Status do Atendimento<\/th>\s*<th>Status da NF<\/th>/);
  assert.match(ui,/<td>\s*<span className=\{"billing-badge "\+\(r.status_atendimento/);

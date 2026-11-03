@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {MEDICAL_SPECIALTIES,isAnesthesiologist} from "@/lib/medical-specialties";
 import {formatBRL,parseBRL} from '@/lib/money';
 import {directPayment,allowedEntities} from '@/lib/billing-finance';
+import {BILLING_PAUSED} from '@/lib/billing-paused';
 import {paymentMethods} from '@/lib/fiscal-money';
 import {individualReceived} from '@/lib/billing-reports';
 import {notifyFinancialChange} from '@/lib/financial-events';
@@ -42,6 +43,7 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
         try { localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }
       }
       (window as Window & { AgendaAuth?: unknown }).AgendaAuth = session.user;
+      document.body.classList.toggle("billing-paused", BILLING_PAUSED);
       (window as Window & { AgendaInitialView?: string }).AgendaInitialView = initialView;
       if (cancelled) return;
       (window as Window & {MedicalDirectory?:unknown}).MedicalDirectory={specialties:MEDICAL_SPECIALTIES,isAnesthesiologist};

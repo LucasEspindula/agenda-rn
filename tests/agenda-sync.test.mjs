@@ -9,7 +9,7 @@ function revisionRoute({role="general_manager",agendaIds=["d1"],revision="2026-1
  const calls=[];
  const db={from(table){calls.push([table,"from"]);let columns="";const chain={select(value){columns=value;return chain},eq(){return chain},in(key,value){calls.push([table,"in",key,value]);return chain},not(key){calls.push([table,"not",key]);return chain},order(){return chain},limit:async()=>({data:table==="audit_logs"?audit?[{created_at:audit}]:[]:table==="agenda_requests"?request?[{created_at:request}]:[]:table==="notifications"&&columns==="read_at"?readAt?[{read_at:readAt}]:[]:table==="notifications"?notification?[{created_at:notification}]:[]:[],error:null}),maybeSingle:async()=>({data:revision?{updated_at:revision}:null,error:null})};return chain}};
  const user=session?{account:{id:1,role},agendaIds}:null;
- return {route:loadTs("app/api/state/revision/route.ts",{"@/app/authz":{getSession:async()=>user,isManager:value=>value==="general_manager"},"@/lib/doctor-services":{canUseAgenda:()=>allowed},"@/lib/supabase-admin":{getSupabaseAdmin:()=>db,dbError:error=>{if(error)throw error}}}),calls};
+ return {route:loadTs("app/api/state/revision/route.ts",{"@/app/authz":{getSession:async()=>user,isManager:value=>value==="general_manager"},"@/lib/doctor-services":{canUseAgenda:()=>allowed},"@/lib/supabase-admin":{getSupabaseAdmin:()=>db,dbError:error=>{if(error)throw error}},"@/lib/agenda/store":{agendaRevision:async()=>revision}}),calls};
 }
 test("agenda revision endpoint requires agenda authorization and returns only lightweight revisions",async()=>{
  for(const options of [{session:false},{allowed:false}]){const response=await revisionRoute(options).route.GET();assert.equal(response.status,403)}

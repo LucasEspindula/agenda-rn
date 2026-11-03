@@ -1,5 +1,6 @@
 import 'server-only';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
+import {loadAgendaState} from '@/lib/agenda/store';
 import {financialActorOrganizationId} from '@/lib/financial-organization';
 import type {BillingData,Financial,Invoice,BillingRow} from './billing-types';
 import {projectFinancialRow} from './billing-projection';
@@ -26,9 +27,9 @@ export async function loadBillingData(actorId:number){
  }
  const names=['billing_entities','billing_doctor_entities','billing_records','invoices','invoice_billing_records','doctors','attendances','company_expenses','company_associates','invoice_requests'] as const;
  const attachmentColumns='id,document_type,invoice_id,billing_record_id,original_filename,mime_type,file_size,status,is_current,replaces_attachment_id,replaced_by_attachment_id,deactivated_at,deactivation_reason,created_at,created_by,updated_at,updated_by';
- const [stateResult,...results]=await Promise.all([db.from('app_state').select('payload,organizations!inner(slug,active)').eq('organization_id',organizationId).eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle(),...names.map(t=>allRows(t)),allRows('users','id,name,role,organization_memberships!inner(organization_id)'),allRows('payment_parts'),allRows('financial_attachments',attachmentColumns)]);
- if(stateResult.error||!stateResult.data||results.some(r=>r.error))throw new Error('Não foi possível carregar o faturamento.');
- const state=stateResult.data?.payload||{};
+ const [agenda,...results]=await Promise.all([loadAgendaState(actorId),...names.map(t=>allRows(t)),allRows('users','id,name,role,organization_memberships!inner(organization_id)'),allRows('payment_parts'),allRows('financial_attachments',attachmentColumns)]);
+ if(results.some(r=>r.error))throw new Error('Não foi possível carregar o faturamento.');
+ const state=agenda.state;
  const records=results[2].data as Financial[],invoices=results[3].data as Invoice[],items=results[4].data as BillingData['items'];
  const patients=(state.patients||[]) as ({id:string;name:string;insurance?:string;cpf?:string;phone?:string;email?:string;cardNumber?:string;created_at?:string;created_by?:number}&PatientAddressInput)[];
  const itemsByRecord=new Map(items.filter(item=>item.is_active!==false).map(item=>[item.billing_record_id,item]));

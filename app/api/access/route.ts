@@ -36,9 +36,9 @@ async function handlePOST(request: Request) {
   const db = getSupabaseAdmin();
   if (!data.id && (!data.password || data.password.length < 8)) return Response.json({ error: "Informe uma senha inicial com pelo menos 8 caracteres" }, { status: 400 });
   if (data.id === session.account.id && data.role !== "general_manager") return Response.json({ error: "Para sua segurança, outro gerente deve alterar seu nível de acesso." }, { status: 400 });
-  const agendas = await db.from("app_state").select("payload,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true).maybeSingle();
+  const agendas = await db.from("doctors").select("id,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true);
   dbError(agendas.error,"Read agenda identifiers");
-  const validAgendas = new Set((agendas.data?.payload?.professionals || []).map((p: {id:string})=>p.id));
+  const validAgendas = new Set((agendas.data || []).map((p: {id:string})=>p.id));
   if ((data.agendaIds || []).some(id=>!validAgendas.has(id))) return Response.json({error:"Agenda inexistente"},{status:400});
   const password = data.password ? await hashPassword(data.password) : null;
   const result=await db.rpc("save_user_access",{p_actor:session.account.id,p_data:{...data,email,password:undefined},p_credentials:password});

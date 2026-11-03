@@ -79,9 +79,8 @@ test('legacy state cannot be transferred, deleted or cloned for another tenant',
  }finally{await db.close()}
 });
 
-test('all server-side agenda readers filter by RN Gestão organization, not global id=1',()=>{
+test('A1: server-side agenda readers use the normalized store scoped to RN Gestão, never app_state',()=>{
  const paths=[
-  '../app/api/access/route.ts',
   '../app/api/attendance/status/route.ts',
   '../app/api/documents/route.ts',
   '../app/api/patient-authorship/route.ts',
@@ -92,11 +91,13 @@ test('all server-side agenda readers filter by RN Gestão organization, not glob
  ];
  for(const path of paths){
   const source=readFileSync(new URL(path,import.meta.url),'utf8');
-  assert.match(source,/organizations!inner\(slug,active\)/,path);
-  assert.match(source,/\.eq\("organizations.slug","rn-gestao"\)/,path);
-  assert.doesNotMatch(source,/from\(['"]app_state['"]\)\.select\([^;]*?\.eq\(['"]id['"],\s*1\)/,path);
+  assert.doesNotMatch(source,/['"]app_state['"]/,path);
+  assert.match(source,/@\/lib\/agenda\/store/,path);
  }
- const sql=readFileSync(new URL('../supabase/migrations/20261029184300_agenda_organization_scope.sql',import.meta.url),'utf8');
- assert.match(sql,/where id=1 and organization_id=rn_org_id/i);
- assert.match(sql,/effective_actor.*coalesce\(p_actor/i);
+ const access=readFileSync(new URL('../app/api/access/route.ts',import.meta.url),'utf8');
+ assert.doesNotMatch(access,/['"]app_state['"]/);
+ assert.match(access,/from\("doctors"\)\.select\("id,organizations!inner\(slug,active\)"\)\.eq\("organizations.slug","rn-gestao"\)/);
+ const sql=readFileSync(new URL('../supabase/migrations/20261103151428_agenda_normalized_a1.sql',import.meta.url),'utf8');
+ assert.match(sql,/org:=public\.require_rn_agenda_actor_organization\(p_actor\)/i);
+ assert.match(sql,/create trigger app_state_frozen/i);
 });

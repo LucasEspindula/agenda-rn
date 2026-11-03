@@ -40,6 +40,10 @@ function setup({role="doctor",ownAgenda=true,initialStatus="scheduled",passwordV
     "@/lib/security/http":{readJson:async request=>request.json(),secureMutation:handler=>handler},
     "@/lib/security/rate-limit":{consumeLimit:async()=>{limitCalls++;}},
     "@/lib/supabase-admin":{getSupabaseAdmin:()=>db,dbError:error=>{if(error)throw error;}},
+    "@/lib/agenda/store":{
+      loadAgendaState:async()=>({state:structuredClone(state),revision:"2026-10-27T10:00:00.000Z"}),
+      commitAgendaState:async(actor,revision,current,next,options)=>{commits.push({name:"apply_agenda_changes",data:{p_actor:actor,p_expected:revision,p_payload:next,p_audit:options.audit}});return {ok:true,revision:"2026-10-27T10:00:01.000Z"};},
+    },
   };
   const {POST}=loadTs("app/api/attendance/status/route.ts",mocks);
   const send=async(status="realized",password="senha-correta")=>{
@@ -54,7 +58,7 @@ test("médico com senha própria pode marcar Atendido com histórico e auditoria
   const response=await send();
   assert.equal(response.status,200);
   assert.equal(commits.length,1);
-  assert.equal(commits[0].name,"commit_agenda_change");
+  assert.equal(commits[0].name,"apply_agenda_changes");
   assert.equal(commits[0].data.p_payload.appointments[0].status,"realized");
   assert.equal(commits[0].data.p_payload.patientHistory[0].type,"Status alterado");
   assert.equal(commits[0].data.p_audit[0].metadata.passwordConfirmed,true);
