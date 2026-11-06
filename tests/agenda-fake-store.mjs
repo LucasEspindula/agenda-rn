@@ -50,6 +50,8 @@ export function fakeAgenda(initial,{start='2026-11-03T12:00:00.000Z'}={}){
   async rpc(name,p){
    calls.push({name,p:structuredClone(p)});
    if(name==='load_agenda_state')return {data:{state:state(),revision:iso()},error:null};
+   // Mesma regra de public.load_agenda_window: consultas e histórico a partir de p_since.
+   if(name==='load_agenda_window'){const full=state(),since=p.p_since;if(!since)return {data:{state:full,revision:iso()},error:null};const ids=new Set([...full.appointments,...full.cancelledAppointments].filter(a=>a.date>=since).map(a=>a.id));return {data:{state:{...full,appointments:full.appointments.filter(a=>a.date>=since),cancelledAppointments:full.cancelledAppointments.filter(a=>a.date>=since),patientHistory:(full.patientHistory||[]).filter(h=>String(h.at)>=since||ids.has(h.appointmentId))},revision:iso()},error:null}}
    if(name==='agenda_revision')return {data:iso(),error:null};
    if(name==='agenda_row_bases'){const at=Date.parse(p.p_revision);return {data:p.p_keys.map(({entity,id})=>{const base=versions.filter(v=>v.entity===entity&&v.id===id&&v.revision<=at).at(-1);return {entity,id,currentVersion:rows[entity].get(id)?.version??null,baseVersion:base?.version??null,base:base?.data??null}}),error:null}}
    if(name==='apply_agenda_changes')return apply(p.p_ops,p);

@@ -36,8 +36,9 @@ export function LegacyApp({initialView="agenda",adminSection="access",doctorId}:
     Promise.all([fetch("/api/session"), fetch("/api/state")]).then(async ([sessionResponse, stateResponse]) => {
       if (!sessionResponse.ok || !stateResponse.ok) throw new Error("Não foi possível carregar sua agenda.");
       const session = await sessionResponse.json() as Session;
-      const state = await stateResponse.json() as { state: unknown; revision: string | null };
+      const state = await stateResponse.json() as { state: unknown; revision: string | null; window?: { since?: string } };
       (window as Window & { AgendaRevision?: string | null }).AgendaRevision = state.revision;
+      (window as Window & { AgendaWindowSince?: string }).AgendaWindowSince = state.window?.since;
       (window as Window & { AgendaInitialState?: unknown }).AgendaInitialState = state.state;
       for (const key of ["agendaRNData_v5", "agendaRNData_v4", "agendaRNData_v3", "agendaRNData_v2", "agendaClinicaData_v1"]) {
         try { localStorage.removeItem(key); } catch { /* Storage may be unavailable. */ }

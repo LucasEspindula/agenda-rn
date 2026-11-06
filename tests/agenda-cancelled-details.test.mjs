@@ -10,7 +10,7 @@ assert.ok(start>=0&&end>start,"O renderizador de cancelamentos deve existir");
 const renderer=source.slice(start,end);
 
 function render(role,billingMethod,notes="<observação>"){
- const container={innerHTML:""};
+ const container={innerHTML:"",insertAdjacentHTML(_,html){this.innerHTML+=html}};
  const appointment={
   id:"cancel-1",patientId:"patient-1",doctorId:"doctor-1",date:"2026-10-20",time:"09:30",
   forma_cobranca:billingMethod,insurance:"UNIMED",cancelledAt:"2026-10-22T11:00:00Z",
@@ -21,7 +21,7 @@ function render(role,billingMethod,notes="<observação>"){
   $:()=>container,selectedProf:()=>({id:"doctor-1"}),isAnesthesiologist:()=>false,
   patient:()=>({name:"Paciente Exemplo"}),hospital:()=>({name:"Hospital Central"}),
   parseDate:value=>new Date(value+"T12:00:00"),workflowDate:()=>"22/10/2026 08:00",
-  money:()=> "R$ 170,00",renderRescheduleHistory:()=>'<section class="appointment-reschedule-history">Histórico</section>',
+  money:()=> "R$ 170,00",agendaWindowNote:()=>"",bindAgendaWindowButtons:()=>{},renderRescheduleHistory:()=>'<section class="appointment-reschedule-history">Histórico</section>',
   agendaLogSnapshot:a=>({
    procedure:"Cirurgia",place:"HC",insurance:a.insurance,doctor:"Dra. Teste",anesthetist:"Dr. Anestesista",
    status:"Confirmado",duration:"60 min",guideExpiry:"25/10/2026",careType:"Ambulatorial",
