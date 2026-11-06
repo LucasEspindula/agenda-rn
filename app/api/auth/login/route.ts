@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, hasActiveRnGestaoMembership, type Role } from "@/app/authz";
+import { SESSION_COOKIE, hasActiveMembership, type Role } from "@/app/authz";
 import { hashPassword, hashToken, verifyPassword } from "@/app/passwords";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { readJson, secureMutation } from "@/lib/security/http";
@@ -25,7 +25,7 @@ async function login(request: Request) {
     if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) await hashPassword(password,undefined,500_000);
     return invalid();
   }
-  if (!await hasActiveRnGestaoMembership(db,Number(account.id),account.role as Role)) return invalid();
+  if (!await hasActiveMembership(db,Number(account.id),account.role as Role)) return invalid();
   if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) {
     const credentials = await hashPassword(password);
     const upgraded = await db.from("users").update({ password_hash: credentials.hash, password_salt: credentials.salt }).eq("id",account.id).eq("password_hash",account.password_hash).select("id").maybeSingle();

@@ -49,13 +49,13 @@ function workflowPayload({users,audit,role='general_manager',requests=[{id:'requ
  const decisionFilters=[];let decisionQueryCount=0;
  const db={from(table){
    if(table==='agenda_requests')return {select:()=>listQuery(requests)};
-   if(table==='users')return {select:()=>result(users)};
+   if(table==='organization_memberships')return {select:()=>({eq:()=>result(users.map(u=>({users:u})))})};
    if(table==='audit_logs')return {select:fields=>{
      if(fields==='*')return listQuery(audit);
-     const query={in:(field,values)=>{decisionFilters.push([field,values]);return query},then:(resolve,reject)=>{decisionQueryCount++;return result(audit).then(resolve,reject)}};
+     const query={eq:()=>query,in:(field,values)=>{decisionFilters.push([field,values]);return query},then:(resolve,reject)=>{decisionQueryCount++;return result(audit).then(resolve,reject)}};
      return query;
    }};
-   if(table==='notifications')return {select:()=>({eq:()=>({order:()=>({limit:()=>result([])})})})};
+   if(table==='notifications'){const q={eq:()=>q,order:()=>({limit:()=>result([])})};return {select:()=>q}}
    throw new Error('Unexpected table: '+table);
  }};
  const {GET}=loadTs('app/api/workflow/route.ts',{
@@ -63,7 +63,7 @@ function workflowPayload({users,audit,role='general_manager',requests=[{id:'requ
    '@/lib/security/state':{canReadAppointment:()=>true,withoutLegacyFinance:value=>value,validateAppointment:()=>{},validId:()=>true},
    '@/lib/security/rate-limit':{consumeLimit:async()=>{}},
    '@/lib/security/http':{readJson:async()=>({}),secureMutation:fn=>fn},
-   '@/app/authz':{getSession:async()=>({account:{id:role==='doctor'?1:99,role},agendaIds:['doctor-1']}),isManager:accountRole=>accountRole==='general_manager'},
+   '@/app/authz':{getSession:async()=>({account:{id:role==='doctor'?1:99,role},organization:{id:'org-1'},agendaIds:['doctor-1']}),isManager:accountRole=>accountRole==='general_manager'},
    '@/lib/supabase-admin':{dbError:error=>{if(error)throw error},getSupabaseAdmin:()=>db}
  });
  return GET().then(response=>response.json()).then(payload=>({payload,decisionQueryCount,decisionFilters}));
@@ -95,7 +95,7 @@ test('doctor skips the batched decision audit query without visible requests',as
 });
 test('workflow API resolves decision authorship without users roles or per-request audit queries',()=>{
  const source=readFileSync('app/api/workflow/route.ts','utf8');
- assert.match(source,/db\.from\("users"\)\.select\("id,name,email"\)/);
+ assert.match(source,/db\.from\("organization_memberships"\)\.select\("users!inner\(id,name,email\)"\)\.eq\("organization_id", org\)/);
  assert.doesNotMatch(source,/db\.from\("users"\)\.select\("id,name,email,role"\)/);
  assert.match(source,/let decisionAuditRows: DecisionAudit\[\] = \[\]/);
  assert.match(source,/if \(visibleRequests\.length\)/);
@@ -166,7 +166,7 @@ function workflowRoute(role,agendaIds,leaky=false){
  const calls=[];
  const audit=[{id:'one',professional_id:'d1',metadata:{before:null,after:{procedure:'Consulta'}}},{id:'two',professional_id:'d2',metadata:{after:{procedure:'Cirurgia'}}},{id:'none',professional_id:null}];
  const db={from(table){const filters=[];const chain={select(){return chain},eq(){return chain},in(key,value){filters.push([key,value]);calls.push([table,'in',key,value]);return chain},order(){calls.push([table,'order']);return chain},limit(){calls.push([table,'limit']);return chain},then(resolve){return Promise.resolve({data:table==='audit_logs'?audit.filter(row=>leaky||filters.every(([key,values])=>values.includes(row[key]))):[],error:null}).then(resolve)}};return chain}};
- const api=loadTs('app/api/workflow/route.ts',{'@/app/authz':{getSession:async()=>({account:{id:1,role,doctorId:role==='doctor'?'d1':null},agendaIds,services:{scheduling_enabled:true}}),isManager:r=>r==='general_manager'},'@/lib/supabase-admin':{getSupabaseAdmin:()=>db,dbError:e=>{if(e)throw e}}});return {api,calls};
+ const api=loadTs('app/api/workflow/route.ts',{'@/app/authz':{getSession:async()=>({account:{id:1,role,doctorId:role==='doctor'?'d1':null},organization:{id:'org-1'},agendaIds,services:{scheduling_enabled:true}}),isManager:r=>r==='general_manager'},'@/lib/supabase-admin':{getSupabaseAdmin:()=>db,dbError:e=>{if(e)throw e}}});return {api,calls};
 }
 test('workflow geral não transfere logs operacionais; somente decisões autorizadas são consultadas',async()=>{
  for(const role of ['general_manager','secretary','doctor']){const {api,calls}=workflowRoute(role,['d1','d2']);const body=await(await api.GET()).json();assertSameStructure(body.audit,[]);assert.ok(!calls.some(c=>c[0]==='audit_logs'&&c[1]==='limit'));}

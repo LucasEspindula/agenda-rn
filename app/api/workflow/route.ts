@@ -39,25 +39,27 @@ export async function GET() {
   const session = await getSession();
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const db = getSupabaseAdmin();
-  let requestQuery = db.from("agenda_requests").select("*");
+  const org = session.organization.id;
+  let requestQuery = db.from("agenda_requests").select("*").eq("organization_id", org);
   if (session.account.role === "doctor") requestQuery = requestQuery.eq("requested_by", session.account.id).in("professional_id", session.agendaIds);
   else if (!isManager(session.account.role)) requestQuery = requestQuery.in("professional_id", session.agendaIds);
   const [requestRows, userRows, notificationRows] = await Promise.all([
     requestQuery.order("created_at", { ascending: false }).limit(200),
-    db.from("users").select("id,name,email"),
-    db.from("notifications").select("*").eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(100),
+    // Nomes apenas de quem pertence à organização da sessão.
+    db.from("organization_memberships").select("users!inner(id,name,email)").eq("organization_id", org),
+    db.from("notifications").select("*").eq("organization_id", org).eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(100),
   ]);
   [requestRows, userRows, notificationRows].forEach((result) => dbError(result.error, "Read workflow"));
   // Supabase schema types are generated after the first production migration.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const requests = (requestRows.data || []) as Array<Record<string, any>>, users = (userRows.data || []) as Array<Record<string, any>>, notifications = (notificationRows.data || []) as Array<Record<string, any>>;
+  const requests = (requestRows.data || []) as Array<Record<string, any>>, users = ((userRows.data || []) as Array<Record<string, any>>).map((row) => (Array.isArray(row.users) ? row.users[0] : row.users) || {}), notifications = (notificationRows.data || []) as Array<Record<string, any>>;
   const names = new Map(users.map((user) => [Number(user.id), user.name || user.email]));
   const scopedRequests = session.account.role === "doctor" ? requests.map(withoutLegacyFinance) : requests;
   const visibleRequests = scopedRequests.filter((row) => session.account.role === "doctor" ? Number(row.requested_by) === session.account.id && allowed(session,row.professional_id) : allowed(session, row.professional_id));
   let decisionAuditRows: DecisionAudit[] = [];
   if (visibleRequests.length) {
     const visibleRequestIds = visibleRequests.map((row) => String(row.id));
-    let decisionQuery = db.from("audit_logs").select("actor_name,actor_role,action,metadata").in("action", ["request_accepted", "request_denied"]).in("metadata->>requestId", visibleRequestIds);
+    let decisionQuery = db.from("audit_logs").select("actor_name,actor_role,action,metadata").eq("organization_id", org).in("action", ["request_accepted", "request_denied"]).in("metadata->>requestId", visibleRequestIds);
     if (!isManager(session.account.role)) decisionQuery = decisionQuery.in("professional_id", session.agendaIds);
     const decisionAudits = await decisionQuery;
     dbError(decisionAudits.error, "Read decision authorship");
@@ -131,7 +133,7 @@ async function handlePATCH(request: Request) {
   if (!validId(body.id) || (body.note !== undefined && (typeof body.note !== "string" || body.note.length > 2000)) || !["accepted", "denied"].includes(body.decision || "")) return Response.json({ error: "Decisão inválida" }, { status: 400 });
   if (body.decision === "denied" && !body.note?.trim()) return Response.json({ error: "Informe o motivo da recusa" }, { status: 400 });
   const db = getSupabaseAdmin();
-  const requestResult = await db.from("agenda_requests").select("*").eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
+  const requestResult = await db.from("agenda_requests").select("*").eq("organization_id", session.organization.id).eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
   if (!row) return Response.json({ error: "Esta solicitação já foi decidida ou não existe" }, { status: 409 });
   if (!allowed(session, row.professional_id)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
   const snapshot = await loadAgendaState(session.account.id);
@@ -183,7 +185,7 @@ async function handlePATCH(request: Request) {
 async function handleDELETE() {
   const session = await getSession();
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
-  const result = await getSupabaseAdmin().from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", session.account.id).is("read_at", null); dbError(result.error, "Mark notifications read");
+  const result = await getSupabaseAdmin().from("notifications").update({ read_at: new Date().toISOString() }).eq("organization_id", session.organization.id).eq("user_id", session.account.id).is("read_at", null); dbError(result.error, "Mark notifications read");
   return Response.json({ ok: true });
 }
 

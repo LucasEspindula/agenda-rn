@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   const { session, db, surgeries } = await context();
   const url = new URL(request.url), id = url.searchParams.get('id');
   if (id) {
-   const { data: doc, error } = await db.from('surgery_documents').select('*').eq('id',id).eq('status','ready').maybeSingle();
+   const { data: doc, error } = await db.from('surgery_documents').select('*').eq('organization_id',session.organization.id).eq('id',id).eq('status','ready').maybeSingle();
    if (error) throw error;
    const surgery = doc && surgeries.find(a => a.id === doc.appointment_id);
    if (!surgery || !permitted(session,surgery)) return Response.json({ error:'Documento não disponível.' },{ status:404 });
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
   const allowed = surgeries.filter(a => permitted(session,a) && (appointmentId ? a.id === appointmentId : a.patientId === patientId));
   if (appointmentId && !allowed.length) return Response.json({ error:'Agenda sem permissão.' },{ status:403 });
   if (!allowed.length) return Response.json({ documents:[] });
-  const { data, error } = await db.from('surgery_documents').select('id,appointment_id,name,category,size,created_at').in('appointment_id',allowed.map(a=>a.id)).eq('status','ready').order('created_at',{ascending:false});
+  const { data, error } = await db.from('surgery_documents').select('id,appointment_id,name,category,size,created_at').eq('organization_id',session.organization.id).in('appointment_id',allowed.map(a=>a.id)).eq('status','ready').order('created_at',{ascending:false});
   if (error) throw error;
   // The browser only needs a heading for each surgery. Never serialize the raw
   // appointment: it can contain financial and other restricted patient fields.
@@ -69,8 +69,8 @@ async function handlePOST(request: Request) {
   const surgery = surgeries.find(a => a.id === body.appointmentId);
   if (!surgery || !permitted(session,surgery)) return Response.json({error:'Agenda sem permissão.'},{status:403});
   if (typeof body.name !== 'string' || !body.name.toLowerCase().endsWith('.pdf') || !Number.isInteger(body.size) || body.size <= 0 || body.size > MAX_SIZE || !['guide','report','summary','other'].includes(body.category)) return Response.json({error:'Selecione um PDF de até 20 MB e uma categoria.'},{status:400});
-  const id = randomUUID(), path = `${surgery.id}/${id}.pdf`, name = body.name.replace(/[\x00-\x1f/\\]/g,'_').slice(0,200);
-  const { error } = await db.from('surgery_documents').insert({id,appointment_id:surgery.id,patient_id:surgery.patientId||null,object_path:path,name,category:body.category,size:body.size,uploaded_by:session.account.id});
+  const id = randomUUID(), path = `org/${session.organization.id}/${surgery.id}/${id}.pdf`, name = body.name.replace(/[\x00-\x1f/\\]/g,'_').slice(0,200);
+  const { error } = await db.from('surgery_documents').insert({id,organization_id:session.organization.id,appointment_id:surgery.id,patient_id:surgery.patientId||null,object_path:path,name,category:body.category,size:body.size,uploaded_by:session.account.id});
   if (error) throw error;
   const { data, error: signError } = await db.storage.from(BUCKET).createSignedUploadUrl(path,{upsert:false});
   if (signError) { await db.from('surgery_documents').delete().eq('id',id); throw signError; }
@@ -83,7 +83,7 @@ async function handlePATCH(request: Request) {
   const { session, db, surgeries } = await context();
   await consumeLimit("pdf-finalize",String(session.account.id),30,3600);
   const { id } = await readJson(request);
-  const { data: doc, error } = await db.from('surgery_documents').select('*').eq('id',id).maybeSingle();
+  const { data: doc, error } = await db.from('surgery_documents').select('*').eq('organization_id',session.organization.id).eq('id',id).maybeSingle();
   if (error) throw error;
   const surgery = doc && surgeries.find(a=>a.id===doc.appointment_id);
   if (!surgery || !permitted(session,surgery) || Number(doc.uploaded_by)!==session.account.id) return Response.json({error:'Envio não disponível.'},{status:403});
@@ -121,7 +121,7 @@ async function handleDELETE(request: Request) {
   const {session,db,surgeries}=await context();
   const {id,confirmed}=await readJson(request);
   if(confirmed!==true) return Response.json({error:'Confirme a exclusão do PDF.'},{status:400});
-  const {data:doc,error}=await db.from('surgery_documents').select('*').eq('id',id).maybeSingle();
+  const {data:doc,error}=await db.from('surgery_documents').select('*').eq('organization_id',session.organization.id).eq('id',id).maybeSingle();
   if(error) throw error;
   const surgery=doc && surgeries.find(a=>a.id===doc.appointment_id);
   if(!surgery||!permitted(session,surgery)) return Response.json({error:'Documento não disponível.'},{status:404});

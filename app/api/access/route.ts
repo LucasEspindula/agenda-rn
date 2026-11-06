@@ -10,15 +10,15 @@ async function managerSession() {
 }
 
 export async function GET() {
-  if (!await managerSession()) return Response.json({ error: "Somente o Gerente geral pode gerenciar acessos" }, { status: 403 });
-  const db = getSupabaseAdmin();
-  const organization = await db.from("organizations").select("id").eq("slug","rn-gestao").eq("active",true).single();
-  dbError(organization.error,"Read organization");
-  const membershipResult = await db.from("organization_memberships").select("user_id").eq("organization_id",organization.data.id);
+  const session = await managerSession();
+  if (!session) return Response.json({ error: "Somente o Gerente geral pode gerenciar acessos" }, { status: 403 });
+  const db = getSupabaseAdmin(), organizationId = session.organization.id;
+  // Só contas da organização do gerente autenticado.
+  const membershipResult = await db.from("organization_memberships").select("user_id").eq("organization_id",organizationId);
   dbError(membershipResult.error,"Read organization members");
   const memberIds=(membershipResult.data||[]).map((m:{user_id:number})=>m.user_id);
   if (!memberIds.length) return Response.json({ users: [] });
-  const [accountsResult, grantsResult] = await Promise.all([db.from("users").select("id,email,name,role,doctor_id,active,created_at,updated_at").in("id",memberIds).order("name").order("email"), db.from("agenda_access").select("user_id,professional_id").in("user_id",memberIds)]);
+  const [accountsResult, grantsResult] = await Promise.all([db.from("users").select("id,email,name,role,doctor_id,active,created_at,updated_at").in("id",memberIds).order("name").order("email"), db.from("agenda_access").select("user_id,professional_id").eq("organization_id",organizationId).in("user_id",memberIds)]);
   dbError(accountsResult.error, "Read users"); dbError(grantsResult.error, "Read grants");
   const accounts = (accountsResult.data || []) as Array<{ id: number; email: string; name: string; role: Role; created_at: string; updated_at: string }>;
   const grants = (grantsResult.data || []) as Array<{ user_id: number; professional_id: string }>;
@@ -36,7 +36,7 @@ async function handlePOST(request: Request) {
   const db = getSupabaseAdmin();
   if (!data.id && (!data.password || data.password.length < 8)) return Response.json({ error: "Informe uma senha inicial com pelo menos 8 caracteres" }, { status: 400 });
   if (data.id === session.account.id && data.role !== "general_manager") return Response.json({ error: "Para sua segurança, outro gerente deve alterar seu nível de acesso." }, { status: 400 });
-  const agendas = await db.from("doctors").select("id,organizations!inner(slug,active)").eq("organizations.slug","rn-gestao").eq("organizations.active",true);
+  const agendas = await db.from("doctors").select("id").eq("organization_id",session.organization.id);
   dbError(agendas.error,"Read agenda identifiers");
   const validAgendas = new Set((agendas.data || []).map((p: {id:string})=>p.id));
   if ((data.agendaIds || []).some(id=>!validAgendas.has(id))) return Response.json({error:"Agenda inexistente"},{status:400});

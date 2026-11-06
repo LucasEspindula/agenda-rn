@@ -13,7 +13,7 @@ export async function GET(request:Request){
  const params=new URL(request.url).searchParams,cursor=params.get('cursor');
  if(cursor&&(cursor.length>64||Number.isNaN(Date.parse(cursor))))return Response.json({error:'Cursor inválido.'},{status:400});
  const db=getSupabaseAdmin();
- let query=db.from('audit_logs').select('id,actor_name,actor_role,action,professional_id,appointment_id,patient_id,created_at,metadata');
+ let query=db.from('audit_logs').select('id,actor_name,actor_role,action,professional_id,appointment_id,patient_id,created_at,metadata').eq('organization_id',session.organization.id);
  if(!isManager(session.account.role))query=query.in('professional_id',session.agendaIds);
  if(cursor)query=query.lt('created_at',cursor);
  const result=await query.order('created_at',{ascending:false}).limit(PAGE_SIZE+1);
@@ -25,7 +25,7 @@ export async function GET(request:Request){
  }).filter((id:string|null):id is string=>!!id))];
  const requestPayloads=new Map<string,{before:unknown;after:unknown;action:string}>();
  if(requestIds.length){
-  let linkedQuery=db.from('agenda_requests').select('id,professional_id,action,previous_payload,proposed_payload').in('id',requestIds);
+  let linkedQuery=db.from('agenda_requests').select('id,professional_id,action,previous_payload,proposed_payload').eq('organization_id',session.organization.id).in('id',requestIds);
   if(!isManager(session.account.role))linkedQuery=linkedQuery.in('professional_id',session.agendaIds);
   const linked=await linkedQuery;
   dbError(linked.error,'Read audit request snapshots');
