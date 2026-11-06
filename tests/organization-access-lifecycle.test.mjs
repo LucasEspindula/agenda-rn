@@ -128,6 +128,10 @@ test('API and session code never physically deletes accounts or admits inactive 
  assert.match(access,/deactivate_user_access/);
  assert.doesNotMatch(access,/from\(["']users["']\)\.delete\(/);
  assert.match(login,/hasActiveRnGestaoMembership/);
- assert.match(session,/hasActiveRnGestaoMembership/);
- assert.match(session,/raw\?\.active/);
+ // getSession usa public.session_context: usuário ativo, vínculo ativo com o mesmo papel e organização única.
+ assert.match(session,/rpc\("session_context"/);
+ const sql=readFileSync(new URL('../supabase/migrations/20261106190000_session_sync_single_call.sql',import.meta.url),'utf8');
+ assert.match(sql,/not v_user\.active/);
+ assert.match(sql,/m\.active and m\.role=v_user\.role and o\.slug='rn-gestao' and o\.active/);
+ assert.match(sql,/count\(\*\) from public\.organizations\)<>1/);
 });

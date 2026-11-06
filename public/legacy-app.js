@@ -36,7 +36,10 @@ const Storage={
 };
 let state=Storage.load(),calendarMode="week",currentDate=startOfWeek(new Date()),detailPatientId=null,workflowData={requests:[],notifications:[],audit:[]},agendaAuditNext=null,agendaAuditLoaded=false,agendaAuditBusy=false,agendaAuditError="";
 const $=id=>document.getElementById(id),qsa=s=>[...document.querySelectorAll(s)];
-let remoteAgendaUpdatePending=false,remoteAgendaRevision=null,agendaSyncInFlight=false,agendaSyncTimer=null,agendaSyncDelay=3000;
+let remoteAgendaUpdatePending=false,remoteAgendaRevision=null,agendaSyncInFlight=false,agendaSyncTimer=null,agendaSyncDelay=4000;
+// Polling adaptativo: 4 s com atividade; sem mudanças recua 2 s por ciclo até 15 s; erro dobra até 30 s.
+const AGENDA_SYNC_FAST=4000,AGENDA_SYNC_IDLE_MAX=15000;
+function agendaNextSyncDelay(previous,changed){return changed?AGENDA_SYNC_FAST:Math.min(AGENDA_SYNC_IDLE_MAX,Math.max(AGENDA_SYNC_FAST,Number(previous)||AGENDA_SYNC_FAST)+2000)}
 function agendaRevisionIsNewer(serverRevision,currentRevision){if(!serverRevision)return false;if(!currentRevision)return true;const serverTime=Date.parse(serverRevision),currentTime=Date.parse(currentRevision);return Number.isFinite(serverTime)&&Number.isFinite(currentTime)?serverTime>currentTime:false}
 function agendaSyncDecision({serverRevision,currentRevision,editorOpen=false,saving=false,pending=false}={}){if(!agendaRevisionIsNewer(serverRevision,currentRevision))return "ignore";return editorOpen||saving||pending?"pending":"apply"}
 function agendaEditorOpen(){return !!document.querySelector(".modal:not(.hidden),dialog[open]")}
@@ -64,19 +67,21 @@ async function checkAgendaRevision(){
  try{const response=await fetch("/api/state/revision",{cache:"no-store"});if(!response.ok)throw Error("revision");const signal=await response.json(),revision=signal.revision,workflowRevision=signal.workflowRevision;
   const workflowRefreshed=await refreshWorkflowRevision(workflowRevision);
   const decision=agendaSyncDecision({serverRevision:revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
-  if(decision==="pending")rememberRemoteAgendaUpdate(revision,{silent:agendaRemoteNoticeMode({saving:Storage.saving,pending:Storage.pending})==="silent"});else if(decision==="apply"){agendaSyncInFlight=false;await applyRemoteAgendaUpdate(revision,workflowRevision,workflowRefreshed);return}else reconcileRemoteAgendaUpdate();
-  agendaSyncDelay=3000;
- }catch{agendaSyncDelay=Math.min(30000,Math.max(3000,agendaSyncDelay*2))}finally{agendaSyncInFlight=false}
+  if(decision==="pending")rememberRemoteAgendaUpdate(revision,{silent:agendaRemoteNoticeMode({saving:Storage.saving,pending:Storage.pending})==="silent"});else if(decision==="apply"){agendaSyncInFlight=false;agendaSyncDelay=AGENDA_SYNC_FAST;await applyRemoteAgendaUpdate(revision,workflowRevision,workflowRefreshed);return}else reconcileRemoteAgendaUpdate();
+  agendaSyncDelay=agendaNextSyncDelay(agendaSyncDelay,decision!=="ignore"||Boolean(workflowRefreshed));
+ }catch{agendaSyncDelay=Math.min(30000,Math.max(AGENDA_SYNC_FAST,agendaSyncDelay*2))}finally{agendaSyncInFlight=false}
 }
 function startAgendaSync(){
  window.AgendaSyncCleanup?.();let stopped=false;
  const schedule=delay=>{clearTimeout(agendaSyncTimer);if(!stopped)agendaSyncTimer=setTimeout(async()=>{await checkAgendaRevision();schedule(agendaSyncDelay)},delay)};
- const wake=()=>{if(document.visibilityState==="visible"){void checkAgendaRevision();schedule(agendaSyncDelay)}};
+ const wake=()=>{if(document.visibilityState==="visible"){agendaSyncDelay=AGENDA_SYNC_FAST;void checkAgendaRevision();schedule(agendaSyncDelay)}};
+ // Interação do usuário volta ao ritmo rápido sem disparar consulta extra.
+ const onActivity=()=>{if(agendaSyncDelay>AGENDA_SYNC_FAST){agendaSyncDelay=AGENDA_SYNC_FAST;schedule(agendaSyncDelay)}};
  const onVisibility=()=>{if(document.visibilityState==="visible")wake()};
- document.addEventListener("visibilitychange",onVisibility);window.addEventListener("focus",wake);window.addEventListener("online",wake);
+ document.addEventListener("visibilitychange",onVisibility);window.addEventListener("focus",wake);window.addEventListener("online",wake);document.addEventListener("pointerdown",onActivity,{passive:true});document.addEventListener("keydown",onActivity);
  window.AgendaSyncAfterModalClose=()=>{if(remoteAgendaUpdatePending&&!reconcileRemoteAgendaUpdate())wake()};window.AgendaSyncAfterSave=()=>{if(!remoteAgendaUpdatePending)return;const next=agendaRemoteUpdateAfterSave({remoteRevision:remoteAgendaRevision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen()});if(next==="clear"){clearRemoteAgendaUpdate();return}if(next==="notice"){remoteAgendaNotice(true);return}void applyRemoteAgendaUpdate(remoteAgendaRevision)};
- window.AgendaSyncCleanup=()=>{stopped=true;clearTimeout(agendaSyncTimer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("focus",wake);window.removeEventListener("online",wake);clearRemoteAgendaUpdate();$("remoteAgendaUpdateNotice")?.remove();delete window.AgendaSyncAfterModalClose;delete window.AgendaSyncAfterSave};
- schedule(3000);
+ window.AgendaSyncCleanup=()=>{stopped=true;clearTimeout(agendaSyncTimer);document.removeEventListener("visibilitychange",onVisibility);window.removeEventListener("focus",wake);window.removeEventListener("online",wake);document.removeEventListener("pointerdown",onActivity);document.removeEventListener("keydown",onActivity);clearRemoteAgendaUpdate();$("remoteAgendaUpdateNotice")?.remove();delete window.AgendaSyncAfterModalClose;delete window.AgendaSyncAfterSave};
+ schedule(AGENDA_SYNC_FAST);
 }
 function pad(n){return String(n).padStart(2,"0")}function ds(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
 function parseDate(s){const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}function startOfWeek(x){const d=new Date(x),day=d.getDay();d.setDate(d.getDate()-day);d.setHours(0,0,0,0);return d}
