@@ -8,7 +8,7 @@ import ts from 'typescript';
 const source=readFileSync(new URL('../public/legacy-app.js',import.meta.url),'utf8');
 const css=readFileSync(new URL('../public/legacy.css',import.meta.url),'utf8');
 const ast=ts.createSourceFile('legacy.js',source,ts.ScriptTarget.Latest,true);
-const names=new Set(['appointmentCard','appointmentCardContent','appointmentPartner','doctorName','anesthetistOverlapWarnings','detailRelatedOptions','canAccessProfessional','overlap']);
+const names=new Set(['appointmentCard','appointmentCardContent','appointmentPartner','doctorName','doctorShortName','anesthetistOverlapWarnings','detailRelatedOptions','canAccessProfessional','overlap']);
 const functions=ast.statements.filter(n=>ts.isFunctionDeclaration(n)&&names.has(n.name.text)).map(n=>n.getText(ast)).join('\n');
 
 function fixture({role='general_manager',agendaIds=[]}={}){
@@ -25,16 +25,16 @@ function fixture({role='general_manager',agendaIds=[]}={}){
   appointmentInsurance:a=>a.insurance??'Unimed',statusLabel:()=>'Confirmado',
   esc:v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),
   mins:v=>Number(v.slice(0,2))*60+Number(v.slice(3)),hhmm:v=>`${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`,
-  $:id=>id==='appointmentId'?{value:''}:null,HOUR_HEIGHT:112,
+  $:id=>id==='appointmentId'?{value:''}:null,HOUR_HEIGHT:132,
  };
  vm.createContext(context);vm.runInContext(functions,context);
  return {c:context,base,busy};
 }
 const card=(c,a,extra='')=>c.appointmentCard(a,7*60,extra,false);
 
-test('card height follows the duration on a 112px hour and keeps the full summary in the title',()=>{
+test('card height follows the duration on a 132px hour and keeps the full summary in the title',()=>{
  const {c,base}=fixture();
- for(const [duration,height] of [[30,50],[45,78],[60,106],[90,162],[120,218]])
+ for(const [duration,height] of [[30,60],[45,93],[60,126],[90,192],[120,258]])
   assert.match(card(c,{...base,duration}),new RegExp(`height:${height}px`),String(duration));
  const html=card(c,base);
  assert.match(html,/title="10:00 – 11:00 · Paciente teste · Cateterismo · Hospital teste · Dr\. Carlos · Unimed · Confirmado"/);
@@ -52,6 +52,9 @@ test('card content names the team role and never duplicates the doctor prefix',(
  c.owner=c.prof('c');html=c.appointmentCardContent(base);
  assert.match(html,/class="appointment-surgeon">Cir\.: Dra\. Ana Teste</);
  assert.doesNotMatch(html,/Dr\. Dra\./);
+ // Nome longo: cartão mostra título + primeiro + último nome, sem corte; o title mantém o completo.
+ assert.equal(c.doctorShortName('Dra. Maria Eduarda de Albuquerque Lins'),'Dra. Maria Lins');
+ assert.equal(c.doctorShortName('Carlos Anestesista'),'Dr. Carlos Anestesista');
  c.owner=c.prof('s');html=c.appointmentCardContent({...base,anesthetistId:null});
  assert.match(html,/class="appointment-surgeon is-empty">Sem anestesista</);
  assert(html.indexOf('appointment-insurance')<html.indexOf('appointment-status-badge'));
@@ -85,11 +88,11 @@ test('anesthetist options follow agenda access but keep the current anesthetist 
 test('agenda appears in the anesthetist calendar and every card keeps all fields in fixed places',()=>{
  assert.match(source,/isAnesthesiologist\(owner\)\?a\.anesthetistId===owner\.id:a\.doctorId===owner\.id/);
  // Mesma altura de hora no JS e no CSS; nenhuma conta antiga de 64px sobrou.
- assert.match(source,/const HOUR_HEIGHT=112;/);
+ assert.match(source,/const HOUR_HEIGHT=132;/);
  assert.doesNotMatch(source,/\/60\)\*64/);
- assert(css.includes('#calendar{--hour-height:112px}'));
- // Posições fixas na grade de 3 linhas: status sempre no canto superior direito.
- for(const [field,row,col] of [['head',1,1],['status-badge',1,2],['patient',2,1],['insurance',2,2],['procedure',3,1],['surgeon',3,2]])
+ assert(css.includes('#calendar{--hour-height:132px}'));
+ // Posições fixas na grade de 4 linhas (procedimento e equipe na largura toda): status sempre no canto superior direito.
+ for(const [field,row,col] of [['head',1,1],['status-badge',1,2],['patient',2,1],['insurance',2,2],['procedure',3,'1 / -1'],['surgeon',4,'1 / -1']])
   assert.match(css,new RegExp(`#calendar \.appointment \.appointment-${field}\{grid-column:${col};grid-row:${row};`),field);
  // Nada some por duração ou largura.
  const cardRules=css.slice(css.indexOf('/* Agenda semanal/diária: cartão com layout fixo'));

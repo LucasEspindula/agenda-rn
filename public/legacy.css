@@ -843,11 +843,12 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
    30 min já mostre tudo. Posições fixas:
    linha 1  horário · hospital ........................ status
    linha 2  paciente .................................. convênio
-   linha 3  procedimento .............................. equipe
+   linha 3  procedimento (largura toda)
+   linha 4  equipe (largura toda: nome do anestesista/cirurgião sem corte)
    O status também colore a faixa lateral; o resumo completo fica no title. */
-#calendar{--hour-height:112px}
+#calendar{--hour-height:132px}
 #calendar .slot,#calendar .time-cell{min-height:var(--hour-height)!important;height:var(--hour-height)}
-#calendar .appointment{--appt-accent:#6f97be;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,max-content);grid-template-rows:repeat(3,auto);align-content:start;column-gap:6px;row-gap:0;box-sizing:border-box;padding:4px 7px 4px 8px!important;border:1px solid rgba(15,59,83,.12)!important;border-left:4px solid var(--appt-accent)!important;border-radius:8px!important;box-shadow:0 1px 2px rgba(15,40,60,.08)!important;font-size:11px!important;line-height:1.2!important;color:#1d2e3a;overflow:visible!important;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease}
+#calendar .appointment{--appt-accent:#6f97be;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,max-content);grid-template-rows:repeat(4,auto);align-content:start;column-gap:6px;row-gap:0;box-sizing:border-box;padding:3px 7px 3px 8px!important;border:1px solid rgba(15,59,83,.12)!important;border-left:4px solid var(--appt-accent)!important;border-radius:8px!important;box-shadow:0 1px 2px rgba(15,40,60,.08)!important;font-size:11px!important;line-height:1.18!important;color:#1d2e3a;overflow:visible!important;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease}
 #calendar .appointment:hover{box-shadow:0 6px 16px rgba(15,40,60,.18)!important;filter:saturate(1.08);z-index:7}
 #calendar .appointment:focus-visible{outline:2px solid #0f6e8c;outline-offset:2px;z-index:7}
 #calendar .appointment.scheduled{--appt-accent:#6f97be}
@@ -857,7 +858,7 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 #calendar .appointment.realized{--appt-accent:#1f8a5f}
 #calendar .appointment.anesthesia-conflict{--appt-accent:#d64556;box-shadow:inset 0 0 0 1.5px #e47884,0 1px 2px rgba(15,40,60,.08)!important}
 /* Cada campo é uma célula fixa da grade; texto longo termina em reticências. */
-#calendar .appointment>strong,#calendar .appointment>span:not(.card-pending-mark):not(.appointment-card-footer),#calendar .appointment .appointment-card-footer>span{display:block!important;position:static!important;min-width:0;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25!important}
+#calendar .appointment>strong,#calendar .appointment>span:not(.card-pending-mark):not(.appointment-card-footer),#calendar .appointment .appointment-card-footer>span{display:block!important;position:static!important;min-width:0;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2!important}
 #calendar .appointment .appointment-card-footer{display:contents!important}
 #calendar .appointment .appointment-head{grid-column:1;grid-row:1;display:flex!important;align-items:baseline;gap:6px;font-size:10.5px!important;font-weight:600;color:#47606f}
 #calendar .appointment .appointment-head b{flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:800;color:#12283a;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
@@ -865,15 +866,15 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 #calendar .appointment .appointment-status-badge{grid-column:2;grid-row:1;justify-self:end;align-self:center;max-width:100%;padding:0 5px;border:0;border-radius:999px;background:rgba(255,255,255,.85);box-shadow:inset 0 0 0 1px currentColor;font-size:8px!important;line-height:1.55!important;font-weight:800;letter-spacing:.02em}
 #calendar .appointment .appointment-patient{grid-column:1;grid-row:2;font-size:11.5px!important;font-weight:700!important;color:#12283a}
 #calendar .appointment .appointment-insurance{grid-column:2;grid-row:2;justify-self:end;max-width:100%;font-size:10px!important;color:#5b7385}
-#calendar .appointment .appointment-procedure{grid-column:1;grid-row:3;font-size:10.5px!important;font-weight:500;color:#3e5869}
-#calendar .appointment .appointment-surgeon{grid-column:2;grid-row:3;justify-self:end;max-width:100%;font-size:10px!important;font-weight:600;color:#55707f}
+#calendar .appointment .appointment-procedure{grid-column:1 / -1;grid-row:3;font-size:10.5px!important;font-weight:500;color:#3e5869}
+#calendar .appointment .appointment-surgeon{grid-column:1 / -1;grid-row:4;justify-self:start;max-width:100%!important;font-size:10px!important;font-weight:600;color:#55707f}
 #calendar .appointment .appointment-surgeon.is-empty{font-weight:500;color:#9aabb6}
 /* Coluna da direita limitada para o paciente ter espaço; encaixes lado a lado dividem meio a meio. */
-#calendar .appointment .appointment-insurance,#calendar .appointment .appointment-surgeon{max-width:66px}
+#calendar .appointment .appointment-insurance{max-width:66px}
 #calendar .appointment .appointment-status-badge{max-width:76px}
-#calendar .appointment.is-wide .appointment-insurance,#calendar .appointment.is-wide .appointment-surgeon{max-width:40ch}
+#calendar .appointment.is-wide .appointment-insurance{max-width:40ch}
 #calendar .appointment.is-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:4px;padding-left:6px!important;padding-right:5px!important}
-#calendar .appointment.is-split .appointment-status-badge,#calendar .appointment.is-split .appointment-insurance,#calendar .appointment.is-split .appointment-surgeon{max-width:100%}
+#calendar .appointment.is-split .appointment-status-badge,#calendar .appointment.is-split .appointment-insurance{max-width:100%}
 #calendar .appointment.is-split .appointment-head b{flex:0 1 auto}
 #calendar .appointment.is-split .appointment-status-badge,#calendar .appointment.is-split.has-pending .appointment-status-badge{padding:0 4px;margin-right:0!important}
 /* Selo "!" de pendência: fora do canto superior direito, com a animação original. */

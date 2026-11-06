@@ -7,7 +7,7 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../public/legacy-app.js', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('legacy.js', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'renderDoctorHistory', 'workflowAuthorship', 'workflowRoleLabel', 'workflowDate', 'renderMobileCalendar', 'mobileCalendarCard', 'assignCalendarLanes']);
+const names = new Set(['hasAnesthesiaConflict', 'phoneNumber', 'appointmentPartner', 'appointmentCardContent', 'doctorName', 'doctorShortName', 'renderDoctorHistory', 'workflowAuthorship', 'workflowRoleLabel', 'workflowDate', 'renderMobileCalendar', 'mobileCalendarCard', 'assignCalendarLanes']);
 const functions = ast.statements.filter(n => ts.isFunctionDeclaration(n) && names.has(n.name.text)).map(n => n.getText(ast)).join('\n');
 function fixture() {
   const doctor = { id: 'd', name: 'Rosa', specialty: 'Ortopedia e Traumatologia' }, anesthetist = { id: 'a', name: 'Dr. Lima', specialty: 'Anestesiologia' };
