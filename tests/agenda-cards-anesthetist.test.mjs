@@ -25,22 +25,21 @@ function fixture({role='general_manager',agendaIds=[]}={}){
   appointmentInsurance:a=>a.insurance??'Unimed',statusLabel:()=>'Confirmado',
   esc:v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),
   mins:v=>Number(v.slice(0,2))*60+Number(v.slice(3)),hhmm:v=>`${String(Math.floor(v/60)).padStart(2,'0')}:${String(v%60).padStart(2,'0')}`,
-  $:id=>id==='appointmentId'?{value:''}:null,
+  $:id=>id==='appointmentId'?{value:''}:null,HOUR_HEIGHT:112,
  };
  vm.createContext(context);vm.runInContext(functions,context);
  return {c:context,base,busy};
 }
 const card=(c,a,extra='')=>c.appointmentCard(a,7*60,extra,false);
 
-test('card size follows the appointment duration and keeps the full summary in the title',()=>{
+test('card height follows the duration on a 112px hour and keeps the full summary in the title',()=>{
  const {c,base}=fixture();
- for(const [duration,size] of [[30,'size-xs'],[45,'size-s'],[60,'size-m'],[90,'size-l'],[120,'size-l']])
-  assert.match(card(c,{...base,duration}),new RegExp(`class="appointment confirmed ${size} `),String(duration));
+ for(const [duration,height] of [[30,50],[45,78],[60,106],[90,162],[120,218]])
+  assert.match(card(c,{...base,duration}),new RegExp(`height:${height}px`),String(duration));
  const html=card(c,base);
  assert.match(html,/title="10:00 – 11:00 · Paciente teste · Cateterismo · Hospital teste · Dr\. Carlos · Unimed · Confirmado"/);
  assert.match(html,/aria-label="10:00 – 11:00 · Paciente teste/);
  assert.match(card(c,base,'left:calc(0% + 3px);right:auto;width:calc(50% - 6px);'),/ is-split /);
- c.calendarMode='day';assert.match(card(c,base),/ is-wide /);
 });
 
 test('card content names the team role and never duplicates the doctor prefix',()=>{
@@ -49,9 +48,9 @@ test('card content names the team role and never duplicates the doctor prefix',(
  assert.equal(c.doctorName('Bruno Teste'),'Dr. Bruno Teste');
  let html=c.appointmentCardContent(base);
  assert.match(html,/<strong class="appointment-head"><b>10:00 – 11:00<\/b><span class="appointment-hospital">HT<\/span><\/strong>/);
- assert.match(html,/class="appointment-surgeon">Anestesista: Dr\. Carlos</);
+ assert.match(html,/class="appointment-surgeon">Anest\.: Dr\. Carlos</);
  c.owner=c.prof('c');html=c.appointmentCardContent(base);
- assert.match(html,/class="appointment-surgeon">Cirurgião: Dra\. Ana Teste</);
+ assert.match(html,/class="appointment-surgeon">Cir\.: Dra\. Ana Teste</);
  assert.doesNotMatch(html,/Dr\. Dra\./);
  c.owner=c.prof('s');html=c.appointmentCardContent({...base,anesthetistId:null});
  assert.match(html,/class="appointment-surgeon is-empty">Sem anestesista</);
@@ -83,9 +82,20 @@ test('anesthetist options follow agenda access but keep the current anesthetist 
  assert.match(source,/isAnesthesiologist\(p\)&&canAccessProfessional\(p\.id\)\)\.map/);
 });
 
-test('agenda appears in the anesthetist calendar and card styles are scoped per size',()=>{
+test('agenda appears in the anesthetist calendar and every card keeps all fields in fixed places',()=>{
  assert.match(source,/isAnesthesiologist\(owner\)\?a\.anesthetistId===owner\.id:a\.doctorId===owner\.id/);
- for(const rule of ['#calendar .appointment.size-xs .appointment-procedure','#calendar .appointment.size-s .appointment-card-footer,#calendar .appointment.size-m .appointment-card-footer{position:absolute!important;top:4px!important',
-  '#calendar .appointment.is-split .appointment-hospital','#calendar .appointment.is-wide{display:grid!important','#calendar .appointment.anesthesia-conflict{--appt-accent:#d64556'])
-  assert(css.includes(rule),rule);
+ // Mesma altura de hora no JS e no CSS; nenhuma conta antiga de 64px sobrou.
+ assert.match(source,/const HOUR_HEIGHT=112;/);
+ assert.doesNotMatch(source,/\/60\)\*64/);
+ assert(css.includes('#calendar{--hour-height:112px}'));
+ // Posições fixas na grade de 3 linhas: status sempre no canto superior direito.
+ for(const [field,row,col] of [['head',1,1],['status-badge',1,2],['patient',2,1],['insurance',2,2],['procedure',3,1],['surgeon',3,2]])
+  assert.match(css,new RegExp(`#calendar \.appointment \.appointment-${field}\{grid-column:${col};grid-row:${row};`),field);
+ // Nada some por duração ou largura.
+ const cardRules=css.slice(css.indexOf('/* Agenda semanal/diária: cartão com layout fixo'));
+ assert.doesNotMatch(cardRules.slice(0,cardRules.indexOf('/* Lista mobile')),/display:none/);
+ // Selo "!" de pendência preservado: fora da regra genérica e com overflow visível no cartão.
+ assert(css.includes('#calendar .appointment>span:not(.card-pending-mark):not(.appointment-card-footer)'));
+ assert(css.includes('overflow:visible!important'));
+ assert.match(css,/\.appointment \.card-pending-mark\{position:absolute;top:-6px;right:-6px;/);
 });

@@ -838,11 +838,16 @@ label{font-size:13px}select,input,textarea{min-height:42px;font-size:14px}.conte
 /* A1: faturamento em reconstrução — painéis financeiros da agenda ocultos. */
 body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.billing-paused #newAppointmentFinance,body.billing-paused #nativePaymentProof{display:none!important}
 
-/* Agenda semanal/diária: cartões adaptados à duração. A altura (64px por hora)
-   define o conteúdo: 30 min mostra horário e paciente; 45-60 min acrescentam
-   procedimento e status; 90 min ou mais mostram também equipe e convênio.
-   O status vira a faixa lateral colorida e o resumo completo fica no title. */
-#calendar .appointment{--appt-accent:#6f97be;display:flex!important;flex-direction:column;justify-content:flex-start;gap:1px;box-sizing:border-box;padding:4px 7px 4px 8px!important;border:1px solid rgba(15,59,83,.12)!important;border-left:4px solid var(--appt-accent)!important;border-radius:8px!important;box-shadow:0 1px 2px rgba(15,40,60,.08)!important;font-size:11px!important;line-height:1.2!important;color:#1d2e3a;overflow:hidden;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease}
+/* Agenda semanal/diária: cartão com layout fixo em qualquer duração.
+   A hora mede --hour-height (HOUR_HEIGHT no legacy-app.js) para que o cartão de
+   30 min já mostre tudo. Posições fixas:
+   linha 1  horário · hospital ........................ status
+   linha 2  paciente .................................. convênio
+   linha 3  procedimento .............................. equipe
+   O status também colore a faixa lateral; o resumo completo fica no title. */
+#calendar{--hour-height:112px}
+#calendar .slot,#calendar .time-cell{min-height:var(--hour-height)!important;height:var(--hour-height)}
+#calendar .appointment{--appt-accent:#6f97be;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,max-content);grid-template-rows:repeat(3,auto);align-content:start;column-gap:6px;row-gap:0;box-sizing:border-box;padding:4px 7px 4px 8px!important;border:1px solid rgba(15,59,83,.12)!important;border-left:4px solid var(--appt-accent)!important;border-radius:8px!important;box-shadow:0 1px 2px rgba(15,40,60,.08)!important;font-size:11px!important;line-height:1.2!important;color:#1d2e3a;overflow:visible!important;cursor:pointer;transition:box-shadow .15s ease,filter .15s ease}
 #calendar .appointment:hover{box-shadow:0 6px 16px rgba(15,40,60,.18)!important;filter:saturate(1.08);z-index:7}
 #calendar .appointment:focus-visible{outline:2px solid #0f6e8c;outline-offset:2px;z-index:7}
 #calendar .appointment.scheduled{--appt-accent:#6f97be}
@@ -851,44 +856,32 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 #calendar .appointment.analysis{--appt-accent:#d69e2e}
 #calendar .appointment.realized{--appt-accent:#1f8a5f}
 #calendar .appointment.anesthesia-conflict{--appt-accent:#d64556;box-shadow:inset 0 0 0 1.5px #e47884,0 1px 2px rgba(15,40,60,.08)!important}
-#calendar .appointment>span,#calendar .appointment>strong{display:block;margin:0!important;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#calendar .appointment .appointment-head{display:flex!important;align-items:baseline;gap:6px;font-size:10.5px!important;line-height:1.25!important;font-weight:600;color:#47606f}
-#calendar .appointment .appointment-head b{flex:none;font-weight:800;color:#12283a;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+/* Cada campo é uma célula fixa da grade; texto longo termina em reticências. */
+#calendar .appointment>strong,#calendar .appointment>span:not(.card-pending-mark):not(.appointment-card-footer),#calendar .appointment .appointment-card-footer>span{display:block!important;position:static!important;min-width:0;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25!important}
+#calendar .appointment .appointment-card-footer{display:contents!important}
+#calendar .appointment .appointment-head{grid-column:1;grid-row:1;display:flex!important;align-items:baseline;gap:6px;font-size:10.5px!important;font-weight:600;color:#47606f}
+#calendar .appointment .appointment-head b{flex:none;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:800;color:#12283a;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 #calendar .appointment .appointment-hospital{display:inline!important;min-width:0;overflow:hidden;text-overflow:ellipsis;margin:0!important;font-size:9.5px;font-weight:700;letter-spacing:.04em;color:#6a8394}
-#calendar .appointment .appointment-patient{font-size:11.5px!important;line-height:1.25!important;font-weight:700!important;color:#12283a}
-#calendar .appointment .appointment-procedure{font-size:10.5px!important;line-height:1.25!important;font-weight:500;color:#3e5869}
-#calendar .appointment .appointment-surgeon{font-size:10px!important;line-height:1.25!important;font-weight:600;color:#55707f}
-#calendar .appointment .appointment-surgeon.is-empty{display:none!important}
-#calendar .appointment .appointment-card-footer{position:static!important;display:flex!important;flex-direction:row!important;align-items:center;justify-content:space-between;gap:6px;min-width:0;max-width:none!important;margin:auto 0 0!important;padding:0!important;background:none!important;overflow:hidden}
-#calendar .appointment .appointment-insurance{flex:1 1 auto;min-width:0;margin:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px!important;color:#5b7385}
-#calendar .appointment .appointment-status-badge{position:static!important;flex:none;align-self:center;margin:0!important;padding:1px 6px;border:0;border-radius:999px;background:rgba(255,255,255,.85);box-shadow:inset 0 0 0 1px currentColor;font-size:8.5px!important;line-height:1.45!important;font-weight:800;letter-spacing:.04em;white-space:nowrap}
-/* 30 min: horário e paciente; status apenas pela faixa lateral. */
-#calendar .appointment.size-xs{padding-top:3px!important;padding-bottom:3px!important;gap:0}
-#calendar .appointment.size-xs .appointment-procedure,#calendar .appointment.size-xs .appointment-surgeon,#calendar .appointment.size-xs .appointment-card-footer{display:none!important}
-/* 45-60 min: status no canto superior, convênio e equipe ocultos. */
-#calendar .appointment.size-s .appointment-procedure,#calendar .appointment.size-s .appointment-surgeon,#calendar .appointment.size-m .appointment-surgeon{display:none!important}
-#calendar .appointment.size-s .appointment-card-footer,#calendar .appointment.size-m .appointment-card-footer{position:absolute!important;top:4px!important;right:6px!important;bottom:auto!important;left:auto!important;margin:0!important}
-#calendar .appointment.size-s .appointment-insurance,#calendar .appointment.size-m .appointment-insurance{display:none!important}
-#calendar .appointment.size-s .appointment-head,#calendar .appointment.size-m .appointment-head{padding-right:84px}
-/* Encaixes lado a lado: só horário e paciente. */
-#calendar .appointment.is-split{padding-left:6px!important;padding-right:5px!important}
-#calendar .appointment.is-split .appointment-hospital,#calendar .appointment.is-split .appointment-procedure,#calendar .appointment.is-split .appointment-surgeon,#calendar .appointment.is-split .appointment-card-footer{display:none!important}
-#calendar .appointment.is-split .appointment-head{padding-right:0}
-#calendar .appointment.anesthesia-conflict .appointment-card-footer{display:none!important}
-#calendar .appointment.anesthesia-conflict .appointment-head{padding-right:0}
-#calendar .appointment.has-pending .appointment-head{padding-right:12px}
-#calendar .appointment.has-pending.size-s .appointment-head,#calendar .appointment.has-pending.size-m .appointment-head{padding-right:92px}
-#calendar .appointment.has-pending.size-s .appointment-card-footer,#calendar .appointment.has-pending.size-m .appointment-card-footer{right:14px}
+#calendar .appointment .appointment-status-badge{grid-column:2;grid-row:1;justify-self:end;align-self:center;max-width:100%;padding:0 5px;border:0;border-radius:999px;background:rgba(255,255,255,.85);box-shadow:inset 0 0 0 1px currentColor;font-size:8px!important;line-height:1.55!important;font-weight:800;letter-spacing:.02em}
+#calendar .appointment .appointment-patient{grid-column:1;grid-row:2;font-size:11.5px!important;font-weight:700!important;color:#12283a}
+#calendar .appointment .appointment-insurance{grid-column:2;grid-row:2;justify-self:end;max-width:100%;font-size:10px!important;color:#5b7385}
+#calendar .appointment .appointment-procedure{grid-column:1;grid-row:3;font-size:10.5px!important;font-weight:500;color:#3e5869}
+#calendar .appointment .appointment-surgeon{grid-column:2;grid-row:3;justify-self:end;max-width:100%;font-size:10px!important;font-weight:600;color:#55707f}
+#calendar .appointment .appointment-surgeon.is-empty{font-weight:500;color:#9aabb6}
+/* Coluna da direita limitada para o paciente ter espaço; encaixes lado a lado dividem meio a meio. */
+#calendar .appointment .appointment-insurance,#calendar .appointment .appointment-surgeon{max-width:66px}
+#calendar .appointment .appointment-status-badge{max-width:76px}
+#calendar .appointment.is-wide .appointment-insurance,#calendar .appointment.is-wide .appointment-surgeon{max-width:40ch}
+#calendar .appointment.is-split{grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:4px;padding-left:6px!important;padding-right:5px!important}
+#calendar .appointment.is-split .appointment-status-badge,#calendar .appointment.is-split .appointment-insurance,#calendar .appointment.is-split .appointment-surgeon{max-width:100%}
+#calendar .appointment.is-split .appointment-head b{flex:0 1 auto}
+#calendar .appointment.is-split .appointment-status-badge,#calendar .appointment.is-split.has-pending .appointment-status-badge{padding:0 4px;margin-right:0!important}
+/* Selo "!" de pendência: fora do canto superior direito, com a animação original. */
+#calendar .appointment.has-pending{z-index:5}
+#calendar .appointment.has-pending .appointment-status-badge{margin-right:8px!important}
+
 /* Lista mobile: mesmo cabeçalho (horário · hospital) e equipe vazia discreta. */
 .mobile-appointment-content .appointment-head{display:flex!important;align-items:baseline;gap:6px;min-width:0}
 .mobile-appointment-content .appointment-head b{flex:none;font-variant-numeric:tabular-nums}
 .mobile-appointment-content .appointment-hospital{display:inline!important;margin:0!important;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700;letter-spacing:.04em;color:#6a8394}
 .mobile-appointment-content .appointment-surgeon.is-empty{font-weight:500!important;color:#8a9eab}
-/* Visão de dia: cartão largo vira uma linha em colunas, em qualquer duração. */
-#calendar .appointment.is-wide{display:grid!important;grid-template-columns:118px minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,.7fr) auto;column-gap:16px;align-items:baseline;align-content:start}
-#calendar .appointment.is-wide .appointment-card-footer{display:contents!important}
-#calendar .appointment.is-wide .appointment-procedure,#calendar .appointment.is-wide .appointment-surgeon,#calendar .appointment.is-wide .appointment-insurance,#calendar .appointment.is-wide .appointment-status-badge{display:block!important}
-#calendar .appointment.is-wide .appointment-surgeon.is-empty{visibility:hidden}
-#calendar .appointment.is-wide .appointment-head{padding-right:0!important}
-#calendar .appointment.is-wide .appointment-status-badge{justify-self:end}
-#calendar .appointment.is-wide.has-pending .appointment-status-badge{margin-right:10px!important}

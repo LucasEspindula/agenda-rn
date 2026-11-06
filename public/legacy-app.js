@@ -402,6 +402,8 @@ function setAgendaOwnerState(owner){
  const shell=document.querySelector(".agenda-shell"),empty=$("agendaEmptyState"),agendaContext=(window.AgendaInitialView||"agenda")==="agenda",hasOwner=Boolean(owner);
  shell?.classList.toggle("agenda-has-no-owner",agendaContext&&!hasOwner);empty?.classList.toggle("hidden",!agendaContext||hasOwner);
 }
+// Altura de 1 hora na grade (px), igual a --hour-height no legacy.css: cabe o cartão de 30 min completo.
+const HOUR_HEIGHT=112;
 function renderCalendar(){
  const owner=selectedProf();setAgendaOwnerState(owner);if(!owner)return;
  renderMobileCalendar();
@@ -445,13 +447,13 @@ function renderCalendar(){
    const day=ds(d),apps=visible.filter(a=>a.date===day&&mins(a.time)>=hour&&mins(a.time)<hour+60).sort((a,b)=>a.time.localeCompare(b.time));html+=`<div class="slot" data-date="${day}" data-hour="${hour}">`;
    const now=new Date(),nowMins=now.getHours()*60+now.getMinutes();
    if(day===ds(now)&&nowMins>=hour&&nowMins<hour+60){
-     const nowTop=((nowMins-hour)/60)*64;
+     const nowTop=((nowMins-hour)/60)*HOUR_HEIGHT;
      html+=`<div class="now-line" style="top:${nowTop}px"><span class="now-time-label">${pad(now.getHours())}:${pad(now.getMinutes())}</span></div>`;
    }
    const ruleIntervals=hardRuleIntervalsForDate(owner,day).filter(x=>x.start>=hour&&x.start<hour+60);
    ruleIntervals.forEach(x=>{
-     const top=Math.max(1,((x.start-hour)/60)*64+1);
-     const height=Math.max(18,((x.end-x.start)/60)*64-2);
+     const top=Math.max(1,((x.start-hour)/60)*HOUR_HEIGHT+1);
+     const height=Math.max(18,((x.end-x.start)/60)*HOUR_HEIGHT-2);
      const hosp=x.rule.hospitalId?` · ${hospital(x.rule.hospitalId)?.name||"Hospital"}`:"";
      html+=`<div class="rule-calendar-block continuous-rule-block" style="top:${top}px;height:${height}px" title="${esc(x.label+hosp)}">
        <div class="rule-block-center">
@@ -463,7 +465,7 @@ function renderCalendar(){
    const ownerBlocks=blocksForProfessional(owner.id,day).filter(b=>mins(b.start)>=hour&&mins(b.start)<hour+60),lanes=dayLaneAssignments.get(day)||new Map(),dayApps=dayAppointments.get(day)||[];
    const laneStyle=key=>{const assignment=lanes.get(key);return !assignment||assignment.total<2?"":`left:calc(${(100/assignment.total)*assignment.lane}% + 3px);right:auto;width:calc(${100/assignment.total}% - 6px);`};
    ownerBlocks.forEach(b=>{
-     const top=Math.max(2,((mins(b.start)-hour)/60)*64+2),height=Math.max(28,((mins(b.end)-mins(b.start))/60)*64-4);
+     const top=Math.max(2,((mins(b.start)-hour)/60)*HOUR_HEIGHT+2),height=Math.max(28,((mins(b.end)-mins(b.start))/60)*HOUR_HEIGHT-4);
      html+=`<button class="schedule-block" data-block-id="${esc(b.id)}" style="top:${top}px;height:${height}px;${laneStyle("block:"+b.id)}"><strong>${esc(b.start)} - ${esc(b.end)}</strong><span>${esc(b.reason)}</span></button>`;
    });
    // The border belongs to overlapping appointments, never to manual schedule blocks.
@@ -471,9 +473,9 @@ function renderCalendar(){
     const positions=group.appointments.map(a=>lanes.get("appointment:"+a.id)).filter(Boolean);
     if(positions.length<2)return;
     const left=Math.min(...positions.map(x=>x.lane/x.total))*100,right=Math.max(...positions.map(x=>(x.lane+1)/x.total))*100;
-    const top=Math.max(1,((group.start-hour)/60)*64+1);
-    const lastCardBottom=Math.max(...group.appointments.map(a=>((mins(a.time)-hour)/60)*64+3+Math.max(36,(Number(a.duration||0)/60)*64-6)));
-    const height=Math.max(40,((group.end-group.start)/60)*64-2,lastCardBottom-top+2);
+    const top=Math.max(1,((group.start-hour)/60)*HOUR_HEIGHT+1);
+    const lastCardBottom=Math.max(...group.appointments.map(a=>((mins(a.time)-hour)/60)*HOUR_HEIGHT+3+Math.max(36,(Number(a.duration||0)/60)*HOUR_HEIGHT-6)));
+    const height=Math.max(40,((group.end-group.start)/60)*HOUR_HEIGHT-2,lastCardBottom-top+2);
     html+=`<div class="calendar-conflict-outline" aria-hidden="true" style="top:${top}px;height:${height}px;left:calc(${left}% + 1px);width:calc(${right-left}% - 2px)"></div>`;
    });
    if(isAnesthesiologist(owner)&&apps.length){
@@ -531,7 +533,7 @@ function appointmentPartner(a,owner=selectedProf()){
 }
 function appointmentCardContent(a,owner=selectedProf()){
  const p=patient(a.patientId),h=hospital(a.hospitalId),partner=prof(isAnesthesiologist(owner)?a.doctorId:a.anesthetistId);
- const team=partner?`${isAnesthesiologist(owner)?"Cirurgião":"Anestesista"}: ${doctorName(partner.name)}`:appointmentPartner(a,owner);
+ const team=partner?`${isAnesthesiologist(owner)?"Cir.":"Anest."}: ${doctorName(partner.name)}`:appointmentPartner(a,owner);
  return `<strong class="appointment-head"><b>${esc(a.time)} – ${esc(hhmm(mins(a.time)+Number(a.duration||0)))}</b><span class="appointment-hospital">${esc(hospitalAcronym(h||"Hospital"))}</span></strong>
  <span class="appointment-patient">${esc(p?.name||"Paciente não informado")}</span>
  <span class="appointment-procedure">${esc(a.procedure||"Procedimento")}</span>
@@ -539,7 +541,7 @@ function appointmentCardContent(a,owner=selectedProf()){
  <span class="appointment-card-footer"><span class="appointment-insurance">${esc(appointmentInsurance(a)||"Sem convênio")}</span><span class="appointment-status-badge ${esc(a.status)}">${esc(statusLabel(a.status))}</span></span>`;
 }
 function appointmentCard(a,hour,extra,conflict){
- const duration=Number(a.duration||0),top=Math.max(3,((mins(a.time)-hour)/60)*64+3),height=Math.max(36,(duration/60)*64-6);
+ const duration=Number(a.duration||0),top=Math.max(3,((mins(a.time)-hour)/60)*HOUR_HEIGHT+3),height=Math.max(36,(duration/60)*HOUR_HEIGHT-6);
  const badge=typeof appointmentPendingBadge==="function"?appointmentPendingBadge(a):"";
  // A altura do cartão define quanto conteúdo cabe; o resumo completo fica no title.
  const size=height<40?"size-xs":height<50?"size-s":height<80?"size-m":"size-l",split=/width:calc\(/.test(extra||"")?"is-split":calendarMode==="day"?"is-wide":"";
