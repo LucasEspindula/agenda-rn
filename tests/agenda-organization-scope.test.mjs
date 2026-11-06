@@ -84,11 +84,12 @@ test('A1: server-side agenda readers use the normalized store scoped to RN Gest�
   '../app/api/attendance/status/route.ts',
   '../app/api/documents/route.ts',
   '../app/api/patient-authorship/route.ts',
-  '../app/api/state/revision/route.ts',
   '../app/api/state/route.ts',
   '../app/api/workflow/route.ts',
   '../lib/billing-data.ts'
  ];
+ // A revisão lê agenda_settings via public.agenda_sync_signal (uma RPC), sem app_state.
+ {const revision=readFileSync(new URL('../app/api/state/revision/route.ts',import.meta.url),'utf8');assert.doesNotMatch(revision,/['"]app_state['"]/);assert.match(revision,/rpc\("agenda_sync_signal"/)}
  for(const path of paths){
   const source=readFileSync(new URL(path,import.meta.url),'utf8');
   assert.doesNotMatch(source,/['"]app_state['"]/,path);

@@ -1,35 +1,19 @@
-import { getSession } from "@/app/authz";
+import { sessionFromContext, sessionTokenHash } from "@/app/authz";
 import { canUseAgenda } from "@/lib/doctor-services";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
-import { agendaRevision } from "@/lib/agenda/store";
 
 export const dynamic = "force-dynamic";
 
+// Consultado por cada aba aberta da agenda: sessão + revisões em uma única RPC
+// (public.agenda_sync_signal), com o mesmo escopo por papel da versão anterior.
 export async function GET() {
-  const session = await getSession();
-  if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
-  const db = getSupabaseAdmin(), role = session.account.role;
-  const auditRead = role === "general_manager"
-    ? db.from("audit_logs").select("created_at").order("created_at", { ascending: false }).limit(1)
-    : role === "secretary" && session.agendaIds.length
-      ? db.from("audit_logs").select("created_at").in("professional_id", session.agendaIds).order("created_at", { ascending: false }).limit(1)
-      : Promise.resolve({ data: [], error: null });
-  const notificationCreatedRead = db.from("notifications").select("created_at").eq("user_id", session.account.id).order("created_at", { ascending: false }).limit(1);
-  const notificationReadRead = db.from("notifications").select("read_at").eq("user_id", session.account.id).not("read_at", "is", null).order("read_at", { ascending: false }).limit(1);
-  const doctorRequestRead = role === "doctor" && session.agendaIds.length ? db.from("agenda_requests").select("created_at").eq("requested_by", session.account.id).in("professional_id", session.agendaIds).order("created_at", { ascending: false }).limit(1) : Promise.resolve({ data: [], error: null });
-  const [revision, auditResult, notificationCreatedResult, notificationReadResult, doctorRequestResult] = await Promise.all([
-    agendaRevision(session.account.id),
-    auditRead,
-    notificationCreatedRead,
-    notificationReadRead,
-    doctorRequestRead,
-  ]);
-  [auditResult, notificationCreatedResult, notificationReadResult, doctorRequestResult].forEach(result => dbError(result.error, "Read synchronization revision"));
-  const workflowRevision = [
-    auditResult.data?.[0]?.created_at,
-    notificationCreatedResult.data?.[0]?.created_at,
-    notificationReadResult.data?.[0]?.read_at,
-    doctorRequestResult.data?.[0]?.created_at,
-  ].filter(Boolean).sort().at(-1) ?? null;
-  return Response.json({ revision, workflowRevision }, { headers: { "Cache-Control": "private, no-store" } });
+  const tokenHash = await sessionTokenHash();
+  const denied = () => Response.json({ error: "Acesso não autorizado" }, { status: 403 });
+  if (!tokenHash) return denied();
+  const { data, error } = await getSupabaseAdmin().rpc("agenda_sync_signal", { p_token_hash: tokenHash });
+  dbError(error, "Read synchronization revision");
+  const session = sessionFromContext(data?.session);
+  if (!session || !canUseAgenda(session)) return denied();
+  const revision = data.revision ? new Date(data.revision).toISOString() : null;
+  return Response.json({ revision, workflowRevision: data.workflowRevision ?? null }, { headers: { "Cache-Control": "private, no-store" } });
 }

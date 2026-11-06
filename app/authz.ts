@@ -24,24 +24,36 @@ export async function hasActiveRnGestaoMembership(db: ReturnType<typeof getSupab
   return Boolean(membership.data) && organizations.count===1;
 }
 
-export async function getSession() {
+export type Session = { account: { id: number; email: string; name: string; role: Role; doctorId: string|null }; services: DoctorServices; agendaIds: string[] };
+
+// Hash do token do cookie, ou null quando ausente/malformado (sem consulta ao banco).
+export async function sessionTokenHash(): Promise<string|null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token || !/^[0-9a-f-]{73}$/.test(token)) return null;
-  const tokenHash = await hashToken(token);
-  const db = getSupabaseAdmin();
-  const { data: session, error } = await db.from("sessions").select("id,user_id,expires_at,users(id,email,name,role,doctor_id,active)").eq("token_hash", tokenHash).gt("expires_at", new Date().toISOString()).maybeSingle();
+  return hashToken(token);
+}
+
+// Normaliza o JSON de public.session_context (mesmas regras de hasActiveRnGestaoMembership).
+export function sessionFromContext(raw: unknown): Session|null {
+  const value = raw as { account?: Record<string, unknown>; services?: DoctorServices; agendaIds?: unknown[] } | null;
+  const account = value?.account;
+  if (!account || !["general_manager", "secretary", "doctor"].includes(String(account.role))) return null;
+  const role = account.role as Role;
+  return {
+    account: { id: Number(account.id), email: String(account.email ?? ""), name: String(account.name ?? ""), role, doctorId: (account.doctorId as string|null) ?? null },
+    services: role === "doctor" ? { ...noServices, ...(value?.services || {}) } : { ...noServices },
+    agendaIds: role === "general_manager" ? [] : [...new Set((value?.agendaIds || []).map(String))],
+  };
+}
+
+// Uma única ida ao banco: sessão válida, usuário ativo, vínculo ativo na organização única,
+// serviços do médico e agendas liberadas (public.session_context).
+export async function getSession(): Promise<Session|null> {
+  const tokenHash = await sessionTokenHash();
+  if (!tokenHash) return null;
+  const { data, error } = await getSupabaseAdmin().rpc("session_context", { p_token_hash: tokenHash });
   dbError(error, "Read session");
-  if (!session?.users) return null;
-  const raw = Array.isArray(session.users) ? session.users[0] : session.users;
-  if (!raw?.active || !["general_manager", "secretary", "doctor"].includes(raw.role)) return null;
-  if (!await hasActiveRnGestaoMembership(db,Number(raw.id),raw.role as Role)) return null;
-  const account = { id: Number(raw.id), email: raw.email as string, name: raw.name as string, role: raw.role as Role, doctorId: raw.doctor_id as string|null };
-  let services:DoctorServices={...noServices};
-  if(account.role==='doctor'&&account.doctorId){const result=await db.from('doctors').select('active,scheduling_enabled,billing_enabled,invoice_enabled').eq('id',account.doctorId).maybeSingle();dbError(result.error,'Read doctor services');if(result.data?.active)services={scheduling_enabled:result.data.scheduling_enabled,billing_enabled:result.data.billing_enabled,invoice_enabled:result.data.invoice_enabled};}
-  if (account.role === "general_manager") return { account, services, agendaIds: [] as string[] };
-  const { data: grants, error: grantError } = await db.from("agenda_access").select("professional_id").eq("user_id", account.id);
-  dbError(grantError, "Read agenda grants");
-  return { account, services, agendaIds: [...new Set([...((grants || []) as Array<{ professional_id: string }>).map((grant) => String(grant.professional_id)),...(account.role==='doctor'&&account.doctorId?[account.doctorId]:[])])] };
+  return sessionFromContext(data);
 }
 
 export function isManager(role: Role) { return role === "general_manager"; }
