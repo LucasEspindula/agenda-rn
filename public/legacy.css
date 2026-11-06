@@ -886,3 +886,7 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 .mobile-appointment-content .appointment-head b{flex:none;font-variant-numeric:tabular-nums}
 .mobile-appointment-content .appointment-hospital{display:inline!important;margin:0!important;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700;letter-spacing:.04em;color:#6a8394}
 .mobile-appointment-content .appointment-surgeon.is-empty{font-weight:500!important;color:#8a9eab}
+
+/* Agenda por período: aviso de que há registros anteriores não carregados. */
+.agenda-window-note{margin:12px 0 4px;padding:8px 12px;border-radius:8px;background:#f3f7f9;color:#4a6474;font-size:12px;line-height:1.4}
+.agenda-window-note .link-btn{font-size:12px;padding:0;margin-left:4px}

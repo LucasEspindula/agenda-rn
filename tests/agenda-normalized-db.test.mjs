@@ -212,3 +212,28 @@ test('workflow decision, audit and notification are written in the same transact
   assert.deepEqual(again,{ok:false,conflict:'request'});
  }finally{await db.close()}
 });
+
+test('period window: browser gets appointments and history from the start date, null keeps the full agenda',async()=>{
+ const db=await fixture();
+ try{
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261106210000_agenda_period_window.sql',import.meta.url),'utf8'));
+  const OLD='b3000000-0000-4000-8000-000000000003',HOLD='e3000000-0000-4000-8000-000000000003';
+  await apply(db,1,[{op:'upsert_appointment',id:OLD,data:appointment(OLD,{date:'2026-01-10',time:'09:00'}),expectedVersion:null,cancelled:false},
+   {op:'append_history',id:HOLD,data:{id:HOLD,patientId:P1,appointmentId:OLD,type:'Agendamento criado',text:'antigo',at:'2026-01-02T09:00:00.000Z'}}]);
+  const full=(await load(db)).state;
+  const win=async since=>(await db.query('select public.load_agenda_window(1,$1::date) as s',[since])).rows[0].s;
+  const all=await win(null);
+  assert.deepEqual(all.state,full,'null since = load_agenda_state');
+  const recent=(await win('2026-06-01')).state;
+  assert.deepEqual(recent.appointments.map(a=>a.id),[AP1]);
+  assert.deepEqual(recent.cancelledAppointments.map(a=>a.id),[AP2]);
+  assert.ok(full.appointments.some(a=>a.id===OLD));
+  assert.ok(!recent.patientHistory.some(h=>h.id===HOLD),'old history stays on the server');
+  assert.ok(recent.patientHistory.some(h=>h.id==='hist-1'),'history of loaded appointments is sent');
+  for(const key of ['patients','professionals','hospitals','schedulingRules','scheduleBlocks','settings'])assert.deepEqual(recent[key],full[key],key);
+  assert.equal((await win('2026-06-01')).revision,(await load(db)).revision);
+  await rejects(db.query(`select public.load_agenda_window(999,'2026-06-01')`),/Acesso à organização negado/);
+  const grants=(await db.query(`select has_function_privilege('anon','public.load_agenda_window(bigint,date)','execute') a,has_function_privilege('authenticated','public.load_agenda_window(bigint,date)','execute') b`)).rows[0];
+  assert.deepEqual(grants,{a:false,b:false});
+ }finally{await db.close()}
+});

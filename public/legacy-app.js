@@ -29,7 +29,7 @@ const Storage={
  async flush(){
   this.saving=true;
   try{while(this.pending){const body=this.pending;this.pending=null;const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json","if-match":window.AgendaRevision||"new"},body}),result=await response.json();if(!response.ok)throw Error(result.error||"Não foi possível salvar no servidor.");if(result.revision)window.AgendaRevision=result.revision;}return true}
-  catch(error){this.pending=null;await appNotice("Alteração não salva",error.message+" A agenda será recarregada. Confira os dados antes de repetir a alteração.");const response=await fetch("/api/state",{cache:"no-store"});if(response.ok){const snapshot=await response.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);closeModals();renderAll()}return false}
+  catch(error){this.pending=null;await appNotice("Alteração não salva",error.message+" A agenda será recarregada. Confira os dados antes de repetir a alteração.");const response=await fetch(agendaStateUrl(),{cache:"no-store"});if(response.ok){const snapshot=await response.json();window.AgendaRevision=snapshot.revision;rememberAgendaWindow(snapshot);state=Storage.migrate(snapshot.state);closeModals();renderAll()}return false}
   finally{this.saving=false;window.AgendaSyncAfterSave?.()}
  }
 
@@ -39,6 +39,28 @@ const $=id=>document.getElementById(id),qsa=s=>[...document.querySelectorAll(s)]
 let remoteAgendaUpdatePending=false,remoteAgendaRevision=null,agendaSyncInFlight=false,agendaSyncTimer=null,agendaSyncDelay=4000;
 // Polling adaptativo: 4 s com atividade; sem mudanças recua 2 s por ciclo até 15 s; erro dobra até 30 s.
 const AGENDA_SYNC_FAST=4000,AGENDA_SYNC_IDLE_MAX=15000;
+// Agenda por período: o servidor envia consultas e histórico a partir de AgendaWindowSince
+// (padrão: 90 dias para trás + futuro). Ao navegar para antes disso, o período é ampliado.
+function agendaStateUrl(){const since=window.AgendaWindowSince;return since?`/api/state?since=${encodeURIComponent(since)}`:"/api/state"}
+function rememberAgendaWindow(snapshot){if(snapshot?.window?.since)window.AgendaWindowSince=snapshot.window.since}
+function agendaWindowCovers(day){const since=window.AgendaWindowSince;return !since||since==="all"||String(day)>=since}
+let agendaWindowLoading=null,agendaWindowFailedAt=0;
+function ensureAgendaWindow(day){
+ if(day!=="all"&&agendaWindowCovers(day))return Promise.resolve(true);
+ if(agendaWindowLoading)return agendaWindowLoading;
+ if(Storage.saving||Storage.pending||agendaEditorOpen()){if(day==="all")toast("Conclua a edição aberta antes de carregar o período anterior.");return Promise.resolve(false)}
+ if(Date.now()-agendaWindowFailedAt<10000)return Promise.resolve(false);
+ const since=day==="all"?"all":String(day).slice(0,7)+"-01";
+ toast("Carregando período anterior…");
+ agendaWindowLoading=(async()=>{try{
+  const response=await fetch(`/api/state?since=${encodeURIComponent(since)}`,{cache:"no-store"});if(!response.ok)throw Error("window");
+  const snapshot=await response.json();if(Storage.saving||Storage.pending||agendaEditorOpen())return false;
+  window.AgendaRevision=snapshot.revision;window.AgendaWindowSince=snapshot.window?.since||since;state=Storage.migrate(snapshot.state);renderAll();return true;
+ }catch{agendaWindowFailedAt=Date.now();toast("Não foi possível carregar o período anterior.");return false}finally{agendaWindowLoading=null}})();
+ return agendaWindowLoading;
+}
+function agendaWindowNote(label){const since=window.AgendaWindowSince;if(!since||since==="all")return "";return `<div class="agenda-window-note">${esc(label)} a partir de ${esc(parseDate(since).toLocaleDateString("pt-BR"))}. <button type="button" class="link-btn" data-agenda-window-all>Carregar anteriores</button></div>`}
+function bindAgendaWindowButtons(root){root?.querySelectorAll("[data-agenda-window-all]").forEach(b=>b.onclick=()=>ensureAgendaWindow("all"))}
 function agendaNextSyncDelay(previous,changed){return changed?AGENDA_SYNC_FAST:Math.min(AGENDA_SYNC_IDLE_MAX,Math.max(AGENDA_SYNC_FAST,Number(previous)||AGENDA_SYNC_FAST)+2000)}
 function agendaRevisionIsNewer(serverRevision,currentRevision){if(!serverRevision)return false;if(!currentRevision)return true;const serverTime=Date.parse(serverRevision),currentTime=Date.parse(currentRevision);return Number.isFinite(serverTime)&&Number.isFinite(currentTime)?serverTime>currentTime:false}
 function agendaSyncDecision({serverRevision,currentRevision,editorOpen=false,saving=false,pending=false}={}){if(!agendaRevisionIsNewer(serverRevision,currentRevision))return "ignore";return editorOpen||saving||pending?"pending":"apply"}
@@ -55,10 +77,10 @@ function restoreCalendarScroll(position){if(!position)return;const card=document
 async function refreshWorkflowRevision(workflowRevision){if(Object.prototype.hasOwnProperty.call(window,"AgendaWorkflowRevision")&&window.AgendaWorkflowRevision===workflowRevision)return false;const refreshed=await refreshWorkflow();if(refreshed)window.AgendaWorkflowRevision=workflowRevision;return refreshed}
 async function applyRemoteAgendaUpdate(expectedRevision,workflowRevision,workflowRefreshed=false){
  if(agendaSyncInFlight)return;agendaSyncInFlight=true;
- try{const response=await fetch("/api/state",{cache:"no-store"});if(!response.ok)return;const snapshot=await response.json(),decision=agendaSyncDecision({serverRevision:snapshot.revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
+ try{const response=await fetch(agendaStateUrl(),{cache:"no-store"});if(!response.ok)return;const snapshot=await response.json(),decision=agendaSyncDecision({serverRevision:snapshot.revision,currentRevision:window.AgendaRevision,editorOpen:agendaEditorOpen(),saving:Storage.saving,pending:Storage.pending});
   if(decision==="ignore"){reconcileRemoteAgendaUpdate();return}
   if(decision==="pending"){rememberRemoteAgendaUpdate(snapshot.revision||expectedRevision,{silent:agendaRemoteNoticeMode({saving:Storage.saving,pending:Storage.pending})==="silent"});return}
-  const scroll=calendarScrollPosition();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);clearRemoteAgendaUpdate();renderAll();restoreCalendarScroll(scroll);if(!workflowRefreshed)await refreshWorkflowRevision(workflowRevision);
+  const scroll=calendarScrollPosition();window.AgendaRevision=snapshot.revision;rememberAgendaWindow(snapshot);state=Storage.migrate(snapshot.state);clearRemoteAgendaUpdate();renderAll();restoreCalendarScroll(scroll);if(!workflowRefreshed)await refreshWorkflowRevision(workflowRevision);
  }catch{/* A próxima verificação recupera falhas temporárias sem tocar no estado local. */}finally{agendaSyncInFlight=false}
 }
 async function checkAgendaRevision(){
@@ -415,6 +437,7 @@ function renderCalendar(){
  mountAgendaOwnerSelector(owner);
  renderGuideAlerts();renderOperationalAlerts();updateNotificationCenter();
  const days=calendarMode==="week"?Array.from({length:7},(_,i)=>addDays(currentDate,i)):[new Date(currentDate)];
+ if(!agendaWindowCovers(ds(days[0])))void ensureAgendaWindow(ds(days[0]));
  $("periodLabel").textContent=calendarMode==="week"?currentDate.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}):currentDate.toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"});
  $("periodRange").textContent=calendarMode==="week"?`${days[0].toLocaleDateString("pt-BR")} — ${days.at(-1).toLocaleDateString("pt-BR")}`:currentDate.toLocaleDateString("pt-BR");
  let start=mins(selectedProf()?.agendaSettings?.workStart||state.settings.workStart),end=mins(selectedProf()?.agendaSettings?.workEnd||state.settings.workEnd);
@@ -711,7 +734,7 @@ function renderWorkflow(){
  renderAgendaLogs();
 }
 const workflowBusy=new Set();
-async function decideRequest(id,decision){if(workflowBusy.has(id))return;let note="";if(decision==="accepted"){const ok=await appConfirm("Aceitar solicitação","Tem certeza que deseja aceitar esta alteração? Ela será aplicada na agenda e ficará registrada no histórico.","Aceitar");if(!ok)return}else{const ok=await appConfirm("Negar solicitação","A solicitação será mantida no histórico e o médico receberá uma notificação.","Negar",true);if(!ok)return;note=await requestDenialReason();if(!note)return}workflowBusy.add(id);renderWorkflow();try{const response=await fetch("/api/workflow",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id,decision,note})});const result=await response.json().catch(()=>({}));if(!response.ok)return appNotice("Não foi possível concluir",result.error||"Tente novamente.");toast(result.message);const [stateResponse]=await Promise.all([fetch("/api/state"),refreshWorkflow()]);if(stateResponse.ok){const resultState=await stateResponse.json();if(resultState.state){window.AgendaRevision=resultState.revision;state=Storage.migrate(resultState.state);renderAll()}}}finally{workflowBusy.delete(id);renderWorkflow()}}
+async function decideRequest(id,decision){if(workflowBusy.has(id))return;let note="";if(decision==="accepted"){const ok=await appConfirm("Aceitar solicitação","Tem certeza que deseja aceitar esta alteração? Ela será aplicada na agenda e ficará registrada no histórico.","Aceitar");if(!ok)return}else{const ok=await appConfirm("Negar solicitação","A solicitação será mantida no histórico e o médico receberá uma notificação.","Negar",true);if(!ok)return;note=await requestDenialReason();if(!note)return}workflowBusy.add(id);renderWorkflow();try{const response=await fetch("/api/workflow",{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({id,decision,note})});const result=await response.json().catch(()=>({}));if(!response.ok)return appNotice("Não foi possível concluir",result.error||"Tente novamente.");toast(result.message);const [stateResponse]=await Promise.all([fetch(agendaStateUrl(),{cache:"no-store"}),refreshWorkflow()]);if(stateResponse.ok){const resultState=await stateResponse.json();if(resultState.state){window.AgendaRevision=resultState.revision;rememberAgendaWindow(resultState);state=Storage.migrate(resultState.state);renderAll()}}}finally{workflowBusy.delete(id);renderWorkflow()}}
 async function sendAgendaSuggestion(action,appointment,appointmentId,button=null){
  if(button?.dataset.sending)return false;
  const auth=window.AgendaAuth||{},reason=appointment.suggestionReason||appointment.rescheduleReason||appointment.cancelReason||"";
@@ -794,6 +817,7 @@ function renderCancelled(){
      </tr>`).join("")}</tbody>
    </table>
   </section>`).join("")||'<div class="empty">Nenhum cancelamento nesta agenda.</div>';
+ $("cancelledList").insertAdjacentHTML("beforeend",agendaWindowNote("Mostrando cancelamentos com data"));bindAgendaWindowButtons($("cancelledList"));
 }
 function money(v){return window.RNMoney.formatBRL(v==null?null:Number(v))}
 
@@ -803,7 +827,8 @@ function openModal(id){lastFocusedElement=document.activeElement;remoteAgendaNot
 function closeModals(){$("modalBackdrop").classList.add("hidden");qsa(".modal").forEach(m=>m.classList.add("hidden"));if(systemDialogResolve){const done=systemDialogResolve;systemDialogResolve=null;done(false)}if(lastFocusedElement?.isConnected)lastFocusedElement.focus();lastFocusedElement=null;window.AgendaSyncAfterModalClose?.()}
 function renderHistory(pid,target,limit=999){
  const list=state.patientHistory.filter(h=>h.patientId===pid).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,limit);
- $(target).innerHTML=list.length?list.map(h=>`<div class="history-item"><strong>${esc(h.type)}</strong><span>${esc(h.text)}</span><span>${new Date(h.at).toLocaleString("pt-BR")}</span></div>`).join(""):'<div class="history-empty">Nenhum histórico registrado ainda.</div>'
+ $(target).innerHTML=list.length?list.map(h=>`<div class="history-item"><strong>${esc(h.type)}</strong><span>${esc(h.text)}</span><span>${new Date(h.at).toLocaleString("pt-BR")}</span></div>`).join(""):'<div class="history-empty">Nenhum histórico registrado ainda.</div>';
+ $(target).insertAdjacentHTML("beforeend",agendaWindowNote("Mostrando histórico"));bindAgendaWindowButtons($(target));
 }
 function updatePatientSide(){
  const p=patient($("appointmentPatient").value),optional=isAnesthesiologist(selectedProf());$("patientSideName").textContent=p?.name||(optional?"Paciente não informado":"Selecione um paciente");$("patientSidePhone").textContent=p?.phone||"—";$("patientSideEmail").textContent=p?.email||"—";$("patientSideInsurance").textContent=p?.insurance||"—";$("patientSideCard").textContent=p?.cardNumber||"—";$("patientAvatar").textContent=p?.name?.charAt(0).toUpperCase()||"—";renderHistory(p?.id,"patientHistory",12)
@@ -852,9 +877,9 @@ function requestPasswordStatusChange(id,status="realized"){
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(result.error||"Não foi possível alterar o status.");
    committed=true;
-   const read=await fetch("/api/state",{cache:"no-store"});
+   const read=await fetch(agendaStateUrl(),{cache:"no-store"});
    if(!read.ok)throw Error("O status foi salvo, mas a atualização da agenda falhou.");
-   const snapshot=await read.json();window.AgendaRevision=snapshot.revision;state=Storage.migrate(snapshot.state);
+   const snapshot=await read.json();window.AgendaRevision=snapshot.revision;rememberAgendaWindow(snapshot);state=Storage.migrate(snapshot.state);
    dialog.close();renderAll();
    const updated=state.appointments.find(item=>item.id===id);
    if(updated&&$("appointmentModal")&&!$("appointmentModal").classList.contains("hidden"))renderAppointmentDetail(updated);
@@ -1348,6 +1373,7 @@ function renderMobileCalendar(){
  const apps=state.appointments.filter(a=>(isAnesthesiologist(owner)?a.anesthetistId===owner.id:a.doctorId===owner.id)&&a.status!=="cancelled"),blocks=state.scheduleBlocks.filter(b=>b.professionalId===owner.id),dates=new Set(apps.map(a=>a.date)),blockDates=new Set(blocks.map(b=>b.date)),start=addDays(mobileMonth,-mobileMonth.getDay()),selected=parseDate(mobileSelectedDate);
  const availability=window.RNAvailability,includeRules=!isAnesthesiologist(owner);
  const monthDates=Array.from({length:42},(_,i)=>ds(addDays(start,i)));
+ if(!agendaWindowCovers(monthDates[0]))void ensureAgendaWindow(monthDates[0]);
  const ruleDates=new Set(monthDates.filter(date=>availability.availabilityIntervals(state,owner.id,date,includeRules).some(interval=>interval.kind==="rule")));
  for(const date of ruleDates)blockDates.add(date);
  const fullyBlocked=availability.entirelyUnavailable(state,owner.id,mobileSelectedDate,includeRules);

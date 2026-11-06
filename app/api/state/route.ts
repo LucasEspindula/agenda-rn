@@ -3,18 +3,21 @@ import { mergeState, visibleState } from "@/lib/security/state";
 import { hasUnverifiedAttendedTransition } from "@/lib/security/attendance-status";
 import { getSession } from "@/app/authz";
 import { HttpError } from "@/lib/security/http";
-import { applyAgendaChanges, loadAgendaState, rowBases } from "@/lib/agenda/store";
+import { applyAgendaChanges, loadAgendaState, loadAgendaWindow, parseAgendaSince, rowBases } from "@/lib/agenda/store";
 import { agendaOps, canonical, changedKeys, conflictingKey, rebase } from "@/lib/agenda/diff";
 
 import {canUseAgenda} from "@/lib/doctor-services";
 import {changedAppointmentIssues,type AvailabilityState} from "@/lib/agenda-availability";
 type AgendaState = Record<string, unknown> & { appointments?: Record<string, unknown>[]; cancelledAppointments?: Record<string, unknown>[]; patients?: Record<string, unknown>[]; schedulingRules?: Record<string, unknown>[]; scheduleBlocks?: Record<string, unknown>[] };
 
-export async function GET() {
+// O navegador recebe só o período pedido (?since=AAAA-MM-DD ou ?since=all); padrão: 90 dias + futuro.
+// Gravações usam o estado completo do servidor e nunca removem consultas/pacientes por ausência.
+export async function GET(request?: Request) {
   const session = await getSession();
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
-  const { state, revision } = await loadAgendaState(session.account.id);
-  return Response.json({ state: visibleState(state, session), revision }, { headers: { "Cache-Control": "private, no-store" } });
+  const since = parseAgendaSince(request ? new URL(request.url).searchParams.get("since") : null);
+  const { state, revision } = await loadAgendaWindow(session.account.id, since);
+  return Response.json({ state: visibleState(state, session), revision, window: { since: since ?? "all" } }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 async function putState(request: Request) {
@@ -61,6 +64,10 @@ async function putState(request: Request) {
 
   }
   const ops = agendaOps(current, next, bases);
+  // O navegador pode não ter as consultas antigas: o uso do hospital é conferido no estado completo.
+  const archivedHospitals = new Set(ops.filter(op => op.op === "archive_hospital").map(op => String(op.id)));
+  if (archivedHospitals.size && [...(next.appointments || []), ...(next.cancelledAppointments || [])].some(a => archivedHospitals.has(String(a.hospitalId))))
+    return Response.json({ error: "Esse hospital está vinculado a agendamentos e não pode ser removido." }, { status: 409 });
   if (!ops.length) return Response.json({ ok: true, revision: snapshot.revision });
   try {
     const saved = await applyAgendaChanges(session.account.id, ops, { audit: entries });

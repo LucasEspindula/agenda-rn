@@ -13,6 +13,28 @@ export async function loadAgendaState(actorId: number): Promise<AgendaSnapshot> 
   return data as AgendaSnapshot;
 }
 
+// Janela padrão enviada ao navegador: 90 dias para trás (fuso de São Paulo) e todo o futuro.
+export const AGENDA_WINDOW_DAYS = 90;
+export function defaultAgendaSince(now = new Date()): string {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const d = new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - AGENDA_WINDOW_DAYS);
+  return d.toISOString().slice(0, 10);
+}
+// "all" = agenda completa; data AAAA-MM-DD válida = a partir dela; qualquer outra coisa = janela padrão.
+export function parseAgendaSince(value: string | null, now = new Date()): string | null {
+  if (value === "all") return null;
+  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value) return value;
+  return defaultAgendaSince(now);
+}
+
+// Agenda para o navegador a partir de `since` (null = completa).
+export async function loadAgendaWindow(actorId: number, since: string | null): Promise<AgendaSnapshot> {
+  const { data, error } = await getSupabaseAdmin().rpc("load_agenda_window", { p_actor: actorId, p_since: since });
+  dbError(error, "Read agenda");
+  if (!data?.state) throw new HttpError(409, "Agenda indisponível.");
+  return data as AgendaSnapshot;
+}
+
 export async function agendaRevision(actorId: number): Promise<string | null> {
   const { data, error } = await getSupabaseAdmin().rpc("agenda_revision", { p_actor: actorId });
   dbError(error, "Read agenda revision");
