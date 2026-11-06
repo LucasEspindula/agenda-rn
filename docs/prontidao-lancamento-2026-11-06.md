@@ -38,6 +38,17 @@ Decisão do dono do produto (06/11): lançar para **outras clínicas**. A Fase 2
 - Causa 3: Supabase **Free** (Nano, CPU compartilhada, pool do PostgREST com 10 conexões, máximo de 60 conexões).
 - `/api/state` devolve a agenda inteira da organização. Ela cresce sem limite com o histórico e precisa de janela por período.
 
+### 2.2.1 Resultado da fase 1 (mesmo dia, preview `gru1` + migration `20261106190000_session_sync_single_call`)
+| Cenário | Antes (`iad1`, ~9 consultas) | Depois (`gru1`, 1 RPC) |
+| --- | --- | --- |
+| `/api/state/revision`, 1 conexão | p50 1 154 ms | p50 **130 ms** |
+| `/api/state/revision`, 10 conexões | 4,4 req/s, p95 3 076 ms | **48 req/s**, p95 287 ms |
+| `/api/state/revision`, 25 conexões | 6,9 req/s, p95 4 973 ms | **48 req/s**, p95 865 ms |
+| `/api/session`, 10 conexões | — | 51 req/s, p95 270 ms |
+| `/api/state`, 10 conexões | — | 21 req/s, p95 635 ms |
+
+O polling agora vai de 4 s (com atividade) até 15 s (sem mudanças). Com o teto medido (~48 req/s, Supabase Free), a estimativa é de algumas centenas de abas abertas, contra ~20 antes. O próximo limite é o plano do Supabase e o `/api/state`, que devolve a agenda inteira.
+
 ### 2.3 Infraestrutura e contrato
 - Vercel **Hobby** não permite uso comercial. Lançar para clínicas pagantes exige **Vercel Pro**.
 - Supabase **Free**: sem backup diário restaurável, pausa por inatividade e CPU compartilhada. Para dado de saúde em produção, o mínimo é **Pro** com backups e, idealmente, PITR.
