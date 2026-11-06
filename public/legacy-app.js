@@ -403,7 +403,7 @@ function setAgendaOwnerState(owner){
  shell?.classList.toggle("agenda-has-no-owner",agendaContext&&!hasOwner);empty?.classList.toggle("hidden",!agendaContext||hasOwner);
 }
 // Altura de 1 hora na grade (px), igual a --hour-height no legacy.css: cabe o cartão de 30 min completo.
-const HOUR_HEIGHT=112;
+const HOUR_HEIGHT=132;
 function renderCalendar(){
  const owner=selectedProf();setAgendaOwnerState(owner);if(!owner)return;
  renderMobileCalendar();
@@ -533,7 +533,7 @@ function appointmentPartner(a,owner=selectedProf()){
 }
 function appointmentCardContent(a,owner=selectedProf()){
  const p=patient(a.patientId),h=hospital(a.hospitalId),partner=prof(isAnesthesiologist(owner)?a.doctorId:a.anesthetistId);
- const team=partner?`${isAnesthesiologist(owner)?"Cir.":"Anest."}: ${doctorName(partner.name)}`:appointmentPartner(a,owner);
+ const team=partner?`${isAnesthesiologist(owner)?"Cir.":"Anest."}: ${doctorShortName(partner.name)}`:appointmentPartner(a,owner);
  return `<strong class="appointment-head"><b>${esc(a.time)} – ${esc(hhmm(mins(a.time)+Number(a.duration||0)))}</b><span class="appointment-hospital">${esc(hospitalAcronym(h||"Hospital"))}</span></strong>
  <span class="appointment-patient">${esc(p?.name||"Paciente não informado")}</span>
  <span class="appointment-procedure">${esc(a.procedure||"Procedimento")}</span>
@@ -576,6 +576,8 @@ function renderRules(){
 let accessUsers=[];
 function roleLabel(role){return role==="general_manager"?"Gerente geral":role==="secretary"?"Secretaria":"Médico"}
 function doctorName(name){const value=String(name||"Médico").trim();return /^dra?\.?\s/i.test(value)?value:`Dr. ${value}`}
+// Nome curto para o cartão (título + primeiro + último nome): cabe inteiro na coluna; o nome completo fica no title.
+function doctorShortName(name){const full=doctorName(name),[title,...rest]=full.split(/\s+/),parts=rest.filter(w=>!/^(d[aeo]s?|e)$/i.test(w));return parts.length>2?`${title} ${parts[0]} ${parts[parts.length-1]}`:full}
 function accountName(account){return account?.role==="doctor"?doctorName(account.name||account.email):account?.name||account?.email||"Usuário"}
 function accessAgendaLabel(user){
  const ids=user.agendaIds||[],all=state.professionals.length>0&&state.professionals.every(p=>ids.includes(p.id));
