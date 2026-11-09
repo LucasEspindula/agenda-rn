@@ -44,7 +44,8 @@ test('organization page and APIs are restricted to managers',()=>{
 });
 
 test('navigation, mobile menu, first steps and legal links',()=>{
- assert.match(read('lib/navigation.ts'),/general_manager'\)links\.push\(\{id:'organization',href:'\/organizacao',label:'Organização'\}\)/);
+ assert.match(read('components/site-header.tsx'),/general_manager'&&<a className="hub-icon hub-settings" href="\/organizacao"[^>]*aria-label="Configurações"/);
+ assert.match(read('components/mobile-navigation.tsx'),/role === "general_manager" && <a href="\/organizacao"[\s\S]*?<span>Configurações<\/span>/);
  const mobile=read('components/mobile-navigation.tsx');
  assert.match(mobile,/<OrganizationSwitcher \/>/);
  assert.match(mobile,/href="\/termos"[\s\S]*href="\/privacidade"/);
@@ -55,4 +56,37 @@ test('navigation, mobile menu, first steps and legal links',()=>{
  assert.match(steps,/\/api\/organizations\/team\?setup=1/);
  assert.match(steps,/if \(steps\.every\(s => s\.done\)\) return null/);
  assert.match(steps,/try \{ window\.localStorage\.setItem/);
+});
+
+test('Cadastros and the old Configurações are folded into the new Configurações tabs',()=>{
+ assert.match(read('app/doctors/page.tsx'),/redirect\("\/organizacao\?aba=medicos"\)/);
+ assert.match(read('app/doctors/page.tsx'),/\/organizacao\/agenda\?doctor_id=/);
+ assert.match(read('app/settings/page.tsx'),/redirect\("\/organizacao\?aba=equipe"\)/);
+ assert.doesNotMatch(read('lib/navigation.ts'),/'\/doctors'/);
+ assert.doesNotMatch(read('components/site-header.tsx'),/href="\/settings"/);
+ assert.doesNotMatch(read('components/mobile-navigation.tsx'),/href="\/settings"/);
+ assert.doesNotMatch(read('public/legacy-app.js'),/'\/settings'|"\/doctors/);
+ const area=read('components/organization-area.tsx');
+ assert.match(area,/\["medicos", "Médicos"\], \["equipe", "Equipe"\], \["dados", "Organização"\]/);
+ assert.match(area,/send\("\/api\/access", "POST", \{ id: user\.id, email: user\.email, name: user\.name \|\| "", role: user\.role, updated_at: user\.updated_at, agendaIds: selected \}\)/);
+ const agenda=read('app/organizacao/agenda/page.tsx');
+ assert.match(agenda,/role !== "general_manager"\) redirect\(doctorHome\(session\)\)/);
+ assert.match(agenda,/<LegacyApp initialView="settings" adminSection="rules" doctorId=\{doctor_id\} \/>/);
+});
+
+test('doctors tab has no billing dependency and gives access only by invite',()=>{
+ const doctors=read('components/organization-doctors.tsx');
+ assert.doesNotMatch(doctors,/api\/billing|doctor-entities|password/i);
+ assert.match(doctors,/send\("\/api\/invites", "POST", \{ email, role: "doctor", name: doctor\.name, doctorId: doctor\.id \}\)/);
+ assert.match(doctors,/send\("\/api\/doctors", "POST", \{ kind: "doctor", data: draft/);
+});
+
+test('hospital is free text in the appointment form, reusing names before creating one',()=>{
+ const body=read('app/dashboard/legacy-body.ts'),js=read('public/legacy-app.js');
+ assert.match(body,/<input id="appointmentHospital" list="hospitalOptions" required/);
+ assert.match(js,/function resolveHospitalText\(text\)/);
+ assert.match(js,/sensitivity:"base"/);
+ assert.match(js,/<input id="detailHospital" list="hospitalOptions"/);
+ assert.match(js,/commitHospital\(hospitalChoice\);const i=state\.appointments\.findIndex/);
+ assert.match(js,/Para um hospital novo, peça à secretaria\./,'doctors cannot create hospitals through suggestions');
 });

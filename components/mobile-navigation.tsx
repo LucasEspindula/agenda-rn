@@ -20,7 +20,6 @@ export default function MobileNavigation({ links, active, name, role }: {
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
-  const isManager = role === "general_manager";
   const tabs = links.slice(0, 3);
   const overflowLinks = links.filter(link => !tabs.some(tab => tab.id === link.id));
 
@@ -76,7 +75,7 @@ export default function MobileNavigation({ links, active, name, role }: {
               <Icon size={20} aria-hidden="true"/><span>{link.label}</span><ChevronRight size={17} aria-hidden="true"/>
             </a>;
           })}
-          {isManager && <a href="/settings" aria-current={active === "settings" ? "page" : undefined}><Settings size={20} aria-hidden="true"/><span>Configurações</span><ChevronRight size={17} aria-hidden="true"/></a>}
+          {role === "general_manager" && <a href="/organizacao" aria-current={active === "organization" || active === "settings" ? "page" : undefined}><Settings size={20} aria-hidden="true"/><span>Configurações</span><ChevronRight size={17} aria-hidden="true"/></a>}
         </nav>
         <div className="mobile-app-menu-footer"><span>Encerrar sessão</span><HubLogout/></div>
         <p className="mobile-app-legal"><a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a></p>

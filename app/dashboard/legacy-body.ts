@@ -69,7 +69,7 @@ export const legacyBody = `<div class="agenda-shell">
       <label id="appointmentInsuranceLabel">Convênio / plano<input id="appointmentInsurance" list="appointmentInsuranceOptions" placeholder="Selecione ou informe o convênio"><datalist id="appointmentInsuranceOptions"></datalist></label>
       <label>Forma de cobrança<select id="appointmentBillingMethod" required><option value="">Selecione</option><option value="PARTICULAR">Particular</option><option value="CONVENIO">Convênio</option></select></label><section id="newAppointmentFinance" class="native-finance"></section>
       <label>Procedimento<input id="appointmentProcedure" required placeholder="Ex.: Artroscopia de joelho"></label>
-      <label>Hospital<select id="appointmentHospital" required></select></label>
+      <label>Hospital<input id="appointmentHospital" list="hospitalOptions" required maxlength="120" autocomplete="off" placeholder="Ex.: HMV"></label><datalist id="hospitalOptions"></datalist>
       <label>Validade da guia<input id="guideExpiry" type="date"></label>
       <label>Data<input id="appointmentDate" type="date" required></label>
       <label>Horário<input id="appointmentTime" type="time" required></label>

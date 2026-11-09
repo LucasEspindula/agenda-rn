@@ -68,3 +68,22 @@
 .setup-steps li.done .setup-step-mark{background:#129e98;color:#fff}
 .setup-steps-hide{position:absolute;top:10px;right:10px;border:0;background:transparent;color:#5f7380;cursor:pointer;width:32px;height:32px;border-radius:8px;display:grid;place-items:center}
 .setup-steps-hide:hover{background:#eef4f7}
+
+/* Abas da administração (Médicos, Equipe, Organização). */
+.org-tabs{display:flex;gap:4px;border-bottom:1px solid #dbe6ec;overflow-x:auto}
+.org-tabs a{padding:10px 14px;color:#5f7380;font-weight:600;text-decoration:none;border-bottom:3px solid transparent;white-space:nowrap}
+.org-tabs a:hover{color:#12374f}
+.org-tabs a[aria-current="page"]{color:#0f817c;border-bottom-color:#129e98}
+.org-dialog{max-width:560px;width:calc(100vw - 32px);padding:20px;border-radius:16px}
+.org-dialog h2{margin:0 0 12px;font-size:18px;color:#12374f}
+.org-dialog .org-muted{margin-bottom:8px}
+.org-checks{display:flex;flex-wrap:wrap;gap:8px 18px}
+.org-checks label,.org-dialog fieldset label{display:flex;align-items:center;gap:8px;font-weight:500}
+.org-dialog fieldset{grid-column:1/-1;border:1px solid #e3ecf1;border-radius:12px;padding:10px 12px;display:grid;gap:6px;margin:0}
+.org-dialog legend{font-weight:600;padding:0 4px}
+.org-access{grid-column:1/-1;display:grid;gap:8px;border-top:1px solid #e3ecf1;padding-top:12px}
+.org-access h3{margin:0;font-size:14px;color:#12374f}
+.org-invite-row{display:flex;gap:8px}
+.org-invite-row input{flex:1;height:38px;border:1px solid #cfdbe3;border-radius:10px;padding:0 10px;font:inherit;min-width:0}
+.org-back{max-width:1180px;margin:12px auto 0;padding:0 16px}
+.org-back a{color:#12857f;font-weight:600;text-decoration:none}

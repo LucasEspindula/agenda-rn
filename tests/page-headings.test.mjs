@@ -9,8 +9,6 @@ test('page descriptions are scoped, left-aligned and preserve actions',()=>{
  assert.match(pending,/Atendimentos realizados que ainda aguardam resolução financeira pelo convênio/);
  assert.match(pending,/pending-page-heading page-description/);
  assert.doesNotMatch(pending,/pending-page-heading">\s*<h1>Pendências de Convênio/);
- const doctors=read('app/doctors/doctor-directory.tsx');
- assert.match(doctors,/Dados profissionais, serviços, entidades recebedoras, agenda e acesso em um único cadastro/);
  const billing=read('app/billing/billing-client.tsx');
  assert.match(billing,/Cadastre os CPF\/CNPJ utilizados para receber pagamentos e/);
  assert.match(billing,/emitir notas fiscais/);

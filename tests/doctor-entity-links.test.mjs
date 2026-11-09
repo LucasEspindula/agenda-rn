@@ -26,21 +26,6 @@ test('doctor entity mutation creates, deactivates and reactivates without delete
  assertSameStructure(inactiveEntityHistory({entities,links},'d1').map(({entity})=>entity.id),['e3']);
 });
 
-test('doctor modal owns auto-saved entity links and preserves failures after reload',()=>{
- const source=readFileSync('app/doctors/doctor-directory.tsx','utf8');
- assert.match(source,/Entidades recebedoras/);
- assert.match(source,/Salve o médico primeiro para configurar as entidades recebedoras./);
- assert.match(source,/As alterações desta seção são salvas automaticamente./);
- assert.match(source,/Gerenciar entidades recebedoras/);
- assert.match(source,/buildDoctorEntityLinkMutation\(links,doctorId,entityId,desiredActive\)/);
- assert.match(source,/kind:'link'/);
- const handler=source.slice(source.indexOf('async function toggleDoctorEntityLink'),source.indexOf(' async function removeAccess'));
- assert.match(handler,/const errorMessage=/);
- assert.ok(handler.indexOf('await load();')<handler.indexOf('setModalError(errorMessage);'));
- assert.match(handler,/delete next\[key\]/);
- assert.doesNotMatch(handler,/delete_link/);
-});
-
 test('focused doctor entities endpoint only serves managers and returns no financial collections',async()=>{
  for(const role of ['doctor','secretary']){
   const endpoint=loadTs('app/api/billing/doctor-entities/route.ts',{'@/app/authz':{getSession:async()=>({account:{role}})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>{throw Error('database must not be queried')}}});
@@ -84,12 +69,3 @@ test('billing retains entity registration but no longer renders the old links ad
 });
 
 
-test('doctor ID is normalized once before the entity-link flow',()=>{
- const source=readFileSync('app/doctors/doctor-directory.tsx','utf8');
- assert.match(source,/const doctorId=typeof draft\.id==='string'\?draft\.id:'';/);
- const handler=source.slice(source.indexOf('async function toggleDoctorEntityLink'),source.indexOf(' async function removeAccess'));
- assert.match(handler,/if\(!doctorId\)return;/);
- assert.ok(handler.includes("const key=doctorId+':'+entityId;"));
- assert.match(handler,/buildDoctorEntityLinkMutation\(links,doctorId,entityId,desiredActive\)/);
- assert.doesNotMatch(handler,/draft\.id as string/);
-});

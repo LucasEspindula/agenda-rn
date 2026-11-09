@@ -10,7 +10,5 @@ export function moduleLinks(session:Identity){
  else if(canOpenInvoices(session))links.push({id:'billing',href:'/billing?view=invoices',label:'Notas fiscais'});
  if(!BILLING_PAUSED&&session.account.role==='secretary'&&process.env.RN_DENIALS_ENABLED==='true')
    links.push({id:'denials',href:'/billing/glosas',label:'Glosas'});
- if(session.account.role==='general_manager')links.push({id:'doctors',href:'/doctors',label:'Cadastros'});
- if(session.account.role==='general_manager')links.push({id:'organization',href:'/organizacao',label:'Organização'});
  return links;
 }
