@@ -142,4 +142,9 @@ test('server: unverified logins are refused, e-mail is fail-closed in production
  for(const p of ['app/api/auth/signup/route.ts','app/api/auth/forgot/route.ts','app/api/auth/reset/route.ts','app/api/auth/resend-confirmation/route.ts','app/api/invites/route.ts','app/api/invites/accept/route.ts'])
   assert.match(read(p),/consumeLimit\(/,p);
  assert.match(read('app/api/auth/forgot/route.ts'),/Se o e-mail estiver cadastrado/,'same answer for unknown e-mails');
+ // Sem envio configurado em produção, a recusa vem antes de consultar o banco (não revela contas).
+ for(const p of ['app/api/auth/forgot/route.ts','app/api/auth/resend-confirmation/route.ts','app/api/auth/signup/route.ts']){
+  const src=read(p),guard=src.indexOf('requireEmailDelivery();'),db=src.indexOf('getSupabaseAdmin()');
+  assert.ok(guard>0&&guard<db,p);
+ }
 });
