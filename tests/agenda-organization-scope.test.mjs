@@ -97,7 +97,10 @@ test('A1: server-side agenda readers use the normalized store scoped to RN Gest�
  }
  const access=readFileSync(new URL('../app/api/access/route.ts',import.meta.url),'utf8');
  assert.doesNotMatch(access,/['"]app_state['"]/);
- assert.match(access,/from\("doctors"\)\.select\("id,organizations!inner\(slug,active\)"\)\.eq\("organizations.slug","rn-gestao"\)/);
+ // 2B-M1: agendas e contas da organização da sessão, nunca de uma organização fixa.
+ assert.match(access,/from\("doctors"\)\.select\("id"\)\.eq\("organization_id",session\.organization\.id\)/);
+ assert.match(access,/from\("organization_memberships"\)\.select\("user_id"\)\.eq\("organization_id",organizationId\)/);
+ assert.doesNotMatch(access,/rn-gestao/);
  const sql=readFileSync(new URL('../supabase/migrations/20261103151428_agenda_normalized_a1.sql',import.meta.url),'utf8');
  assert.match(sql,/org:=public\.require_rn_agenda_actor_organization\(p_actor\)/i);
  assert.match(sql,/create trigger app_state_frozen/i);

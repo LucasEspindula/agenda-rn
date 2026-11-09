@@ -7,6 +7,7 @@ import {loadTs} from './load-ts.mjs';
 import * as crypto from 'node:crypto';
 const source=readFileSync(new URL('../app/api/documents/route.ts',import.meta.url),'utf8');
 function fixture(session,doc=null){
+ session=session&&{organization:{id:'org-1'},...session};
  const rows=[{id:'a',doctorId:'d1',patientId:'p',date:'2026-10-28',procedure:'Cirurgia',payment:{received_amount:1500},invoiceNumber:'NF-RESTRICTED',patientPrivate:{cpf:'00000000000'}},{id:'b',doctorId:'d2',patientId:'p'}];let allowed;
  const removed=[];
  const db={storage:{from(){return {remove:async paths=>{removed.push(...paths);return {error:null}}}}},from(table){const q={delete(){removed.push('metadata');return q},select(){return q},eq(){return q},in(k,ids){allowed=ids;return q},order:async()=>({data:[{id:'doc',appointment_id:allowed[0]}]}),maybeSingle:async()=>({data:table==='app_state'?{payload:{appointments:rows}}:doc})};return q}};

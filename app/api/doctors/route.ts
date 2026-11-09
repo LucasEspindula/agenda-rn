@@ -9,7 +9,12 @@ type DoctorAccount={id:number;email:string;doctor_id:string|null;updated_at:stri
 type AgendaGrant={user_id:number;professional_id:string};
 export async function GET(){
  const session=await getSession();if(!session||session.account.role!=='general_manager')return Response.json({error:'Acesso restrito à gerência.'},{status:403});
- const db=getSupabaseAdmin();const [doctors,agendas,accounts,grants]=await Promise.all([db.from('doctors').select('*').order('name'),db.from('doctor_agendas').select('*'),db.from('users').select('id,email,doctor_id,active,updated_at').eq('role','doctor'),db.from('agenda_access').select('user_id,professional_id')]);
+ // Somente médicos, agendas, contas e acessos da organização do gerente autenticado.
+ const db=getSupabaseAdmin(),org=session.organization.id;
+ const members=await db.from('organization_memberships').select('user_id').eq('organization_id',org);
+ if(members.error)return Response.json({error:'Não foi possível carregar os médicos.'},{status:503});
+ const memberIds=(members.data||[]).map((m:{user_id:number})=>m.user_id);
+ const [doctors,agendas,accounts,grants]=await Promise.all([db.from('doctors').select('*').eq('organization_id',org).order('name'),db.from('doctor_agendas').select('*').eq('organization_id',org),memberIds.length?db.from('users').select('id,email,doctor_id,active,updated_at').eq('role','doctor').in('id',memberIds):Promise.resolve({data:[],error:null}),db.from('agenda_access').select('user_id,professional_id').eq('organization_id',org)]);
  if(doctors.error||agendas.error||accounts.error||grants.error)return Response.json({error:'Não foi possível carregar os médicos.'},{status:503});
  return Response.json({doctors:doctors.data,agendas:agendas.data,accounts:((accounts.data||[]) as DoctorAccount[]).map(a=>({...a,agendaIds:((grants.data||[]) as AgendaGrant[]).filter(g=>g.user_id===a.id).map(g=>g.professional_id)}))},{headers:{'Cache-Control':'private, no-store'}});
 }

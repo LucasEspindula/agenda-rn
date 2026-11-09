@@ -10,6 +10,7 @@ function setup(role='general_manager',agendaIds=['dr1'],leaky=false){
   let items=table==='audit_logs'?records:[];
   const query={
    select(){return query},
+   eq(field,value){calls.push(['eq',table,field,value]);return query},
    in(field,values){calls.push(['in',table,field,values]);if(!leaky)items=items.filter(row=>values.includes(row[field]));return query},
    lt(field,value){calls.push(['lt',field,value]);items=items.filter(row=>row[field]<value);return query},
    order(field,{ascending}){items.sort((a,b)=>ascending?String(a[field]).localeCompare(String(b[field])):String(b[field]).localeCompare(String(a[field])));return query},
@@ -17,7 +18,7 @@ function setup(role='general_manager',agendaIds=['dr1'],leaky=false){
   };return query;
  }};
  const {GET}=loadTs('app/api/workflow/logs/route.ts',{
-  '@/app/authz':{getSession:async()=>({account:{role,id:1},agendaIds}),isManager:r=>r==='general_manager'},
+  '@/app/authz':{getSession:async()=>({account:{role,id:1},organization:{id:'org-1'},agendaIds}),isManager:r=>r==='general_manager'},
   '@/lib/doctor-services':{canUseAgenda:()=>true},
   '@/lib/supabase-admin':{getSupabaseAdmin:()=>db,dbError:e=>{if(e)throw e}}
  });

@@ -127,11 +127,12 @@ test('API and session code never physically deletes accounts or admits inactive 
  const session=readFileSync(new URL('../app/authz.ts',import.meta.url),'utf8');
  assert.match(access,/deactivate_user_access/);
  assert.doesNotMatch(access,/from\(["']users["']\)\.delete\(/);
- assert.match(login,/hasActiveRnGestaoMembership/);
- // getSession usa public.session_context: usuário ativo, vínculo ativo com o mesmo papel e organização única.
+ assert.match(login,/hasActiveMembership/);
+ // getSession usa public.session_context: usuário ativo e vínculo ativo com o mesmo papel em organização ativa.
  assert.match(session,/rpc\("session_context"/);
- const sql=readFileSync(new URL('../supabase/migrations/20261106190000_session_sync_single_call.sql',import.meta.url),'utf8');
- assert.match(sql,/not v_user\.active/);
- assert.match(sql,/m\.active and m\.role=v_user\.role and o\.slug='rn-gestao' and o\.active/);
- assert.match(sql,/count\(\*\) from public\.organizations\)<>1/);
+ const sql=readFileSync(new URL('../supabase/migrations/20261107120000_tenant_core_isolation.sql',import.meta.url),'utf8');
+ const context=sql.slice(sql.indexOf('create or replace function public.session_context'),sql.indexOf('create or replace function public.agenda_sync_signal'));
+ assert.match(context,/not v_user\.active/);
+ assert.match(context,/m\.active and m\.role=v_user\.role and o\.active/);
+ assert.doesNotMatch(context,/rn-gestao|count\(\*\)/,'no single-organization gate');
 });
