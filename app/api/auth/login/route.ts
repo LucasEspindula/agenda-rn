@@ -15,7 +15,7 @@ async function login(request: Request) {
   // Vercel owns this header. The global/account limits remain effective without it.
   if (process.env.VERCEL === "1") await consumeLimit("login-ip", request.headers.get("x-vercel-forwarded-for") || "unknown", 30, 300);
   const db = getSupabaseAdmin();
-  const found = await db.from("users").select("id,role,active,password_hash,password_salt").eq("email", email).maybeSingle();
+  const found = await db.from("users").select("id,role,active,password_hash,password_salt,email_verified_at").eq("email", email).maybeSingle();
   dbError(found.error, "Read account"); const account = found.data;
   if (!account?.active || !account.password_hash || !account.password_salt || !["general_manager","secretary","doctor"].includes(account.role)) {
     await hashPassword(password); // No distinguishable fast path for unknown accounts.
@@ -26,6 +26,10 @@ async function login(request: Request) {
     return invalid();
   }
   if (!await hasActiveMembership(db,Number(account.id),account.role as Role)) return invalid();
+  // Autocadastro só entra depois de confirmar o e-mail (a senha já foi conferida).
+  if (!account.email_verified_at) return Response.json({ error: "Confirme seu e-mail antes de entrar. Procure o link na sua caixa de entrada.", unverified: true }, { status: 403 });
+  // Limpeza ocasional de sessões e links vencidos.
+  if (Math.random() < 0.05) await db.rpc("purge_expired_auth").then(() => undefined, () => undefined);
   if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) {
     const credentials = await hashPassword(password);
     const upgraded = await db.from("users").update({ password_hash: credentials.hash, password_salt: credentials.salt }).eq("id",account.id).eq("password_hash",account.password_hash).select("id").maybeSingle();
