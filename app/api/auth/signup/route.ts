@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/client";
-import { appOrigin, emails, newEmailToken, sendMail } from "@/lib/email";
+import { appOrigin, emails, newEmailToken, requireEmailDelivery, sendMail } from "@/lib/email";
 import { TERMS_VERSION, publicSignupEnabled } from "@/lib/legal";
 
 const body = z.object({
@@ -21,6 +21,7 @@ const done = () => Response.json({ ok: true, message: "Enviamos um e-mail para c
 
 async function signup(request: Request) {
   if (!publicSignupEnabled()) throw new HttpError(404, "Cadastro indisponível.");
+  requireEmailDelivery();
   await consumeLimit("signup-ip", clientIp(request), 5, 3600);
   const parsed = body.safeParse(await readJson(request, 4096));
   if (!parsed.success) throw new HttpError(400, "Confira os dados. A senha precisa ter de 12 a 128 caracteres e os termos precisam ser aceitos.");

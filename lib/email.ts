@@ -13,6 +13,13 @@ export function emailConfigured() {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 }
 
+// Rotas públicas que só enviam e-mail para contas existentes chamam isto ANTES de consultar
+// o banco: sem envio configurado em produção, todas as respostas são 503 iguais, sem revelar
+// se o e-mail tem conta.
+export function requireEmailDelivery() {
+  if (!emailConfigured() && process.env.VERCEL_ENV === "production") throw new HttpError(503, "Envio de e-mail ainda não configurado.");
+}
+
 export async function sendMail(mail: Mail): Promise<"sent" | "logged"> {
   const key = process.env.RESEND_API_KEY, from = process.env.EMAIL_FROM;
   if (!key || !from) {
