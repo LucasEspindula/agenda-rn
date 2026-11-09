@@ -17,8 +17,9 @@ export async function hasActiveMembership(db: ReturnType<typeof getSupabaseAdmin
   return Boolean(membership.data);
 }
 
-export type Organization = { id: string; slug: string; name: string };
-export type Session = { account: { id: number; email: string; name: string; role: Role; doctorId: string|null }; organization: Organization; services: DoctorServices; agendaIds: string[] };
+export type Organization = { id: string; slug: string; name: string; kind?: string };
+export type Customer = { id: string; name: string; isOwner: boolean; maxOrganizations: number; organizationCount: number };
+export type Session = { account: { id: number; email: string; name: string; role: Role; doctorId: string|null }; organization: Organization; organizations: Organization[]; customer: Customer|null; services: DoctorServices; agendaIds: string[] };
 
 // Hash do token do cookie, ou null quando ausente/malformado (sem consulta ao banco).
 export async function sessionTokenHash(): Promise<string|null> {
@@ -29,14 +30,16 @@ export async function sessionTokenHash(): Promise<string|null> {
 
 // Normaliza o JSON de public.session_context (mesmas regras de hasActiveMembership).
 export function sessionFromContext(raw: unknown): Session|null {
-  const value = raw as { account?: Record<string, unknown>; organization?: Record<string, unknown>; services?: DoctorServices; agendaIds?: unknown[] } | null;
+  const value = raw as { account?: Record<string, unknown>; organization?: Record<string, unknown>; organizations?: Array<Record<string, unknown>>; customer?: Record<string, unknown>; services?: DoctorServices; agendaIds?: unknown[] } | null;
   const account = value?.account, organization = value?.organization;
   if (!account || !["general_manager", "secretary", "doctor"].includes(String(account.role))) return null;
   if (!organization?.id) return null;
   const role = account.role as Role;
   return {
     account: { id: Number(account.id), email: String(account.email ?? ""), name: String(account.name ?? ""), role, doctorId: (account.doctorId as string|null) ?? null },
-    organization: { id: String(organization.id), slug: String(organization.slug ?? ""), name: String(organization.name ?? "") },
+    organization: { id: String(organization.id), slug: String(organization.slug ?? ""), name: String(organization.name ?? ""), kind: organization.kind ? String(organization.kind) : undefined },
+    organizations: (value?.organizations || []).map(o => ({ id: String(o.id), slug: String(o.slug ?? ""), name: String(o.name ?? ""), kind: o.kind ? String(o.kind) : undefined })),
+    customer: value?.customer?.id ? { id: String(value.customer.id), name: String(value.customer.name ?? ""), isOwner: value.customer.isOwner === true, maxOrganizations: Number(value.customer.maxOrganizations ?? 0), organizationCount: Number(value.customer.organizationCount ?? 0) } : null,
     services: role === "doctor" ? { ...noServices, ...(value?.services || {}) } : { ...noServices },
     agendaIds: role === "general_manager" ? [] : [...new Set((value?.agendaIds || []).map(String))],
   };

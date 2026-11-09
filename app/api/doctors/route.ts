@@ -28,7 +28,7 @@ export const POST=secureMutation(async request=>{
   if(!parsed.success||kind!=='doctor')throw new HttpError(400,'Confira e-mail e senha (12 a 128 caracteres).');
   const {password,...metadata}=parsed.data;account=metadata;credentials=password?await hashPassword(password):null;
  }
- const result=await getSupabaseAdmin().rpc('save_doctor_with_access',{p_actor:session.account.id,p_kind:kind,p_data:data,p_access:account,p_credentials:credentials});
+ const result=await getSupabaseAdmin().rpc('save_doctor_with_access',{p_actor:session.account.id,p_kind:kind,p_data:data,p_access:account,p_credentials:credentials,p_org:session.organization.id});
  if(result.error)throw new HttpError(result.error.code==='P0001'?409:400,result.error.code==='P0001'?result.error.message:'Confira os dados do cadastro.');
  return Response.json({id:result.data});
 });

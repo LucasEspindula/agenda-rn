@@ -41,7 +41,7 @@ async function handlePOST(request: Request) {
   const validAgendas = new Set((agendas.data || []).map((p: {id:string})=>p.id));
   if ((data.agendaIds || []).some(id=>!validAgendas.has(id))) return Response.json({error:"Agenda inexistente"},{status:400});
   const password = data.password ? await hashPassword(data.password) : null;
-  const result=await db.rpc("save_user_access",{p_actor:session.account.id,p_data:{...data,email,password:undefined},p_credentials:password});
+  const result=await db.rpc("save_user_access",{p_actor:session.account.id,p_data:{...data,email,password:undefined},p_credentials:password,p_org:session.organization.id});
   if(result.error)return Response.json({error:result.error.code==="P0001"?result.error.message:"Não foi possível salvar o acesso."},{status:409});
   return Response.json({ ok: true });
 }
@@ -51,7 +51,7 @@ async function handleDELETE(request: Request) {
   if (!session) return Response.json({ error: "Somente o Gerente geral pode gerenciar acessos" }, { status: 403 });
   const id = Number(new URL(request.url).searchParams.get("id"));
   if (!Number.isSafeInteger(id) || id <= 0 || id === session.account.id) return Response.json({ error: "O Gerente geral atual não pode desativar o próprio acesso" }, { status: 400 });
-  const result = await getSupabaseAdmin().rpc("deactivate_user_access",{p_actor:session.account.id,p_target:id});
+  const result = await getSupabaseAdmin().rpc("deactivate_user_access",{p_actor:session.account.id,p_target:id,p_org:session.organization.id});
   if (result.error) return Response.json({error:result.error.code==="P0001"?result.error.message:"Não foi possível desativar o acesso."},{status:409});
   return Response.json({ ok: true });
 }

@@ -8,6 +8,7 @@ import MobileNavigation from '@/components/mobile-navigation';
 import AgendaSectionMenu from '@/components/agenda-section-menu';
 import BillingSectionMenu from '@/components/billing-section-menu';
 import BillingMobileTables from '@/components/billing-mobile-tables';
+import OrganizationSwitcher from '@/components/organization-switcher';
 export default function SiteHeader({account,active,services}:{services?:DoctorServices;account:{name:string;role:string;doctorId?:string|null};active?:ModuleName}){
  const session={account,services},icons={agenda:CalendarDays,billing:Wallet,denials:ShieldAlert,doctors:Stethoscope,settings:Settings};
  return <><header className="hub-header">
@@ -15,6 +16,7 @@ export default function SiteHeader({account,active,services}:{services?:DoctorSe
   {active==='agenda'&&<AgendaSectionMenu role={account.role}/>}
   {(active==='billing'||active==='denials')&&<BillingSectionMenu/>}
   <nav className="hub-nav" aria-label="Módulos">{moduleLinks(session).map(link=>{const Icon=icons[link.id];return <a key={link.id} href={link.href} aria-current={active===link.id?'page':undefined}><Icon size={17} aria-hidden="true"/>{link.label}</a>})}</nav>
+  <OrganizationSwitcher/>
   <div className="hub-account"><div className="hub-avatar" aria-hidden="true">{(account.name||'U').replace(/^Dr\.?\s*/i,'').slice(0,1).toUpperCase()}</div><div className="hub-profile"><strong>{account.role==='doctor'&&!/^Dr\.?\s/i.test(account.name)?'Dr. ':''}{account.name}</strong><span>{account.role==='general_manager'?'Gerente geral':account.role==='doctor'?'Médico':'Secretaria'}</span></div>
    {account.role==='general_manager'&&<a className="hub-icon hub-settings" href="/settings" aria-current={active==='settings'?'page':undefined} aria-label="Configurações" title="Configurações"><Settings size={21} aria-hidden="true"/></a>}<HubLogout/>
   </div>

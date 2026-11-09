@@ -90,7 +90,7 @@ async function handlePOST(request: Request) {
   const body = await readJson(request) as { action?: "create" | "update" | "delete"; appointment?: Appointment; appointmentId?: string };
   if (!body.action || !["create", "update", "delete"].includes(body.action)) return Response.json({ error: "Solicitação inválida" }, { status: 400 });
   const db = getSupabaseAdmin();
-  const state = (await loadAgendaState(session.account.id)).state as AgendaState;
+  const state = (await loadAgendaState(session.account.id, session.organization.id)).state as AgendaState;
   const previous = state.appointments?.find((item) => item.id === (body.appointmentId || body.appointment?.id)) || null;
   const proposed = body.appointment || null;
   if (body.action !== "create" && previous && !canReadAppointment(session, previous)) return Response.json({ error: "Agendamento sem permissão" }, { status: 403 });
@@ -118,6 +118,7 @@ async function handlePOST(request: Request) {
   // A solicitação, a notificação e a auditoria são uma única transação.
   // Criá-las em Promise.all permite que a notificação ultrapasse o pedido (FK 23503).
   const { data: savedId, error } = await db.rpc("submit_agenda_suggestion", {
+    p_org: session.organization.id,
     p_request: { id, professional_id: professionalId, appointment_id: targetAppointmentId, action: body.action, proposed_payload: proposed, previous_payload: previous, requested_by: session.account.id, created_at: now },
     p_notification: { id: crypto.randomUUID(), user_id: session.account.id, type: "request_sent", request_id: id, message: "Alteração de agenda enviada.", created_at: now },
     p_audit: { id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: "request_created", professional_id: professionalId, appointment_id: previous?.id || proposed?.id || null, patient_id: String((proposed || previous)?.patientId || "") || null, description, metadata: { requestId: id, requestAction: body.action }, created_at: now },
@@ -136,7 +137,7 @@ async function handlePATCH(request: Request) {
   const requestResult = await db.from("agenda_requests").select("*").eq("organization_id", session.organization.id).eq("id", body.id).eq("status", "pending").maybeSingle(); dbError(requestResult.error, "Read request"); const row = requestResult.data;
   if (!row) return Response.json({ error: "Esta solicitação já foi decidida ou não existe" }, { status: 409 });
   if (!allowed(session, row.professional_id)) return Response.json({ error: "Você não possui acesso a esta agenda" }, { status: 403 });
-  const snapshot = await loadAgendaState(session.account.id);
+  const snapshot = await loadAgendaState(session.account.id, session.organization.id);
   const before = snapshot.state as AgendaState;
   const state = structuredClone(before) as AgendaState;
   const proposed = row.proposed_payload as Appointment | null;
@@ -171,7 +172,7 @@ async function handlePATCH(request: Request) {
   const description = `${actor} ${accepted ? "aceitou" : "negou"} a sugestão de ${row.action === "delete" ? "desagendamento" : "alteração"} de ${patient}.`;
   let result: { ok: boolean };
   try { result = await commitAgendaState(session.account.id, snapshot.revision, before, accepted ? state : before, {
-    requestId: row.id, decision: body.decision as "accepted" | "denied", note: body.note?.trim() || null,
+    org: session.organization.id, requestId: row.id, decision: body.decision as "accepted" | "denied", note: body.note?.trim() || null,
     notification: { id: crypto.randomUUID(), user_id: row.requested_by, type: accepted ? "request_accepted" : "request_denied", message: `Alteração de agenda ${accepted ? "aceita" : "negada"}.` },
     audit: [{ id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor, actor_role: session.account.role, action: accepted ? "request_accepted" : "request_denied", professional_id: row.professional_id, appointment_id: row.appointment_id, patient_id: (proposed || previous)?.patientId || null, description, metadata: { requestId: row.id, note: body.note?.trim() || null } }],
   }); } catch (error) {
