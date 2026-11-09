@@ -1,6 +1,6 @@
 # RN Integra — Contexto central e continuidade
 
-> Atualizado em 29/10/2026 (America/Sao_Paulo). Documento de transferência entre conversas de desenvolvimento. **Não substitui verificações ao vivo no GitHub, Supabase e Vercel.**
+> Atualizado em 09/11/2026 (America/Sao_Paulo); estado atual na seção 6B. Documento de transferência entre conversas de desenvolvimento. **Não substitui verificações ao vivo no GitHub, Supabase e Vercel.**
 
 ## 1. Como retomar o trabalho em um novo chat
 
@@ -20,6 +20,7 @@
 - Vercel: projeto `agenda-rn`; equipe `team_FBTsVaBXUxWhfN3bwm5g9142`.
 - Objetivo: evoluir o sistema existente para SaaS multiempresa comercializável, **sem expor dados entre organizações**.
 - Estratégia: preservar estabilidade e compatibilidade do cliente existente (RN Gestão), migrar gradualmente, sem criar novos tenants até concluir o isolamento.
+- **Desde 06/11/2026:** lançamento para outras clínicas decidido; multiempresa implementado (seção 6B). Banco de produção só tem dados de teste e será zerado antes do lançamento.
 
 ## 3. Snapshot verificado em 29/10/2026
 
@@ -222,6 +223,43 @@ Critérios mínimos para avanço:
 - **Contas de teste** (gerente, secretária com as duas agendas, médico) com domínio `@rnintegra.test`; médicos de teste Dra. Ana Teste (Cardiologia) e Dr. Bruno Teste (Ortopedia e Traumatologia); pacientes de teste incluindo o mesmo nome/CPF nos dois médicos e um RN. Senhas fora do repositório, em arquivo protegido por DPAPI na máquina do responsável.
 - Observação operacional: nos previews, o login só funciona no endereço do próprio deployment (`VERCEL_URL`), não no alias do branch (regra de origem anterior à A1).
 
+## 6B. Lançamento para outras clínicas — multiempresa, contas, LGPD e Configurações (06–09/11/2026)
+
+**Decisão (06/11):** lançar para **outras clínicas**; a Fase 2B volta a valer. Auditoria de prontidão e testes de carga em `docs/prontidao-lancamento-2026-11-06.md`. Faturamento continua **pausado** (M2c, reconstrução futura).
+
+**Estado verificado em 09/11/2026:** `main` = `7052ac9`; produção Vercel servindo essa versão (`/api/health`), região de funções `gru1`. Migrations aplicadas no Supabase após a A1 (versão registrada no banco → arquivo):
+
+| Banco | Arquivo |
+| --- | --- |
+| `20261106181749 session_sync_single_call` | `20261106190000_session_sync_single_call.sql` |
+| `20261106195225 agenda_period_window` | `20261106210000_agenda_period_window.sql` |
+| `20261109113733 tenant_core_isolation` | `20261107120000_tenant_core_isolation.sql` |
+| `20261109134208 accounts_multi_organization` | `20261109150000_accounts_multi_organization.sql` |
+| `20261109142604 signup_email_invites` | `20261110120000_signup_email_invites.sql` |
+| `20261109163509 lgpd_operations` | `20261110180000_lgpd_operations.sql` |
+| `20261109175650 organization_area` | `20261111120000_organization_area.sql` |
+
+As versões diferem porque o banco registra o momento da aplicação; ao comparar, use o **nome**. Toda migration foi ensaiada antes em `BEGIN…ROLLBACK` no banco real e aplicada só com autorização do responsável.
+
+**O que entrou (PRs mergeadas com squash):**
+- **#84–#86** — cartões da agenda conforme a duração, fluxo do anestesista, nome completo da equipe nos cartões.
+- **#87** — capacidade fase 1: funções em `gru1` (perto do banco `sa-east-1`), `session_context` e `agenda_sync_signal` (uma chamada ao banco por requisição/sincronização), polling adaptativo 4–15 s.
+- **#88** — agenda carregada por período (`load_agenda_window`; padrão 90 dias para trás + futuro); gravações seguem mesclando contra o estado completo.
+- **#89 (M1)** — isolamento por organização: a organização vem do vínculo ativo, nunca do navegador; `guard_tenant_row` e `organization_id` nas tabelas restantes; buscas por id escopadas.
+- **#90 (M2a)** — **contas** (cliente que contrata; dono, plano, status, limite de organizações) e **várias organizações por pessoa** (mesmo papel em todas, por enquanto); a organização ativa vai em cada RPC (`p_org`) e o banco confere o vínculo.
+- **#91/#92 (M2b)** — cadastro público com conta em teste, confirmação de e-mail, redefinição de senha e **convites** (tokens de uso único, só SHA-256); respostas uniformes para não revelar contas existentes.
+- **#93** — LGPD: exportação e anonimização de paciente, `security_events` (IPs/e-mails só em hash, 1 ano), manutenção diária via cron, `/api/health`.
+- **#94** — lobby pós-login (`/organizacoes`) para quem tem várias organizações, primeiros passos na agenda da gerência, links de Termos/Privacidade; correção do login com 2+ vínculos.
+- **#95** — **Configurações** na engrenagem do menu (`/organizacao`, só gerência) com abas **Médicos**, **Equipe** e **Organização**. Cadastros e a antiga Configurações foram absorvidos (`/doctors` e `/settings` redirecionam). Médicos sem dependência do faturamento; acesso de médico **só por convite**; agenda do médico (horário, regras e bloqueios) em `/organizacao/agenda`; agendas liberadas da secretaria editadas na Equipe. **Hospital virou texto livre** no agendamento (ex.: "HMV"): reaproveita nome/sigla existente sem diferenciar maiúsculas ou cria o registro ao salvar; secretaria só acrescenta; médico (sugestão) só usa nomes existentes. Sem migration.
+
+**Regras novas a preservar:**
+- O titular da conta não pode ser removido da organização; ninguém remove o próprio acesso.
+- Senhas nunca são definidas pela gerência para outras pessoas em fluxos novos: convite por e-mail.
+- Arquivos novos no Storage sempre em `org/<organization_id>/…` (documentos de cirurgia e comprovantes). Restam 9 objetos de teste no caminho antigo (8 comprovantes em `financial-documents`, 1 PDF órfão em `surgery-documents`); o banco bloqueia exclusão direta, então saem pelo painel/API de Storage na limpeza antes do lançamento.
+- Previews usam o mesmo Supabase de produção; login no preview só no endereço do próprio deployment.
+
+**Pendências para o lançamento (lado do responsável):** `CRON_SECRET`; domínio e envio de e-mail (`RESEND_API_KEY`, `EMAIL_FROM`, `APP_ORIGIN`, `PUBLIC_SIGNUP_ENABLED`); revisão jurídica de Termos/Privacidade e DPO; Supabase Pro (backups); **zerar banco e Storage** antes de abrir. **Técnico:** reconstrução do faturamento (M2c) com entidades recebedoras do médico; remoção de `app_state` (A2).
+
 ## 7. Log de continuidade
 
 | Data | Alteração | Referência | Próximo passo |
@@ -248,6 +286,12 @@ Critérios mínimos para avanço:
 | 30/10/2026 | Etapa 2B/3d2 — 3 APIs financeiras privilegiadas isoladas por organização; CI aprovada; Vercel prod bloqueada por cota HTTP 402 | PR #82 / `35a3a32...` / CI `41073775407` | Resolver publicação da main na Vercel; validar deploy e ampliar relatórios/exportações/Storage e testes cross-tenant |
 
 | 03/11/2026 | Agenda primeiro: deploy `bf524cff` confirmado; Fase 2B pausada; faturamento desligado; A1 agenda normalizada publicada | PR #83 / `17f6a597...` / migration `20261103151428` / 606 testes / Vercel READY `dpl_9cpWgZZp...` | Equipe de teste usa a agenda; A2 remove `app_state`; reconstrução do faturamento em branch e banco próprios |
+
+| 06/11/2026 | Decisão de lançar para outras clínicas; cartões da agenda, capacidade fase 1 e agenda por período | PRs #84–#88 / `b4b285e` / migrations `session_sync_single_call`, `agenda_period_window` | Multiempresa (M1/M2) |
+
+| 09/11/2026 | Isolamento por organização, contas e várias organizações, cadastro/convites, LGPD, lobby | PRs #89–#94 / `67d75a0` / 5 migrations (seção 6B) / Vercel READY | Consolidar administração |
+
+| 09/11/2026 | Configurações na engrenagem (Médicos, Equipe, Organização); hospital em texto livre | PR #95 / `7052ac9` / sem migration / CI verde, preview testado, produção conferida | Pendências de lançamento (seção 6B) e faturamento M2c |
 
 ## 8. Protocolo para o assistente em futuros chats
 
