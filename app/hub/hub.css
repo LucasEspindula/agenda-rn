@@ -175,3 +175,14 @@
 .org-switcher>.org-error{position:absolute;top:40px;right:0;background:#fff;padding:4px 8px;border-radius:6px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:760px){.org-switcher>select{max-width:140px}}
+
+/* Convite por e-mail (2B-M2b), em Configurações. */
+.invite-panel{max-width:1180px;margin:14px auto 0;padding:0 16px}
+.invite-toggle{display:inline-flex;align-items:center;gap:6px}
+.invite-form{margin-top:10px;display:grid;gap:10px;max-width:520px;padding:16px;border:1px solid #d9e5ec;border-radius:12px;background:#fff;color:#10293a;font-size:14px}
+.invite-form label{display:grid;gap:4px;font-weight:600}
+.invite-form input:not([type=checkbox]),.invite-form select{height:38px;border:1px solid #cfdbe3;border-radius:8px;padding:0 10px;font-weight:400}
+.invite-form fieldset{border:1px solid #e3ecf1;border-radius:8px;padding:8px 10px;display:grid;gap:4px}
+.invite-form .invite-check{display:flex;align-items:center;gap:6px;font-weight:400}
+.invite-form>div{display:flex;justify-content:flex-end;gap:8px}
+.invite-error{color:#b42318}.invite-ok{color:#027a48}

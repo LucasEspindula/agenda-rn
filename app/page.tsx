@@ -4,6 +4,7 @@ import { LoginForm } from "./login-form";
 import { LoginScene } from "./login-scene";
 
 import {doctorHome} from "@/lib/doctor-services";
+import {publicSignupEnabled} from "@/lib/legal";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -18,8 +19,9 @@ export default async function Home() {
         <div><h1 className="text-2xl font-semibold tracking-tight text-[#12374f]">RN Integra</h1><p className="mt-0.5 text-sm text-slate-500">Gestão de atendimentos</p></div>
       </div>
       <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Entre na sua conta</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">Use o e-mail e a senha cadastrados pelo Gerente geral.</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">Use seu e-mail e senha do RN Integra.</p>
       <LoginForm />
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm"><a href="/esqueci-senha" className="text-[#12857f] underline">Esqueci minha senha</a>{publicSignupEnabled()&&<a href="/cadastro" className="text-[#12857f] underline">Criar conta</a>}</div>
     </section>
   </main>;
 }
