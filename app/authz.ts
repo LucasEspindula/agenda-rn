@@ -8,13 +8,17 @@ export const SESSION_COOKIE = "agenda_rn_session";
 
 // A organização vem do vínculo ativo do usuário (um por usuário), nunca do navegador.
 // O login exige vínculo ativo com o mesmo papel, em organização ativa.
-export async function hasActiveMembership(db: ReturnType<typeof getSupabaseAdmin>, userId: number, role: Role): Promise<boolean> {
-  const membership = await db.from("organization_memberships")
+// Devolve quantas organizações ativas a pessoa tem (até 2: basta saber se precisa escolher).
+export async function activeMembershipCount(db: ReturnType<typeof getSupabaseAdmin>, userId: number, role: Role): Promise<number> {
+  const memberships = await db.from("organization_memberships")
     .select("organization_id,organizations!inner(active)")
     .eq("user_id",userId).eq("active",true).eq("role",role).eq("organizations.active",true)
-    .maybeSingle();
-  dbError(membership.error,"Read organization membership");
-  return Boolean(membership.data);
+    .limit(2);
+  dbError(memberships.error,"Read organization membership");
+  return (memberships.data || []).length;
+}
+export async function hasActiveMembership(db: ReturnType<typeof getSupabaseAdmin>, userId: number, role: Role): Promise<boolean> {
+  return (await activeMembershipCount(db, userId, role)) > 0;
 }
 
 export type Organization = { id: string; slug: string; name: string; kind?: string };

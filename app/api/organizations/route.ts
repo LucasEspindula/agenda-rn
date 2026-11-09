@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getSession, sessionTokenHash } from "@/app/authz";
+import { getSession, isManager, sessionTokenHash } from "@/app/authz";
 import { readJson, secureMutation, HttpError } from "@/lib/security/http";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { recordSecurityEvent } from "@/lib/security/events";
@@ -46,3 +46,17 @@ async function handlePOST(request: Request) {
 }
 
 export const POST = secureMutation(handlePOST);
+
+const update = z.object({ name: z.string().trim().min(2).max(120), kind: z.enum(["MANAGEMENT_COMPANY", "CLINIC", "SOLO_DOCTOR"]) }).strict();
+
+// Nome e tipo da organização ativa (gerência; o banco confere o vínculo).
+async function handlePATCH(request: Request) {
+  const session = await getSession();
+  if (!session || !isManager(session.account.role)) throw new HttpError(403, "Somente a gerência edita a organização.");
+  const parsed = update.safeParse(await readJson(request, 2048));
+  if (!parsed.success) throw new HttpError(400, "Informe o nome (2 a 120 caracteres) e o tipo.");
+  const result = await getSupabaseAdmin().rpc("update_organization", { p_actor: session.account.id, p_org: session.organization.id, p_name: parsed.data.name, p_kind: parsed.data.kind });
+  if (result.error) throw new HttpError(result.error.code === "P0001" ? 409 : 500, result.error.code === "P0001" ? result.error.message : "Não foi possível salvar.");
+  return Response.json({ ok: true, organization: result.data });
+}
+export const PATCH = secureMutation(handlePATCH);

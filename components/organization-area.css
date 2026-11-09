@@ -1,0 +1,65 @@
+/* Área de organização: página da gerência (dados, organizações e equipe). */
+.org-area{max-width:860px;margin:0 auto;padding:24px 16px 48px;color:#10293a;font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;gap:16px}
+.org-area-head{display:flex;align-items:center;gap:14px}
+.org-area-head h1{margin:0;font-size:24px;font-weight:700;color:#12374f}
+.org-area-head p{margin:2px 0 0;color:#5f7380}
+.org-area-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#e6f5f3;color:#12857f;flex-shrink:0}
+.org-card{background:#fff;border:1px solid #dbe6ec;border-radius:16px;padding:18px;display:grid;gap:12px;min-width:0}
+.org-card h2{margin:0;font-size:16px;font-weight:700;color:#12374f}
+.org-card h3{margin:6px 0 0;font-size:14px;font-weight:700;color:#12374f}
+.org-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.org-muted{margin:0;color:#5f7380;font-size:13px}
+.org-muted a{color:#12857f}
+.org-form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));align-items:end}
+.org-form label{display:grid;gap:4px;font-weight:600}
+.org-form input,.org-form select{height:40px;border:1px solid #cfdbe3;border-radius:10px;padding:0 10px;font:inherit;background:#fff;min-width:0}
+.org-form>div,.org-form>p{grid-column:1/-1}
+.org-form>div{display:flex;justify-content:flex-end;gap:8px}
+.org-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:0 14px;border-radius:10px;border:1px solid #cfdbe3;background:#fff;color:#12374f;font:600 14px/1 Inter,system-ui,sans-serif;cursor:pointer;justify-self:start}
+.org-btn:hover{border-color:#129e98;color:#0f817c}
+.org-btn.primary{background:#129e98;border-color:#129e98;color:#fff}
+.org-btn.primary:hover{background:#0f817c}
+.org-btn.danger:hover{border-color:#d92d20;color:#b42318}
+.org-btn.icon{width:38px;padding:0}
+.org-btn:disabled{opacity:.55;cursor:wait}
+.org-btn:focus-visible,.org-area a:focus-visible{outline:3px solid #72e0d8;outline-offset:2px}
+.org-list,.org-members{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.org-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e3ecf1;border-radius:12px}
+.org-list li div{display:grid;min-width:0}
+.org-list li strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.org-list li span{color:#5f7380;font-size:13px}
+.org-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:#e6f5f3;color:#0f817c;font-weight:700;font-size:12px}
+.org-members li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e3ecf1;border-radius:12px}
+.org-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#eef4f7;color:#12374f;flex-shrink:0}
+.org-avatar.invite{background:#fff6e5;color:#b54708}
+.org-member-info{display:grid;gap:2px;min-width:0;flex:1}
+.org-member-info>strong,.org-member-info>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.org-member-info>span{color:#5f7380;font-size:13px}
+.org-member-info em{font-style:normal;color:#5f7380;font-weight:500}
+.org-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.org-tag{padding:2px 8px;border-radius:999px;background:#eef4f7;color:#12374f;font-size:12px;font-weight:600}
+.org-tag.owner{background:#e6f5f3;color:#0f817c}
+.org-tag.light{background:#f6f8fa;color:#5f7380;font-weight:500}
+.org-actions{display:flex;gap:6px;flex-shrink:0}
+.org-notice{margin:0;padding:10px 12px;border-radius:10px;font-size:14px}
+.org-notice.ok{background:#ecfdf3;color:#027a48;border:1px solid #abefc6}
+.org-notice.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+.org-legal{display:flex;justify-content:center;gap:8px;color:#5f7380;font-size:13px}
+.org-legal a{color:#12857f}
+.org-area .invite-panel{max-width:none;margin:0;padding:0}
+@media(max-width:600px){.org-area{padding:16px 16px 40px}.org-area-head h1{font-size:20px}.org-card{padding:14px}}
+
+/* Primeiros passos (agenda da gerência, organização ainda vazia). */
+.setup-steps{max-width:1180px;margin:14px auto 0;padding:0 16px;font:14px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#10293a}
+.setup-steps-box{position:relative;background:#fff;border:1px solid #cfe9e5;border-radius:16px;padding:16px 18px;display:grid;gap:12px}
+.setup-steps-box h2{margin:0;font-size:16px;color:#12374f}
+.setup-steps-box>p{margin:0;color:#5f7380;font-size:13px}
+.setup-steps ol{list-style:none;margin:0;padding:0;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.setup-steps li{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid #e3ecf1;border-radius:12px}
+.setup-steps li.done{background:#f3fbf9;border-color:#cfe9e5}
+.setup-steps li strong{display:block}
+.setup-steps li a{color:#12857f;font-weight:600;font-size:13px}
+.setup-step-mark{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#eef4f7;color:#12374f;font-weight:700;font-size:13px;flex-shrink:0}
+.setup-steps li.done .setup-step-mark{background:#129e98;color:#fff}
+.setup-steps-hide{position:absolute;top:10px;right:10px;border:0;background:transparent;color:#5f7380;cursor:pointer;width:32px;height:32px;border-radius:8px;display:grid;place-items:center}
+.setup-steps-hide:hover{background:#eef4f7}

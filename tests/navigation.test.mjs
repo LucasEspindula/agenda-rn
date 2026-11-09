@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 const {moduleLinks}=loadTs('lib/navigation.ts',{'./billing-paused':{BILLING_PAUSED:false},});
 const session=(role,scheduling=false,billing=false,invoice=false)=>({account:{role,doctorId:role==='doctor'?'d1':null},services:{scheduling_enabled:scheduling,billing_enabled:billing,invoice_enabled:invoice}});
 for(const [name,s,expected] of [
- ['manager',session('general_manager'),['/dashboard?agenda=1','/billing','/doctors']],
+ ['manager',session('general_manager'),['/dashboard?agenda=1','/billing','/doctors','/organizacao']],
  ['secretary',session('secretary'),['/dashboard?agenda=1']],
  ['doctor agenda',session('doctor',true),['/dashboard?agenda=1']],
  ['doctor agenda and finance',session('doctor',true,true),['/dashboard?agenda=1']],
@@ -67,7 +67,10 @@ test('former Hub URL redirects through the permitted home, including unauthentic
  const mobile=readFileSync('components/mobile-navigation.tsx','utf8');
  assert.doesNotMatch(mobile,/href="\/hub"/);
  assert.doesNotMatch(mobile,/>Início<\/span>/);
- assert.match(readFileSync('app/login-form.tsx','utf8'),/window\.location\.assign\("\/"\)/);
+ const login=readFileSync('app/login-form.tsx','utf8');
+ // Depois do login: "/" decide o destino pelas permissões; quem tem várias organizações vai ao lobby.
+ assert.match(login,/window\.location\.assign\(result\?\.next === "\/organizacoes" \? "\/organizacoes" : "\/"\)/);
+ assert.doesNotMatch(login,/\/hub/);
 });
 test('billing receives its initial view from the server',()=>{
  const billingPage=readFileSync('app/billing/page.tsx','utf8');

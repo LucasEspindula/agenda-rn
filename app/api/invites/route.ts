@@ -30,3 +30,15 @@ async function invite(request: Request) {
   return Response.json({ ok: true, message: `Convite enviado para ${data.email}.` });
 }
 export const POST = secureMutation(invite);
+
+// Cancela um convite pendente da organização ativa (o link deixa de funcionar).
+async function cancel(request: Request) {
+  const session = await getSession();
+  if (!session || !isManager(session.account.role)) throw new HttpError(403, "Somente a gerência cancela convites.");
+  const id = new URL(request.url).searchParams.get("id") || "";
+  if (!z.string().uuid().safeParse(id).success) throw new HttpError(400, "Convite inválido.");
+  const result = await getSupabaseAdmin().rpc("cancel_invite", { p_actor: session.account.id, p_org: session.organization.id, p_invite: id });
+  if (result.error) throw new HttpError(result.error.code === "P0001" ? 409 : 500, result.error.code === "P0001" ? result.error.message : "Não foi possível cancelar o convite.");
+  return Response.json({ ok: true, message: "Convite cancelado." });
+}
+export const DELETE = secureMutation(cancel);

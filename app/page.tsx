@@ -22,6 +22,7 @@ export default async function Home() {
       <p className="mt-2 text-sm leading-6 text-slate-600">Use seu e-mail e senha do RN Integra.</p>
       <LoginForm />
       <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm"><a href="/esqueci-senha" className="text-[#12857f] underline">Esqueci minha senha</a>{publicSignupEnabled()&&<a href="/cadastro" className="text-[#12857f] underline">Criar conta</a>}</div>
+      <p className="mt-6 flex justify-center gap-2 text-xs text-slate-500"><a href="/termos" className="underline hover:text-[#12857f]">Termos de uso</a><span aria-hidden="true">·</span><a href="/privacidade" className="underline hover:text-[#12857f]">Política de privacidade</a></p>
     </section>
   </main>;
 }

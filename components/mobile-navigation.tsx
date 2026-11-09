@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X } from "lucide-react";
+import OrganizationSwitcher from "@/components/organization-switcher";
 import HubLogout from "@/app/hub/hub-logout";
 import type { ModuleName } from "@/lib/navigation";
 
 type MobileLink = { id: ModuleName; href: string; label: string };
-const icons = { agenda: CalendarDays, billing: Wallet, denials: ShieldAlert, doctors: Stethoscope, settings: Settings };
+const icons = { agenda: CalendarDays, billing: Wallet, denials: ShieldAlert, doctors: Stethoscope, organization: Building2, settings: Settings };
 const shortLabels: Record<ModuleName, string> = {
-  agenda: "Agenda", billing: "Faturamento", denials: "Glosas", doctors: "Cadastros", settings: "Ajustes",
+  agenda: "Agenda", billing: "Faturamento", denials: "Glosas", doctors: "Cadastros", organization: "Organização", settings: "Ajustes",
 };
 
 export default function MobileNavigation({ links, active, name, role }: {
@@ -67,6 +68,7 @@ export default function MobileNavigation({ links, active, name, role }: {
           <span className="mobile-app-account-avatar" aria-hidden="true">{name.replace(/^Dr[.]? */i, "").slice(0, 1).toUpperCase() || "U"}</span>
           <div><strong>{name}</strong><small>{role === "general_manager" ? "Gerente geral" : role === "doctor" ? "Médico" : role === "secretary" ? "Secretaria" : "Usuário"}</small></div>
         </div>
+        {open && <div className="mobile-app-org"><OrganizationSwitcher /></div>}
         <nav className="mobile-app-menu-links" aria-label="Todas as áreas autorizadas">
           {overflowLinks.map(link => {
             const Icon = icons[link.id];
@@ -77,6 +79,7 @@ export default function MobileNavigation({ links, active, name, role }: {
           {isManager && <a href="/settings" aria-current={active === "settings" ? "page" : undefined}><Settings size={20} aria-hidden="true"/><span>Configurações</span><ChevronRight size={17} aria-hidden="true"/></a>}
         </nav>
         <div className="mobile-app-menu-footer"><span>Encerrar sessão</span><HubLogout/></div>
+        <p className="mobile-app-legal"><a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a></p>
       </div>
     </dialog>
   </>;

@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, hasActiveMembership, type Role } from "@/app/authz";
+import { SESSION_COOKIE, activeMembershipCount, type Role } from "@/app/authz";
 import { hashPassword, hashToken, verifyPassword } from "@/app/passwords";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { readJson, secureMutation } from "@/lib/security/http";
@@ -28,7 +28,9 @@ async function login(request: Request) {
     if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) await hashPassword(password,undefined,500_000);
     return invalid();
   }
-  if (!await hasActiveMembership(db,Number(account.id),account.role as Role)) return invalid();
+  // Vínculo ativo em organização ativa; quem tem várias escolhe depois de entrar.
+  const organizations = await activeMembershipCount(db,Number(account.id),account.role as Role);
+  if (!organizations) return invalid();
   // Autocadastro só entra depois de confirmar o e-mail (a senha já foi conferida).
   if (!account.email_verified_at) { await recordSecurityEvent("login_unverified", request, { actorId: Number(account.id) }); return Response.json({ error: "Confirme seu e-mail antes de entrar. Procure o link na sua caixa de entrada.", unverified: true }, { status: 403 }); }
   // Limpeza ocasional de sessões e links vencidos.
@@ -44,6 +46,6 @@ async function login(request: Request) {
   dbError(created.error, "Create session");
   (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, secure: true, sameSite: "strict", path: "/", expires: expiresAt });
   await recordSecurityEvent("login_success", request, { actorId: Number(account.id) });
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, next: organizations > 1 ? "/organizacoes" : "/" });
 }
 export const POST = secureMutation(login);

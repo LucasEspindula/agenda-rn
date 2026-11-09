@@ -9,6 +9,6 @@ export default async function SettingsPage(){
  const session=await getSession();
  if(!session)redirect('/');
  if(session.account.role!=='general_manager')redirect(doctorHome(session));
- return <div className="rn-hub rn-agenda settings-module"><SiteHeader account={session.account} services={session.services} active="settings"/><InviteForm organizationName={session.organization.name}/><LegacyApp initialView="settings"/></div>;
+ return <div className="rn-hub rn-agenda settings-module"><SiteHeader account={session.account} services={session.services} active="settings"/><p className="invite-panel settings-org-hint">Equipe, convites por e-mail e organizações ficam em <a href="/organizacao">Organização</a>.</p><LegacyApp initialView="settings"/></div>;
 }
 

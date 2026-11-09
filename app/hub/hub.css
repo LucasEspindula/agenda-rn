@@ -186,3 +186,18 @@
 .invite-form .invite-check{display:flex;align-items:center;gap:6px;font-weight:400}
 .invite-form>div{display:flex;justify-content:flex-end;gap:8px}
 .invite-error{color:#b42318}.invite-ok{color:#027a48}
+
+/* Organização no celular: o seletor sai do topo e vai para o menu; links legais no rodapé do menu. */
+.mobile-app-org,.mobile-app-legal{display:none}
+@media(max-width:900px){
+  .rn-hub .hub-header .org-switcher{display:none}
+  .mobile-app-org{display:block;padding:4px 2px}
+  .mobile-app-org .org-switcher{margin:0;color:#12374f}
+  .mobile-app-org .org-switcher>select{max-width:none;flex:1;height:42px;background:#fff;color:#12374f;border:1px solid #dce7ec;font-size:15px}
+  .mobile-app-org .org-create{position:static;width:auto;margin-top:8px;box-shadow:none;border:1px solid #dce7ec}
+  .mobile-app-org .org-switcher{flex-wrap:wrap}
+  .mobile-app-legal{display:block;margin:10px 0 0;text-align:center;font-size:12px;color:#516a76}
+  .mobile-app-legal a{color:#087c76}
+}
+.settings-org-hint{color:#36586a;font-size:14px}
+.settings-org-hint a{color:#087c76;font-weight:650}
