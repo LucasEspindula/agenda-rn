@@ -27,7 +27,9 @@ export function LoginForm() {
         return;
       }
 
-      window.location.assign("/");
+      // Quem tem mais de uma organização escolhe em qual entrar (a última usada vem marcada).
+      const result = await response.json().catch(() => null);
+      window.location.assign(result?.next === "/organizacoes" ? "/organizacoes" : "/");
     } catch {
       setError("Não foi possível conectar. Verifique sua internet e tente novamente.");
     } finally {

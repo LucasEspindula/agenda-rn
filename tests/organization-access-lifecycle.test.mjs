@@ -127,7 +127,7 @@ test('API and session code never physically deletes accounts or admits inactive 
  const session=readFileSync(new URL('../app/authz.ts',import.meta.url),'utf8');
  assert.match(access,/deactivate_user_access/);
  assert.doesNotMatch(access,/from\(["']users["']\)\.delete\(/);
- assert.match(login,/hasActiveMembership/);
+ assert.match(login,/activeMembershipCount/);
  // getSession usa public.session_context: usuário ativo e vínculo ativo com o mesmo papel em organização ativa.
  assert.match(session,/rpc\("session_context"/);
  const sql=readFileSync(new URL('../supabase/migrations/20261107120000_tenant_core_isolation.sql',import.meta.url),'utf8');

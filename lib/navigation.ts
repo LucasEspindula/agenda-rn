@@ -1,6 +1,6 @@
 import {BILLING_PAUSED} from './billing-paused';
 import {canOpenBilling,canOpenInvoices,canUseAgenda,type DoctorServices} from './doctor-services';
-export type ModuleName='agenda'|'billing'|'denials'|'doctors'|'settings';
+export type ModuleName='agenda'|'billing'|'denials'|'doctors'|'organization'|'settings';
 type Identity={account:{role:string;doctorId?:string|null};services?:DoctorServices};
 export function moduleLinks(session:Identity){
  const links:{id:ModuleName;href:string;label:string}[]=[];
@@ -11,5 +11,6 @@ export function moduleLinks(session:Identity){
  if(!BILLING_PAUSED&&session.account.role==='secretary'&&process.env.RN_DENIALS_ENABLED==='true')
    links.push({id:'denials',href:'/billing/glosas',label:'Glosas'});
  if(session.account.role==='general_manager')links.push({id:'doctors',href:'/doctors',label:'Cadastros'});
+ if(session.account.role==='general_manager')links.push({id:'organization',href:'/organizacao',label:'Organização'});
  return links;
 }

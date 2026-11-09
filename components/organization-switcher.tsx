@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
+import { ORGANIZATION_KINDS } from "@/lib/organization-kinds";
 
 type Org = { id: string; name: string; kind?: string };
 type Customer = { isOwner: boolean; maxOrganizations: number; organizationCount: number } | null;
-const kinds: Array<[string, string]> = [["MANAGEMENT_COMPANY", "Empresa de gestão"], ["CLINIC", "Clínica"], ["SOLO_DOCTOR", "Médico autônomo"]];
+const kinds = ORGANIZATION_KINDS;
 
 // Organização ativa da sessão. Aparece quando a pessoa tem mais de uma organização
 // ou é titular da conta (pode criar outra). A troca é validada no servidor.

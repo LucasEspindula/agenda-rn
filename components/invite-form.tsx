@@ -5,8 +5,8 @@ import { MailPlus } from "lucide-react";
 type Doctor = { id: string; name: string; specialty?: string; active?: boolean };
 const roles: Array<[string, string]> = [["secretary", "Secretária(o)"], ["doctor", "Médico(a)"], ["general_manager", "Gerente geral"]];
 
-// Convite por e-mail para a organização ativa (Configurações, só gerência).
-export default function InviteForm({ organizationName }: { organizationName: string }) {
+// Convite por e-mail para a organização ativa (página Organização, só gerência).
+export default function InviteForm({ organizationName, onSent }: { organizationName: string; onSent?: () => void | Promise<void> }) {
   const [open, setOpen] = useState(false), [doctors, setDoctors] = useState<Doctor[]>([]), [role, setRole] = useState("secretary");
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(""), [error, setError] = useState("");
   useEffect(() => {
@@ -23,12 +23,12 @@ export default function InviteForm({ organizationName }: { organizationName: str
       const response = await fetch("/api/invites", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "Não foi possível enviar o convite.");
-      setMessage(result.message || "Convite enviado."); form.reset(); setRole("secretary");
+      setMessage(result.message || "Convite enviado."); form.reset(); setRole("secretary"); await onSent?.();
     } catch (e) { setError(e instanceof Error ? e.message : "Não foi possível enviar o convite."); }
     finally { setBusy(false); }
   }
   return <section className="invite-panel">
-    <button type="button" className="secondary-btn invite-toggle" onClick={() => setOpen(v => !v)} aria-expanded={open}><MailPlus size={16} aria-hidden="true" /> Convidar por e-mail</button>
+    <button type="button" className="secondary-btn org-btn invite-toggle" onClick={() => setOpen(v => !v)} aria-expanded={open}><MailPlus size={16} aria-hidden="true" /> Convidar por e-mail</button>
     {open && <form className="invite-form" onSubmit={submit}>
       <p>O convite vale por 7 dias e dá acesso a <strong>{organizationName}</strong>.</p>
       <label>E-mail<input name="email" type="email" required maxLength={254} /></label>
@@ -38,7 +38,7 @@ export default function InviteForm({ organizationName }: { organizationName: str
       {role === "secretary" && <fieldset><legend>Agendas liberadas</legend>{doctors.length ? doctors.map(d => <label key={d.id} className="invite-check"><input type="checkbox" name="agendaIds" value={d.id} /> {d.name}</label>) : <span>Nenhum médico cadastrado.</span>}</fieldset>}
       {error && <p className="invite-error" role="alert">{error}</p>}
       {message && <p className="invite-ok" role="status">{message}</p>}
-      <div><button type="button" className="secondary-btn" onClick={() => setOpen(false)}>Fechar</button><button className="primary-btn" disabled={busy}>{busy ? "Enviando…" : "Enviar convite"}</button></div>
+      <div><button type="button" className="secondary-btn org-btn" onClick={() => setOpen(false)}>Fechar</button><button className="primary-btn org-btn primary" disabled={busy}>{busy ? "Enviando…" : "Enviar convite"}</button></div>
     </form>}
   </section>;
 }

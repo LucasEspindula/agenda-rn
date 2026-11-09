@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import {CalendarDays,Wallet,ShieldAlert,Stethoscope,Settings} from 'lucide-react';
+import {Building2,CalendarDays,Wallet,ShieldAlert,Stethoscope,Settings} from 'lucide-react';
 import HubLogout from '@/app/hub/hub-logout';
 import {moduleLinks,type ModuleName} from '@/lib/navigation';
 import {doctorHome,type DoctorServices} from '@/lib/doctor-services';
@@ -10,7 +10,7 @@ import BillingSectionMenu from '@/components/billing-section-menu';
 import BillingMobileTables from '@/components/billing-mobile-tables';
 import OrganizationSwitcher from '@/components/organization-switcher';
 export default function SiteHeader({account,active,services}:{services?:DoctorServices;account:{name:string;role:string;doctorId?:string|null};active?:ModuleName}){
- const session={account,services},icons={agenda:CalendarDays,billing:Wallet,denials:ShieldAlert,doctors:Stethoscope,settings:Settings};
+ const session={account,services},icons={agenda:CalendarDays,billing:Wallet,denials:ShieldAlert,doctors:Stethoscope,organization:Building2,settings:Settings};
  return <><header className="hub-header">
   <a className="hub-brand" href={doctorHome(session)} aria-label="RN Integra — início"><Image src="/agenda-rn-icon.jpg" alt="" width={42} height={42}/><div><strong>RN Integra</strong><span>Gestão de atendimentos</span></div></a>
   {active==='agenda'&&<AgendaSectionMenu role={account.role}/>}
