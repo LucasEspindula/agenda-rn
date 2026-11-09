@@ -77,7 +77,7 @@ test('a hospital used only by appointments outside the window cannot be archived
 test('client reads through the window, extends it on navigation and offers older records',()=>{
  const client=readFileSync('public/legacy-app.js','utf8'),host=readFileSync('app/dashboard/legacy-app.tsx','utf8');
  assert.equal((client.match(/fetch\("\/api\/state",\{cache/g)||[]).length,0,'every GET goes through agendaStateUrl()');
- assert.equal((client.match(/fetch\(agendaStateUrl\(\)/g)||[]).length,4);
+ assert.equal((client.match(/fetch\(agendaStateUrl\(\)/g)||[]).length,5,'includes the reload after anonymizing a patient');
  assert.match(client,/if\(!agendaWindowCovers\(ds\(days\[0\]\)\)\)void ensureAgendaWindow\(ds\(days\[0\]\)\);/);
  assert.match(client,/if\(!agendaWindowCovers\(monthDates\[0\]\)\)void ensureAgendaWindow\(monthDates\[0\]\);/);
  assert.match(client,/agendaWindowNote\("Mostrando cancelamentos com data"\)/);
