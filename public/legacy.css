@@ -890,3 +890,9 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 /* Agenda por período: aviso de que há registros anteriores não carregados. */
 .agenda-window-note{margin:12px 0 4px;padding:8px 12px;border-radius:8px;background:#f3f7f9;color:#4a6474;font-size:12px;line-height:1.4}
 .agenda-window-note .link-btn{font-size:12px;padding:0;margin-left:4px}
+
+/* LGPD na ficha do paciente (gerência). */
+.patient-privacy{margin-top:16px;padding:14px 16px;border:1px solid #f1d7c2;border-radius:12px;background:#fffaf5}
+.patient-privacy h4{margin:0 0 4px;font-size:14px;color:#7a3b10}
+.patient-privacy p{margin:0 0 10px;font-size:12px;color:#6b5a4c}
+.privacy-error{color:#b42318;font-size:12px;min-height:1em}

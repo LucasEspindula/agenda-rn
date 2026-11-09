@@ -125,7 +125,7 @@ test('an existing account joins another organization only while logged in with t
 
 test('server: unverified logins are refused, e-mail is fail-closed in production, tokens are hashed, sign-up is gated',async()=>{
  const login=read('app/api/auth/login/route.ts');
- assert.match(login,/if \(!account\.email_verified_at\) return Response\.json\(\{ error: "Confirme seu e-mail/);
+ assert.match(login,/if \(!account\.email_verified_at\) \{ await recordSecurityEvent\("login_unverified"[^}]*\}\); return Response\.json\(\{ error: "Confirme seu e-mail/);
  assert.match(login,/purge_expired_auth/);
  const prev={...process.env};
  try{

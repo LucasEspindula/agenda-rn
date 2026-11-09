@@ -641,6 +641,34 @@ function renderDoctorHistory(){
  const rows=workflowData.requests||[];
  return rows.length?rows.map(r=>`<article class="workflow-card doctor-history ${esc(r.status)}"><div class="workflow-card-main"><div class="workflow-heading"><strong>${esc(workflowRequestTitle(r))}</strong><span class="workflow-status ${esc(r.status)}">${r.status==="accepted"?"Aceita ✅":r.status==="denied"?"Recusada 🚫":"Aguardando aprovação"}</span></div><div class="workflow-changes">${workflowChangeRows(r)}</div>${r.decisionNote?`<p class="decision-reason"><strong>Motivo da recusa:</strong> ${esc(r.decisionNote)}</p>`:""}${workflowAuthorship(r)}</div></article>`).join(""):'<div class="empty">Nenhuma solicitação enviada.</div>';
 }
+// LGPD (gerência): exportar os dados do paciente ou anonimizá-lo a pedido do titular.
+function mountPatientPrivacyPanel(id){
+ const panel=$("patientDetailModal").querySelector(".modal-panel");let box=$("patientPrivacy");
+ if((window.AgendaAuth||{}).role!=="general_manager"){box?.remove();return}
+ if(!box){box=document.createElement("section");box.id="patientPrivacy";box.className="patient-privacy";panel.append(box)}
+ box.innerHTML='<h4>Dados pessoais (LGPD)</h4><p>Pedidos do paciente sobre os próprios dados. Tudo fica registrado.</p><div class="modal-actions"><button type="button" class="secondary-btn" data-privacy-export>Exportar dados</button><button type="button" class="danger-btn" data-privacy-anonymize>Anonimizar paciente…</button></div>';
+ box.querySelector("[data-privacy-export]").onclick=()=>{const a=document.createElement("a");a.href=`/api/patients/${encodeURIComponent(id)}/export`;a.download=`paciente-${id}.json`;document.body.append(a);a.click();a.remove()};
+ box.querySelector("[data-privacy-anonymize]").onclick=()=>anonymizePatient(id);
+}
+function anonymizePatient(id){
+ const dialog=document.createElement("dialog");dialog.className="agenda-print-dialog";
+ dialog.innerHTML='<form><h3>Anonimizar paciente</h3><p>Remove nome, CPF, contatos, endereço, observações, histórico e documentos. Os agendamentos passados ficam na agenda sem dados pessoais. Não pode ser desfeito. Paciente com atendimento realizado ou agendamento futuro não pode ser anonimizado.</p><label>Motivo do pedido<textarea name="reason" rows="3" minlength="10" maxlength="500" required></textarea></label><label>Digite ANONIMIZAR para confirmar<input name="confirm" autocomplete="off" required></label><p class="privacy-error" role="alert"></p><div class="print-dialog-actions"><button type="button" class="secondary-btn">Voltar</button><button type="submit" class="danger-btn">Anonimizar</button></div></form>';
+ const close=()=>{dialog.close();dialog.remove()};
+ dialog.querySelector('button[type="button"]').onclick=close;dialog.oncancel=e=>{e.preventDefault();close()};
+ dialog.querySelector("form").onsubmit=async e=>{
+  e.preventDefault();const f=new FormData(e.currentTarget),error=dialog.querySelector(".privacy-error"),button=dialog.querySelector('button[type="submit"]');
+  if(String(f.get("confirm")).trim()!=="ANONIMIZAR"){error.textContent="Digite ANONIMIZAR para confirmar.";return}
+  button.disabled=true;error.textContent="";
+  try{
+   const response=await fetch(`/api/patients/${encodeURIComponent(id)}/anonymize`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({reason:String(f.get("reason")||"").trim(),confirm:"ANONIMIZAR"})});
+   const result=await response.json().catch(()=>({}));if(!response.ok)throw Error(result.error||"Não foi possível anonimizar.");
+   close();closeModals();
+   const read=await fetch(agendaStateUrl(),{cache:"no-store"});if(read.ok){const snapshot=await read.json();window.AgendaRevision=snapshot.revision;rememberAgendaWindow(snapshot);state=Storage.migrate(snapshot.state);renderAll()}
+   appNotice("Paciente anonimizado",result.message||"Os dados pessoais foram removidos.");
+  }catch(err){error.textContent=err.message;button.disabled=false}
+ };
+ document.body.appendChild(dialog);dialog.showModal();
+}
 function requestDenialReason(){
  return new Promise(resolve=>{
  const dialog=document.createElement("dialog");dialog.className="agenda-print-dialog";
@@ -1272,7 +1300,7 @@ async function renderPatientFinancialHistory(patientId){
  }catch(error){if(section.isConnected)section.insertAdjacentHTML('beforeend','<p role="alert">'+esc(error.message||'Falha na consulta financeira.')+'</p>');}
 }
 
-function openPatientDetail(id){const p=patient(id);if(!p)return;detailPatientId=id;$("patientDetailTitle").textContent=p.name;$("detailPhone").innerHTML=phoneControl(p.phone);$("detailEmail").textContent=p.email||"—";$("detailAddress").textContent=patientFullAddress(p)||"Não informado";$("detailInsurance").textContent=p.insurance||"—";$("detailCard").textContent=p.cardNumber||"—";renderHistory(id,"detailHistory");void renderPatientFinancialHistory(id);let docs=$("patientDocuments");if(!docs){docs=document.createElement("section");docs.id="patientDocuments";$("patientDetailModal").querySelector(".modal-panel").append(docs)}mountDocumentPanel(docs,null,id);openModal("patientDetailModal")}
+function openPatientDetail(id){const p=patient(id);if(!p)return;detailPatientId=id;$("patientDetailTitle").textContent=p.name;$("detailPhone").innerHTML=phoneControl(p.phone);$("detailEmail").textContent=p.email||"—";$("detailAddress").textContent=patientFullAddress(p)||"Não informado";$("detailInsurance").textContent=p.insurance||"—";$("detailCard").textContent=p.cardNumber||"—";renderHistory(id,"detailHistory");void renderPatientFinancialHistory(id);let docs=$("patientDocuments");if(!docs){docs=document.createElement("section");docs.id="patientDocuments";$("patientDetailModal").querySelector(".modal-panel").append(docs)}mountDocumentPanel(docs,null,id);mountPatientPrivacyPanel(id);openModal("patientDetailModal")}
 $("editPatientFromDetail").onclick=()=>{if((window.AgendaAuth||{}).role==="doctor")return;const id=detailPatientId;closeModals();openPatient(id)}
 $("patientCPF").oninput=e=>{e.target.value=window.RNCPF.formatCPF(e.target.value);e.target.setCustomValidity("")};
 $("patientForm").onsubmit=async e=>{e.preventDefault();if($("patientCPF").value&&!window.RNCPF.validCPF($("patientCPF").value)){ $("patientCPF").setCustomValidity("Informe um CPF válido ou deixe vazio.");$("patientCPF").reportValidity();return;}const x={id:$("patientId").value||crypto.randomUUID(),doctorId:$("patientDoctor").value,name:$("patientName").value.trim(),cpf:window.RNCPF.normalizeCPF($("patientCPF").value),address:$("patientAddress").value.trim(),addressZip:$("patientZip").value.trim(),addressNumber:$("patientNumber").value.trim(),addressComplement:$("patientComplement").value.trim(),addressNeighborhood:$("patientNeighborhood").value.trim(),addressCity:$("patientCity").value.trim(),addressState:$("patientState").value.trim().toUpperCase(),phone:$("patientPhone").value.trim(),email:$("patientEmail").value.trim(),insurance:$("patientInsurance").value.trim(),cardNumber:$("patientCardNumber").value.trim(),newborn:$("patientNewborn").checked,guardianName:$("patientNewborn").checked?$("patientGuardian").value.trim():""},i=state.patients.findIndex(p=>p.id===x.id);if(x.newborn&&!x.guardianName){$("patientGuardian").setCustomValidity("Informe o responsável pelo recém-nascido.");$("patientGuardian").reportValidity();return;}$("patientGuardian").setCustomValidity("");if(!canAccessProfessional(x.doctorId))return appNotice("Acesso restrito","Você só pode cadastrar pacientes nas agendas liberadas para sua conta.");if(i>=0){const old=state.patients[i];if(!canAccessProfessional(old.doctorId))return appNotice("Acesso restrito","Você não possui acesso à agenda atual deste paciente.");state.patients[i]={...old,...x};if(old.doctorId!==x.doctorId)hist(x.id,"Médico responsável alterado",`De "${prof(old.doctorId)?.name||"—"}" para "${prof(x.doctorId)?.name||"—"}"`);if(old.insurance!==x.insurance)hist(x.id,"Convênio alterado",`De "${old.insurance||"—"}" para "${x.insurance||"—"}"`);if(old.cardNumber!==x.cardNumber)hist(x.id,"Carteirinha alterada",`De "${old.cardNumber||"—"}" para "${x.cardNumber||"—"}"`)}else{state.patients.push(x);hist(x.id,"Paciente cadastrado","Cadastro criado.")}if(await persist()===false)return;closeModals();toast("Paciente salvo.")}

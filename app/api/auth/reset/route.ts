@@ -5,6 +5,7 @@ import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/client";
 import { hashEmailToken, validEmailToken } from "@/lib/email";
+import { recordSecurityEvent } from "@/lib/security/events";
 
 async function reset(request: Request) {
   await consumeLimit("reset-submit-ip", clientIp(request), 20, 3600);
@@ -13,6 +14,7 @@ async function reset(request: Request) {
   const credentials = await hashPassword(parsed.data.password);
   const result = await getSupabaseAdmin().rpc("reset_password", { p_token_hash: hashEmailToken(parsed.data.token), p_hash: credentials.hash, p_salt: credentials.salt });
   if (result.error) throw new HttpError(400, "Link inválido ou expirado. Peça um novo em “Esqueci minha senha”.");
+  await recordSecurityEvent("password_reset", request, { actorId: Number(result.data) });
   return Response.json({ ok: true, message: "Senha alterada. Entre com a nova senha." });
 }
 export const POST = secureMutation(reset);

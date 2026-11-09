@@ -6,6 +6,7 @@ import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/client";
 import { hashEmailToken, validEmailToken } from "@/lib/email";
+import { recordSecurityEvent } from "@/lib/security/events";
 
 // Conta nova: nome + senha. Conta existente: precisa estar logada com o mesmo e-mail.
 async function accept(request: Request) {
@@ -20,6 +21,7 @@ async function accept(request: Request) {
     p_name: parsed.data.name ?? null, p_hash: credentials?.hash ?? null, p_salt: credentials?.salt ?? null,
   });
   if (result.error) throw new HttpError(result.error.code === "P0001" ? 409 : 500, result.error.code === "P0001" ? result.error.message : "Não foi possível aceitar o convite.");
+  await recordSecurityEvent("invite_accepted", request, { actorId: Number(result.data) });
   return Response.json({ ok: true, loggedIn: Boolean(session), message: session ? "Convite aceito. Escolha a organização no topo da tela." : "Conta criada. Entre com seu e-mail e a senha que você escolheu." });
 }
 export const POST = secureMutation(accept);

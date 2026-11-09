@@ -2,6 +2,7 @@ import { z } from "zod";
 import { getSession, sessionTokenHash } from "@/app/authz";
 import { readJson, secureMutation, HttpError } from "@/lib/security/http";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { recordSecurityEvent } from "@/lib/security/events";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ async function handlePOST(request: Request) {
   // A sessão passa a trabalhar na organização escolhida (vínculo conferido no banco).
   const switched = await db.rpc("switch_session_organization", { p_token_hash: tokenHash, p_org: target });
   if (switched.error) throw new HttpError(403, "Acesso à organização negado");
+  await recordSecurityEvent("organization_switch", request, { organizationId: target, actorId: session.account.id, details: { from: session.organization.id } });
   return Response.json({ ok: true, organizationId: target });
 }
 
