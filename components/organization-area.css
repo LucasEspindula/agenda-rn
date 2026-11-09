@@ -44,6 +44,11 @@
 .org-notice{margin:0;padding:10px 12px;border-radius:10px;font-size:14px}
 .org-notice.ok{background:#ecfdf3;color:#027a48;border:1px solid #abefc6}
 .org-notice.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}
+/* Aviso flutuante: visível mesmo com a página rolada até a equipe. */
+.org-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:10px;width:max-content;max-width:calc(100vw - 32px);box-shadow:0 12px 32px rgba(10,30,45,.18)}
+.org-toast button{display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:8px;background:transparent;color:inherit;cursor:pointer;flex-shrink:0}
+.org-toast button:hover{background:rgba(0,0,0,.06)}
+@media(max-width:900px){.org-toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}}
 .org-legal{display:flex;justify-content:center;gap:8px;color:#5f7380;font-size:13px}
 .org-legal a{color:#12857f}
 .org-area .invite-panel{max-width:none;margin:0;padding:0}

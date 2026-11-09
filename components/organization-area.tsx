@@ -38,6 +38,13 @@ export default function OrganizationArea({ organization, organizations, customer
     return () => { alive = false; };
   }, []);
 
+  // Avisos de sucesso somem sozinhos; erros ficam até a pessoa fechar.
+  useEffect(() => {
+    if (notice?.kind !== "ok") return;
+    const timer = window.setTimeout(() => setNotice(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   async function act(key: string, work: () => Promise<{ message?: string } | void>, after?: () => void | Promise<void>) {
     setBusy(key); setNotice(null);
     try { const result = await work(); if (result?.message) setNotice({ kind: "ok", text: result.message }); await after?.(); }
@@ -52,7 +59,8 @@ export default function OrganizationArea({ organization, organizations, customer
       <span className="org-area-icon" aria-hidden="true"><Building2 size={24} /></span>
       <div><h1>{organization.name}</h1><p>{organizationKindLabel(organization.kind)} · organização ativa</p></div>
     </header>
-    {notice && <p className={`org-notice ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
+    {notice && <p className={`org-notice org-toast ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>
+      <span>{notice.text}</span><button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso"><X size={16} aria-hidden="true" /></button></p>}
 
     <section className="org-card" aria-labelledby="org-data">
       <h2 id="org-data">Dados da organização</h2>
