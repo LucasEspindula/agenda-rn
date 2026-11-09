@@ -27,9 +27,11 @@ begin
   from public.appointments x where organization_id=a_org and archived_at is null order by date desc limit 1;
 
  -- Clínica B, com agenda e gerente próprios.
- insert into public.organizations(id,slug,name,kind,active) values(b_org,'clinica-teste-b','Clínica Teste B','CLINIC',true);
- insert into public.agenda_settings(organization_id) values(b_org);
  insert into public.users(email,name,role,active) values('gerente.b@clinicab.test','Gerente B','general_manager',true) returning id into b_mgr;
+ -- Desde a 2B-M2a toda organização pertence a uma conta (aqui, outra conta contratante).
+ insert into public.accounts(id,name,owner_user_id) values('bbbbbbbb-0000-4000-8000-0000000000ac','Conta Teste B',b_mgr);
+ insert into public.organizations(id,slug,name,kind,active,account_id) values(b_org,'clinica-teste-b','Clínica Teste B','CLINIC',true,'bbbbbbbb-0000-4000-8000-0000000000ac');
+ insert into public.agenda_settings(organization_id) values(b_org);
  insert into public.organization_memberships(organization_id,user_id,role,active) values(b_org,b_mgr,'general_manager',true);
  insert into public.sessions(token_hash,user_id,expires_at) values('iso-a',a_mgr,now()+interval '10 minutes'),('iso-b',b_mgr,now()+interval '10 minutes');
 
@@ -98,6 +100,31 @@ begin
   'data',jsonb_build_object('doctorId',a_doc,'name','Paciente A novo'))))));
  insert into tenant_check values('A grava normalmente com 2 organizações',msg is null,msg);
  insert into tenant_check values('revisão de A intacta e separada de B',public.agenda_revision(a_mgr)<>public.agenda_revision(b_mgr),'');
+
+ -- 2B-M2a: titular com duas organizações na mesma conta.
+ declare a_new uuid; a_owner bigint:=(select owner_user_id from public.accounts a join public.organizations o on o.account_id=a.id where o.id=a_org); n_patient text:=gen_random_uuid()::text;
+ begin
+  msg:=pg_temp.fails(format('select public.create_account_organization(%s,%L,%L,%L)',b_mgr,a_org,'Invasora','CLINIC'));
+  insert into tenant_check values('quem não é titular de A não cria organização na conta de A',msg is not null,msg);
+  a_new:=public.create_account_organization(a_owner,a_org,'Filial Teste','CLINIC');
+  insert into tenant_check values('titular cria segunda organização na própria conta',(select account_id from public.organizations where id=a_new)=(select account_id from public.organizations where id=a_org),a_new::text);
+  msg:=pg_temp.fails(format('select public.load_agenda_state(%s)',a_owner));
+  insert into tenant_check values('com duas organizações, chamada sem organização é recusada',msg like '%Selecione a organização%',msg);
+  st:=public.load_agenda_state(a_owner,a_new)->'state';
+  insert into tenant_check values('organização nova começa vazia',jsonb_array_length(st->'appointments')=0 and jsonb_array_length(st->'patients')=0,'');
+  st:=public.load_agenda_state(a_owner,a_org)->'state';
+  insert into tenant_check values('titular continua vendo A ao escolher A',jsonb_array_length(st->'appointments')>0,jsonb_array_length(st->'appointments')::text);
+  msg:=pg_temp.fails(format('select public.load_agenda_state(%s,%L)',b_mgr,a_new));
+  insert into tenant_check values('gerente de outra conta não abre a organização nova',msg is not null,msg);
+  insert into public.sessions(token_hash,user_id,expires_at) values('iso-owner',a_owner,now()+interval '10 minutes');
+  perform public.switch_session_organization('iso-owner',a_new);
+  insert into tenant_check values('sessão do titular troca para a organização nova',(public.session_context('iso-owner')->'organization'->>'id')::uuid=a_new,'');
+  msg:=pg_temp.fails(format('select public.switch_session_organization(%L,%L)','iso-owner',b_org));
+  insert into tenant_check values('sessão não troca para organização sem vínculo',msg is not null,msg);
+  msg:=pg_temp.fails(format('select public.apply_agenda_changes(%s,%L::jsonb,%L::jsonb,null,null,null,null,%L)',a_owner,jsonb_build_array(jsonb_build_object('op','upsert_patient','id',n_patient,'expectedVersion',null,
+   'data',jsonb_build_object('doctorId',a_doc,'name','Paciente cruzado'))),'[]',a_new));
+  insert into tenant_check values('na organização nova não se usa médico de A',msg is not null,msg);
+ end;
 end $$;
 
 select step, ok, left(detail,140) detail from tenant_check;

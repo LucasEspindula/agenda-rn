@@ -33,7 +33,7 @@ async function confirmAttendanceStatus(request: Request) {
   // O limite aplica-se também a senhas erradas; a senha nunca é persistida ou auditada.
   await consumeLimit("attendance-status-password", String(session.account.id), 20, 300);
   const db = getSupabaseAdmin();
-  const snapshot = await loadAgendaState(session.account.id);
+  const snapshot = await loadAgendaState(session.account.id, session.organization.id);
   const state = snapshot.state as AgendaState;
   const current = (state.appointments || []).find((appointment) => appointment.id === body.appointmentId);
   if (!current) return Response.json({ error: "Agendamento não encontrado ou cancelado." }, { status: 404 });
@@ -64,6 +64,7 @@ async function confirmAttendanceStatus(request: Request) {
   const actor = session.account.name || session.account.email;
   let saved: { ok: boolean; revision?: string };
   try { saved = await commitAgendaState(session.account.id, snapshot.revision, state, next, {
+    org: session.organization.id,
     audit: [{
       id: crypto.randomUUID(), actor_user_id: session.account.id, actor_name: actor,
       actor_role: session.account.role, action: "appointment_updated",

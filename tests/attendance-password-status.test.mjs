@@ -33,7 +33,7 @@ function setup({role="doctor",ownAgenda=true,initialStatus="scheduled",passwordV
   };
   const account={id:42,name:"Dr. Exemplo",email:"medico@example.test",role};
   const mocks={
-    "@/app/authz":{getSession:async()=>({account,agendaIds:["doctor-1"]})},
+    "@/app/authz":{getSession:async()=>({account,organization:{id:"org-1"},agendaIds:["doctor-1"]})},
     "@/app/passwords":{verifyPassword:async value=>passwordValid&&value==="senha-correta"},
     "@/lib/doctor-services":{canUseAgenda:()=>true},
     "@/lib/security/state":{canReadAppointment:(session,a)=>session.account.role==="general_manager"||(ownAgenda&&session.agendaIds.includes(a.doctorId)),validId:id=>/^[A-Za-z0-9_-]{1,128}$/.test(id)},

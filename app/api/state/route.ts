@@ -16,7 +16,7 @@ export async function GET(request?: Request) {
   const session = await getSession();
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const since = parseAgendaSince(request ? new URL(request.url).searchParams.get("since") : null);
-  const { state, revision } = await loadAgendaWindow(session.account.id, since);
+  const { state, revision } = await loadAgendaWindow(session.account.id, since, session.organization.id);
   return Response.json({ state: visibleState(state, session), revision, window: { since: since ?? "all" } }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
@@ -24,13 +24,13 @@ async function putState(request: Request) {
   const session = await getSession();
   if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso não autorizado" }, { status: 403 });
   const proposed = (await readJson(request, 4 * 1024 * 1024)) as AgendaState;
-  const snapshot = await loadAgendaState(session.account.id);
+  const snapshot = await loadAgendaState(session.account.id, session.organization.id);
   const current = snapshot.state as AgendaState;
   const suppliedRevision = request.headers.get("if-match");
   // A revisão informada é a leitura do usuário: base do merge por registro.
   if (!suppliedRevision || !Number.isFinite(Date.parse(suppliedRevision))) return Response.json({ error: "A agenda foi atualizada. Atualize a página antes de salvar." }, { status: 409 });
   const baseRevision = new Date(Date.parse(suppliedRevision)).toISOString();
-  const bases = await rowBases(session.account.id, baseRevision, changedKeys(current, proposed));
+  const bases = await rowBases(session.account.id, baseRevision, changedKeys(current, proposed), session.organization.id);
   const next = mergeState(current, rebase(current, proposed, bases), session) as AgendaState;
   const conflict = conflictingKey(current, next, bases);
   if (conflict) return Response.json({ error: "Este registro foi alterado por outra pessoa. Reabra e tente novamente." }, { status: 409 });
@@ -70,7 +70,7 @@ async function putState(request: Request) {
     return Response.json({ error: "Esse hospital está vinculado a agendamentos e não pode ser removido." }, { status: 409 });
   if (!ops.length) return Response.json({ ok: true, revision: snapshot.revision });
   try {
-    const saved = await applyAgendaChanges(session.account.id, ops, { audit: entries });
+    const saved = await applyAgendaChanges(session.account.id, ops, { audit: entries, org: session.organization.id });
     return Response.json({ ok: true, revision: saved.revision });
   } catch (error) {
     if (error instanceof HttpError) return Response.json({ error: error.message }, { status: error.status });

@@ -17,7 +17,7 @@ const base=()=>({schemaVersion:7,settings:{workStart:'07:00',workEnd:'19:00'},pr
 function fixture(){
  const agenda=fakeAgenda(base());
  const api=loadTs('app/api/state/route.ts',{
-  '@/app/authz':{getSession:async()=>({account:{id:1,name:'g',email:'g@t.test',role:'general_manager',doctorId:null},services:{scheduling_enabled:true},agendaIds:[]}),isManager:()=>true},
+  '@/app/authz':{getSession:async()=>({organization:{id:'org-1'},account:{id:1,name:'g',email:'g@t.test',role:'general_manager',doctorId:null},services:{scheduling_enabled:true},agendaIds:[]}),isManager:()=>true},
   '@/lib/supabase-admin':{getSupabaseAdmin:()=>agenda.db,dbError:e=>{if(e)throw e}}});
  return {api,agenda};
 }

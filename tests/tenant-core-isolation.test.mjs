@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 
 // 2B-M1: organização derivada do autor e guarda das tabelas que ganharam organization_id.
-const migration=readFileSync(new URL('../supabase/migrations/20261107120000_tenant_core_isolation.sql',import.meta.url),'utf8');
+const migration=readFileSync(new URL('../supabase/migrations/20261107120000_tenant_core_isolation.sql',import.meta.url),'utf8').split('\r\n').join('\n');
 const A='00000000-0000-4000-8000-00000000000a',B='00000000-0000-4000-8000-00000000000b';
 const pick=(sql,start,end)=>sql.slice(sql.indexOf(start),end?sql.indexOf(end,sql.indexOf(start)+1):undefined);
 const body=(sql,fn)=>{const i=sql.indexOf(`create or replace function public.${fn}(`);if(i<0)return '';const ends=['$function$;','end;$$;'].map(e=>sql.indexOf(e,i)).filter(x=>x>0);return sql.slice(i,Math.min(...ends))};

@@ -21,7 +21,7 @@ async function context() {
  const session = await getSession();
  if (!session || !canUseAgenda(session)) throw new Error('unauthorized');
  const db = getSupabaseAdmin();
- const { state } = await loadAgendaState(session.account.id);
+ const { state } = await loadAgendaState(session.account.id, session.organization.id);
  const surgeries: Surgery[] = [...(state.appointments || []), ...(state.cancelledAppointments || [])];
  return { session, db, surgeries };
 }

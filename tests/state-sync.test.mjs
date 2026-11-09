@@ -17,7 +17,7 @@ const base=()=>({schemaVersion:7,settings:{workStart:'07:00',workEnd:'19:00'},pr
 function fixture({role='general_manager',agendaIds=['one'],authenticated=true,store}={}){
  const agenda=store||fakeAgenda(base());
  const api=loadTs('app/api/state/route.ts',{
-  '@/app/authz':{getSession:async()=>authenticated?{account:{id:role==='doctor'?3:role==='secretary'?2:1,name:role,email:role+'@example.test',role,doctorId:role==='doctor'?'one':null},services:{scheduling_enabled:true,billing_enabled:false,invoice_enabled:false},agendaIds}:null,isManager:r=>r==='general_manager'},
+  '@/app/authz':{getSession:async()=>authenticated?{organization:{id:'org-1'},account:{id:role==='doctor'?3:role==='secretary'?2:1,name:role,email:role+'@example.test',role,doctorId:role==='doctor'?'one':null},services:{scheduling_enabled:true,billing_enabled:false,invoice_enabled:false},agendaIds}:null,isManager:r=>r==='general_manager'},
   '@/lib/supabase-admin':{getSupabaseAdmin:()=>agenda.db,dbError:error=>{if(error)throw Object.assign(new Error(error.message),error)}}
  });
  return {api,agenda};
