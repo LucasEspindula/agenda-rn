@@ -136,6 +136,13 @@ export function mergeState(current: State | null, proposed: State, p: Principal)
   const historyIds = new Set((current.patientHistory || []).map((h: Row)=>h.id));
   const newHistory = proposed.patientHistory.filter((h: Row)=>!historyIds.has(h.id));
   for (const h of newHistory) if (!ownedIds.has(h.patientId) || (h.appointmentId && ![...appointments,...cancelledAppointments].some(a=>a.id===h.appointmentId && a.patientId===h.patientId && canReadAppointment(p,a)))) throw new HttpError(403, 'Histórico sem permissão.');
+  // Hospital é texto livre no agendamento: a secretaria só acrescenta nomes novos; editar ou arquivar continua com a gerência.
+  const knownHospitals = new Set((current.hospitals || []).map((h: Row) => h.id));
+  const newHospitals = (proposed.hospitals || []).filter((h: Row) => !knownHospitals.has(h.id)).map((h: Row) => {
+    const name = String(h.name ?? '').trim();
+    if (!name || name.length > 120) throw new HttpError(400, 'Hospital inválido.');
+    return { id: h.id, name };
+  });
   // Existing clinical history is append-only for secretaries, never overwritten by a client snapshot.
-  return {...current,patients,appointments,cancelledAppointments,patientHistory:[...(current.patientHistory || []),...newHistory]};
+  return {...current,hospitals:[...(current.hospitals || []),...newHospitals],patients,appointments,cancelledAppointments,patientHistory:[...(current.patientHistory || []),...newHistory]};
 }

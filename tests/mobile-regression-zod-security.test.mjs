@@ -36,13 +36,6 @@ test('billing section selectors do not overflow horizontally and include doctor 
   assert.match(source('app/billing/billing-subnav.tsx'), /<details className="billing-mobile-menu">/);
 });
 
-test('Cadastros navigation sits flush below 60px mobile header', () => {
-  const styles = source('app/billing/billing.css');
-  assert.match(source('app/doctors/page.tsx'), /className="billing-subnav cadastros-subnav"/);
-  assert.match(styles, /\.billing-subnav\.cadastros-subnav \{[\s\S]*?top:60px;[\s\S]*?margin:0;/);
-  assert.match(styles, /\.billing-subnav\.cadastros-subnav nav\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-});
-
 test('mobile calendar and procedure list are not reimplemented', () => {
   const agenda = source('public/legacy-app.js');
   assert.match(agenda, /function renderMobileCalendar\(\)/);

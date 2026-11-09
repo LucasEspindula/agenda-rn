@@ -58,6 +58,7 @@ test("fluxo executado fecha modal somente em sucesso e não reconstrói Detalhes
  let mode="success";
  const ctx={
   state:{appointments:[{...user}]},selectedProf:()=>({id:"dr1"}),$:(id)=>fields[id],
+  resolveHospitalText:()=>({id:"h1",created:null}),newHospitalBlockedForDoctor:()=>false,commitHospital:()=>{},
   window:{AgendaAuth:{role:"general_manager"}},isAnesthesiologist:()=>false,
   validateNativeFinance:()=>true,appointmentInsurance:(a)=>a.insurance,
   appNotice:()=>calls.push("notice"),nativeFinanceError:(e)=>calls.push("error:"+e),

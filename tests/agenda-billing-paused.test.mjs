@@ -8,7 +8,7 @@ const session=(role,scheduling=false,billing=false,invoice=false)=>({account:{ro
 
 test('billing menus are hidden for every profile while paused',()=>{
  const {moduleLinks}=loadTs('lib/navigation.ts');
- assert.deepEqual(Array.from(moduleLinks(session('general_manager')),l=>l.href),['/dashboard?agenda=1','/doctors','/organizacao']);
+ assert.deepEqual(Array.from(moduleLinks(session('general_manager')),l=>l.href),['/dashboard?agenda=1']);
  assert.deepEqual(Array.from(moduleLinks(session('doctor',true,true,true)),l=>l.href),['/dashboard?agenda=1']);
  const {doctorHome,canOpenBilling,canOpenInvoices}=loadTs('lib/doctor-services.ts');
  assert.equal(doctorHome(session('doctor',false,true,true)),'/no-services');

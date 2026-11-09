@@ -19,9 +19,9 @@ export default function SetupSteps({ organizationId }: { organizationId: string 
   }, [key]);
   if (hidden || !status) return null;
   const steps = [
-    { done: status.doctors > 0, title: "Cadastre o primeiro médico", text: "Cada médico tem a própria agenda e horário de atendimento.", href: "/doctors", link: "Ir para Cadastros" },
+    { done: status.doctors > 0, title: "Cadastre o primeiro médico", text: "Cada médico tem a própria agenda e horário de atendimento.", href: "/organizacao?aba=medicos", link: "Ir para Médicos" },
     { done: status.appointments > 0, title: "Crie o primeiro agendamento", text: "Use o botão “Novo agendamento” na agenda abaixo.", href: null, link: null },
-    { done: status.members > 1 || status.invites > 0, title: "Convide sua equipe", text: "Secretárias, médicos e outros gerentes recebem o convite por e-mail.", href: "/organizacao", link: "Convidar" },
+    { done: status.members > 1 || status.invites > 0, title: "Convide sua equipe", text: "Secretárias, médicos e outros gerentes recebem o convite por e-mail.", href: "/organizacao?aba=equipe", link: "Convidar" },
   ];
   if (steps.every(s => s.done)) return null;
   const hide = () => { try { window.localStorage.setItem(key, "1"); } catch { /* sem armazenamento: só nesta tela */ } setHidden(true); };

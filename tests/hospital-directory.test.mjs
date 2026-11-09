@@ -25,36 +25,6 @@ test('hospital removal is blocked for every legacy usage source',()=>{
  assert.equal(hospitalIsInUse(state,'h1'),false);
 });
 
-test('native HospitalDirectory uses state snapshots and optimistic concurrency',()=>{
- const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
- assert.match(source,/fetch\('\/api\/state',\{cache:'no-store'\}\)/);
- assert.match(source,/'If-Match':revision\|\|'new'/);
- assert.match(source,/withHospitals\(state,hospitals\)/);
- assert.match(source,/crypto\.randomUUID\(\)/);
- assert.match(source,/if\(response\.status===409\)await load\(\)/);
- assert.match(source,/Hospital já cadastrado\./);
- assert.match(source,/Hospital em uso\. Este hospital está vinculado a agendamentos ou regras e não pode ser removido\./);
- assert.doesNotMatch(source,/LegacyApp/);
-});
-
-test('Cadastros renders native hospitals while agenda rules keep LegacyApp',()=>{
- const source=readFileSync('app/doctors/page.tsx','utf8');
- assert.match(source,/import HospitalDirectory from '.\/hospital-directory'/);
- assert.match(source,/const legacy=view==='agenda'&&!!doctor_id/);
- assert.match(source,/view==='hospitals'\?<HospitalDirectory\/>/);
- assert.match(source,/view==='agenda'&&doctor_id\?<><AgendaSettings[^]*?<LegacyApp initialView="settings" adminSection="rules"/);
- assert.doesNotMatch(source,/view==='hospitals'\?<LegacyApp/);
-});
-
-
-test('hospital deletion keeps the compact table icon and uses a textual danger action in the modal',()=>{
- const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
- assert.match(source,/className="billing-icon-action billing-delete"[^>]*title="Remover hospital"/);
- assert.match(source,/<button className="billing-danger" disabled=\{busy\} onClick=\{\(\)=>void remove\(\)\}\>\{busy\?'Removendo…':'Remover'\}<\/button>/);
- assert.doesNotMatch(source,/<button className="billing-delete" disabled=\{busy\} onClick=\{\(\)=>void remove\(\)\}/);
-});
-
-
 test('hospital abbreviations are normalized while preserving legacy fallbacks',()=>{
  const {automaticHospitalAbbreviation,hospitalAbbreviation,normalizeHospitalAbbreviation}=loadTs('lib/hospital-directory.ts');
  assert.equal(normalizeHospitalAbbreviation('Mirar'),'MIRAR');
@@ -64,17 +34,6 @@ test('hospital abbreviations are normalized while preserving legacy fallbacks',(
  assert.equal(hospitalAbbreviation({id:'h2',name:'Hospital Moinhos de Vento'}),'HMV');
  assert.equal(hospitalAbbreviation({id:'h3',name:'Hospital Blanc'}),'BLANC');
  assert.equal(automaticHospitalAbbreviation('Mirar Hospital de olhos'),'MHO');
-});
-
-test('native hospital UI orders abbreviations first and persists normalized values',()=>{
- const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
- assert.match(source,/className="billing-table billing-admin-table doctor-table hospital-table"/);
- assert.match(source,/<th>Abreviação<\/th><th>Hospital<\/th><th>Ações<\/th>/);
- assert.doesNotMatch(source,/<th>Hospital<\/th><th>Abreviação<\/th>/);
- assert.doesNotMatch(source,/Disponibilidade|Todas as agendas/);
- assert.match(source,/const name=draftName\.trim\(\),abbreviation=normalizeHospitalAbbreviation\(draftAbbreviation\);/);
- assert.match(source,/setDraftAbbreviation\(event\.target\.value\.toLocaleUpperCase\('pt-BR'\)\)/);
- assert.match(source,/hospitalAbbreviation\(hospital\)/);
 });
 
 test('Agenda uppercases saved hospital abbreviations in cards, workflow and snapshots',()=>{
@@ -97,17 +56,6 @@ test('state validation accepts bounded abbreviation fields without changing hosp
  const source=readFileSync('lib/security/state.ts','utf8');
  assert.match(source,/'abbreviation'/);
  assert.match(source,/key==='hospitals'&&row\.abbreviation!=null&&String\(row\.abbreviation\)\.length>16/);
-});
-
-
-test('abbreviation keeps internal spaces while typing and trims only when saved',()=>{
- const source=readFileSync('app/doctors/hospital-directory.tsx','utf8');
- assert.match(source,/onChange=\{event=>setDraftAbbreviation\(event\.target\.value\.toLocaleUpperCase\('pt-BR'\)\)\}/);
- assert.doesNotMatch(source,/onChange=\{event=>setDraftAbbreviation\(normalizeHospitalAbbreviation\(event\.target\.value\)\)\}/);
- assert.match(source,/const name=draftName\.trim\(\),abbreviation=normalizeHospitalAbbreviation\(draftAbbreviation\);/);
- const {normalizeHospitalAbbreviation}=loadTs('lib/hospital-directory.ts');
- assert.equal('Mãe Deus'.toLocaleUpperCase('pt-BR'),'MÃE DEUS');
- assert.equal(normalizeHospitalAbbreviation('  Mãe Deus  '),'MÃE DEUS');
 });
 
 

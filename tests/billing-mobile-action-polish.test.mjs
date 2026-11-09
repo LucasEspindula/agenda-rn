@@ -127,22 +127,3 @@ test("Atendimentos uses the shared bottom-right Plus only on the mobile records 
  assert.match(css,/\.rn-hub \.billing-main button\.billing-mobile-fab,[\s\S]*?position:fixed;[\s\S]*?right:16px;[\s\S]*?bottom:calc\(86px \+ env\(safe-area-inset-bottom,0px\)\)/);
 });
 
-test("Cadastros doctor and hospital create buttons float on mobile without changing their handlers",()=>{
- const doctors=read("app/doctors/doctor-directory.tsx");
- const hospitals=read("app/doctors/hospital-directory.tsx");
- const css=read("app/billing/billing.css");
- assert.match(doctors,/className="billing-primary billing-mobile-fab" aria-label="Cadastrar médico"/);
- assert.match(doctors,/onClick=\{\(\)=>open\('doctor',\{name:''/);
- assert.match(doctors,/className="billing-fab-label">Cadastrar médico<\/span>/);
- assert.match(hospitals,/className="billing-primary billing-mobile-fab" aria-label="Cadastrar hospital"/);
- assert.match(hospitals,/disabled=\{loading\|\|busy\} onClick=\{\(\)=>open\(\)\}/);
- assert.match(hospitals,/className="billing-fab-label">\+ Cadastrar hospital<\/span>/);
- for(const source of [doctors,hospitals]){
-  assert.match(source,/import \{[^}]*Plus[^}]*\} from ['"]lucide-react['"]/);
-  assert.match(source,/<Plus size=\{27\}\/>/);
-  assert.match(source,/<main className="billing-main">/);
- }
- assert.match(css,/main\.billing-main:has\(button\.billing-mobile-fab\)\{\s*padding-bottom:calc\(178px \+ env\(safe-area-inset-bottom,0px\)\)!important;/);
- assert.match(css,/\.rn-hub button\.billing-mobile-fab \.billing-fab-label\{display:none!important\}/);
- assert.match(css,/\.rn-hub \.billing-fab-icon\{display:none\}/);
-});
