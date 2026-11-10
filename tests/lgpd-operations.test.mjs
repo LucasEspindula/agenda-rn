@@ -82,3 +82,15 @@ test('auth flows leave a security trail without storing e-mails or IPs in clear'
  assert.match(ui,/if\(\(window\.AgendaAuth\|\|\{\}\)\.role!=="general_manager"\)\{box\?\.remove\(\);return\}/,'LGPD panel only for managers');
  assert.match(ui,/mountPatientPrivacyPanel\(id\);openModal\("patientDetailModal"\)/);
 });
+
+test('anonymization archives the open past appointments of the patient, keeping every earlier guarantee',()=>{
+ const next=read('supabase/migrations/20261113120000_anonymize_archives_open_appointments.sql');
+ const fn=next.slice(next.indexOf('create or replace function public.anonymize_patient'),next.indexOf('end;$$;')+7);
+ const old=pick('create or replace function public.anonymize_patient','end;$$;');
+ // Tudo o que a versão anterior fazia continua igual, linha a linha.
+ for(const line of old.split('\n').map(l=>l.trim()).filter(Boolean))assert.ok(fn.includes(line),line);
+ assert.match(fn,/update public\.appointments set archived_at=clock_timestamp\(\),archived_by=p_actor\s+where id=any\(appts\) and organization_id=p_org and cancelled_at is null and archived_at is null;/);
+ // Órfãos antigos: só de pacientes anonimizados, passados, sem atendimento; a agenda ganha nova revisão.
+ assert.match(next,/p\.name='Paciente anonimizado'[\s\S]*a\.date<current_date[\s\S]*not exists\(select 1 from public\.attendances t where t\.appointment_id=a\.id\)/);
+ assert.match(next,/update public\.agenda_settings set revision=[\s\S]*organization_id=any\(orgs\)/);
+});
