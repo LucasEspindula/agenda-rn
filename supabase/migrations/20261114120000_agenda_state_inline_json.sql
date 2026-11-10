@@ -1,4 +1,4 @@
--- Desempenho da agenda: montar o estado ficou ~6x mais barato.
+-- Desempenho da agenda: montar o estado ficou ~4x mais barato (completa 162 → 40 ms; janela 133 → 37 ms).
 -- As funções por linha (agenda_appointment_json, agenda_iso, agenda_hhmi...) têm set search_path,
 -- e o Postgres nunca incorpora função com SET na consulta: cada linha virava várias chamadas de
 -- função completas (um bloqueio = 3, um agendamento = 4 + subconsulta). Aqui o mesmo JSON é
