@@ -26,6 +26,8 @@ test('swipe release completes past 30% of the drawer or on a fast flick, otherwi
 
 test('menu swipe is wired on every page header, skips inputs, horizontal scrollers and other dialogs',()=>{
  const nav=read('components/mobile-navigation.tsx'),src=read('components/menu-swipe.ts'),css=read('app/hub/hub.css');
+ assert.match(nav,/dialogRef\.current\.style\.animation = "";\s*if \(!dialogRef\.current\?\.open\) dialogRef\.current\?\.showModal\(\)/,'header button opens with the entry animation');
+ assert.doesNotMatch(src,/addEventListener\("close"/,'no dependency on the async close event');
  assert.match(nav,/attachMenuSwipe\(dialog,/);
  assert.match(nav,/enabled: \(\) => phone\.matches/);
  assert.match(nav,/swipeRef\.current\.slideOut\(\)/,'X and outside tap slide the drawer out too');
@@ -78,7 +80,8 @@ function swipeHarness(){
  const fire=(type,x)=>(docListeners[type]||[]).forEach(f=>f({target,touches:type==='touchend'?[]:[{clientX:x,clientY:400}],preventDefault(){}}));
  const drag=(from,to,ms=300)=>{fire('touchstart',from);for(let i=1;i<=6;i++){now+=ms/6;fire('touchmove',from+(to-from)*i/6)}fire('touchend',to)};
  const finish=()=>{(menuListeners.transitionend||[]).slice().forEach(f=>f());timers.splice(0).forEach(f=>f())};
- return {menu,style,drag,finish,api};
+ const lateClose=()=>(menuListeners.close||[]).forEach(f=>f());
+ return {menu,style,drag,finish,api,lateClose};
 }
 
 test('opening by swipe does not replay the entry animation when the finger lifts (no flash)',()=>{
@@ -91,7 +94,12 @@ test('opening by swipe does not replay the entry animation when the finger lifts
  assert.equal(h.style.transform,'','drag position cleared');
  h.drag(120,330);h.finish();
  assert.equal(h.menu.open,false);
- assert.equal(h.style.animation,'','entry animation restored by the swipe close itself, without waiting for the async close event');
+ h.drag(340,120);
+ assert.equal(h.style.animation,'none','a quick reopen by swipe never plays the entry animation');
+ h.lateClose();
+ assert.equal(h.style.animation,'none','a late async close event from the previous close does not re-enable it');
+ h.finish();
+ assert.equal(h.menu.open,true);
 });
 
 test('a short swipe that snaps back closes before clearing the drag position (no one-frame open drawer)',()=>{

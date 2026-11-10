@@ -47,8 +47,10 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
     menu.style.transform = `translateX(${Math.max(0, Math.min(width, offset))}px)`;
     menu.style.setProperty("--menu-progress", String(1 - Math.max(0, Math.min(width, offset)) / width));
   };
-  // Limpa só a posição do arrasto. A animação de entrada continua desligada enquanto o menu
-  // estiver aberto: religá-la aqui faria o navegador tocá-la de novo (a "piscada").
+  // Limpa só a posição do arrasto. A animação de entrada é decidida por quem abre: o gesto a
+  // desliga (a gaveta já vem acompanhando o dedo) e o botão do cabeçalho a liga. Religá-la ao
+  // soltar o dedo, ou no evento "close" (assíncrono, pode chegar após uma reabertura), fazia o
+  // navegador tocá-la de novo: a "piscada".
   const reset = () => {
     menu.style.transition = ""; menu.style.transform = "";
     menu.style.removeProperty("--menu-progress");
@@ -63,17 +65,13 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
       pending = null;
       menu.removeEventListener("transitionend", done);
       // Fechar antes de limpar a posição: senão a gaveta reaparece aberta por um quadro.
-      if (!open) { onClose(); restoreAnimation(); }
+      if (!open) onClose();
       reset();
     };
     pending = done;
     menu.addEventListener("transitionend", done);
     window.setTimeout(done, 260);
   };
-  // A animação de entrada volta a valer só depois que o menu fecha (para o botão do cabeçalho).
-  // O evento "close" cobre o Esc; os fechamentos pelo gesto e pelo X religam direto, sem depender dele.
-  function restoreAnimation() { menu.style.animation = ""; }
-  menu.addEventListener("close", restoreAnimation);
 
   const start = (event: TouchEvent) => {
     mode = null; decided = false; dragging = false;
@@ -117,7 +115,6 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
     // Fechar pelo X ou tocando fora também desliza a gaveta para fora.
     slideOut() { width = menu.getBoundingClientRect().width || 320; menu.style.transition = "none"; place(0); void menu.offsetWidth; settle(false); },
     detach() {
-      menu.removeEventListener("close", restoreAnimation);
       document.removeEventListener("touchstart", start);
       document.removeEventListener("touchmove", move);
       document.removeEventListener("touchend", end);
