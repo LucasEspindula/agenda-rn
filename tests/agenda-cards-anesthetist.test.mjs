@@ -102,3 +102,10 @@ test('agenda appears in the anesthetist calendar and every card keeps all fields
  assert(css.includes('overflow:visible!important'));
  assert.match(css,/\.appointment \.card-pending-mark\{position:absolute;top:-6px;right:-6px;/);
 });
+
+test('desktop card: procedure location sits under the insurance, never squeezed out of the time row',()=>{
+ const css=readFileSync(new URL('../public/legacy.css',import.meta.url),'utf8');
+ assert.match(css,/#calendar \.appointment \.appointment-head\{display:contents!important\}/);
+ assert.match(css,/#calendar \.appointment \.appointment-hospital\{grid-column:2;grid-row:3;justify-self:end;/);
+ assert.match(css,/#calendar \.appointment \.appointment-procedure\{grid-column:1\}/);
+});

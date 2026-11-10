@@ -869,6 +869,14 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 #calendar .appointment .appointment-procedure{grid-column:1 / -1;grid-row:3;font-size:10.5px!important;font-weight:500;color:#3e5869}
 #calendar .appointment .appointment-surgeon{grid-column:1 / -1;grid-row:4;justify-self:start;max-width:100%!important;font-size:10px!important;font-weight:600;color:#55707f}
 #calendar .appointment .appointment-surgeon.is-empty{font-weight:500;color:#9aabb6}
+/* Local do procedimento: sai da linha do horário (onde o status o espremia até sumir) e fica
+   à direita, abaixo do convênio, na linha do procedimento. */
+#calendar .appointment .appointment-head{display:contents!important}
+#calendar .appointment .appointment-head b{grid-column:1;grid-row:1;align-self:baseline;font-size:10.5px}
+#calendar .appointment .appointment-hospital{grid-column:2;grid-row:3;justify-self:end;align-self:baseline;display:block!important;max-width:66px;white-space:nowrap;font-size:9.5px;font-weight:700;letter-spacing:.04em;color:#6a8394}
+#calendar .appointment .appointment-procedure{grid-column:1}
+#calendar .appointment.is-wide .appointment-hospital{max-width:40ch}
+#calendar .appointment.is-split .appointment-hospital{max-width:100%}
 /* Coluna da direita limitada para o paciente ter espaço; encaixes lado a lado dividem meio a meio. */
 #calendar .appointment .appointment-insurance{max-width:66px}
 #calendar .appointment .appointment-status-badge{max-width:76px}
