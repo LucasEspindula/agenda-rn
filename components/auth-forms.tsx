@@ -51,7 +51,7 @@ export function SignupForm() {
           <option value="MANAGEMENT_COMPANY">Empresa de gestão de agendas</option><option value="CLINIC">Clínica</option><option value="SOLO_DOCTOR">Médico autônomo</option>
         </select></div>
       <label className="flex items-start gap-2 text-sm text-slate-600"><input type="checkbox" name="acceptTerms" required className="mt-1" />
-        <span>Li e aceito os <a href="/termos" target="_blank" className="underline">termos de uso</a> e a <a href="/privacidade" target="_blank" className="underline">política de privacidade</a>.</span></label>
+        <span>Li e aceito, em nome da organização, os <a href="/termos" target="_blank" className="underline">termos de uso</a>, a <a href="/privacidade" target="_blank" className="underline">política de privacidade</a> e o <a href="/contrato-operador" target="_blank" className="underline">contrato de tratamento de dados</a>.</span></label>
     </>}
     build={d => ({ name: d.get("name"), email: d.get("email"), password: d.get("password"), organizationName: d.get("organizationName"), organizationKind: d.get("organizationKind"), acceptTerms: d.get("acceptTerms") === "on" })} />;
 }
@@ -74,6 +74,7 @@ export function InviteAcceptForm({ token, existingUser, defaultName }: { token: 
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     after={() => window.location.assign("/dashboard?agenda=1")} />;
   return <AuthForm endpoint="/api/invites/accept" submit="Criar acesso e aceitar"
+    extra={<p className="text-xs text-slate-500">Ao criar seu acesso, você concorda com os <a href="/termos" target="_blank" className="underline">termos de uso</a> e a <a href="/privacidade" target="_blank" className="underline">política de privacidade</a>.</p>}
     fields={[{ name: "name", label: "Seu nome", autoComplete: "name", minLength: 2, maxLength: 120, defaultValue: defaultName }, password("Crie uma senha")]}
     build={d => ({ token, name: d.get("name"), password: d.get("password") })} />;
 }
