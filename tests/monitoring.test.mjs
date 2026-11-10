@@ -88,6 +88,7 @@ test('playbook explains known errors and marks what heals by itself',()=>{
  assert.equal(playbook.findPlaybook('TypeError: fetch failed').auto,'transient');
  assert.equal(playbook.findPlaybook('Error: Supabase server configuration is incomplete').auto,'config');
  assert.equal(playbook.findPlaybook('Envio de e-mail ainda não configurado.').id,'email-config');
+ assert.equal(playbook.findPlaybook('upstream request timeout').id,'db-overload','Vercel gives up waiting for an overloaded database');
  assert.equal(playbook.findPlaybook('TypeError: cannot read properties of undefined'),null,'unknown errors go to a dev');
  for(const p of playbook.PLAYBOOKS){assert.ok(p.diagnosis&&p.action,p.id)}
 });

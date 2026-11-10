@@ -30,7 +30,7 @@ export const PLAYBOOKS: Playbook[] = [
   },
   {
     id: "db-overload",
-    match: /too many connections|remaining connection slots|statement timeout|canceling statement due to statement timeout/i,
+    match: /too many connections|remaining connection slots|statement timeout|canceling statement due to statement timeout|upstream request timeout/i,
     diagnosis: "O banco de dados ficou sobrecarregado (conexões ou consultas lentas).",
     action: "Costuma passar sozinho. Se repetir, abrir Supabase → Reports → Database e ver consultas lentas; considerar aumentar o plano.",
     auto: "transient",
