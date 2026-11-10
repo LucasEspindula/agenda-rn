@@ -21,7 +21,7 @@ function render(role,billingMethod,notes="<observação>"){
   $:()=>container,selectedProf:()=>({id:"doctor-1"}),isAnesthesiologist:()=>false,
   patient:()=>({name:"Paciente Exemplo"}),hospital:()=>({name:"Hospital Central"}),
   parseDate:value=>new Date(value+"T12:00:00"),workflowDate:()=>"22/10/2026 08:00",
-  money:()=> "R$ 170,00",agendaWindowNote:()=>"",bindAgendaWindowButtons:()=>{},renderRescheduleHistory:()=>'<section class="appointment-reschedule-history">Histórico</section>',
+  money:()=> "R$ 170,00",renderCancelledOwner:()=>{},agendaWindowNote:()=>"",bindAgendaWindowButtons:()=>{},renderRescheduleHistory:()=>'<section class="appointment-reschedule-history">Histórico</section>',
   agendaLogSnapshot:a=>({
    procedure:"Cirurgia",place:"HC",insurance:a.insurance,doctor:"Dra. Teste",anesthetist:"Dr. Anestesista",
    status:"Confirmado",duration:"60 min",guideExpiry:"25/10/2026",careType:"Ambulatorial",

@@ -953,3 +953,61 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
    text-align:right;
  }
 }
+
+/* Seletor de agenda: o card abre a folha própria; o <select> nativo fica só como fonte do valor. */
+.agenda-owner-select-card{cursor:pointer}
+.agenda-owner-select-card select{pointer-events:none}
+.agenda-owner-select-card:focus-visible{outline:3px solid #1b9990;outline-offset:2px}
+dialog.agenda-picker{box-sizing:border-box;width:min(460px,calc(100vw - 32px));max-width:none;max-height:min(78dvh,640px);margin:auto;padding:0;border:0;border-radius:20px;background:#fff;color:#213b49;box-shadow:0 24px 60px #071c2f55}
+dialog.agenda-picker[open]{display:flex;animation:agenda-picker-in .18s ease-out}
+dialog.agenda-picker::backdrop{background:#071b2a99}
+@keyframes agenda-picker-in{from{opacity:.4;transform:translateY(12px)}to{opacity:1;transform:none}}
+.agenda-picker-panel{display:flex;flex-direction:column;width:100%;min-height:0;padding:18px 16px 16px}
+.agenda-picker-grip{display:none}
+.agenda-picker-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:0 4px 12px}
+.agenda-picker-eyebrow{color:#12857f;font-size:10px;font-weight:850;letter-spacing:.1em}
+.agenda-picker-head h3{margin:3px 0 0;font-size:20px;color:#193d50}
+.agenda-picker-close{display:grid;place-items:center;width:42px;height:42px;border:0;border-radius:12px;background:#eef3f5;color:#375668;font-size:24px;line-height:1;cursor:pointer}
+.agenda-picker-search{display:block;margin:0 0 10px}
+.agenda-picker-search input{box-sizing:border-box;width:100%;height:44px;padding:0 14px;border:1px solid #d3e1e8;border-radius:12px;background:#f7fafb;font-size:15px;color:#213b49}
+.agenda-picker-search input:focus{outline:none;border-color:#1b9990;background:#fff;box-shadow:0 0 0 3px #1b99902a}
+.agenda-picker-list{min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -4px;padding:0 4px}
+.agenda-picker-group+.agenda-picker-group{margin-top:10px;padding-top:10px;border-top:1px solid #e6eef2}
+.agenda-picker-group h4{display:flex;align-items:center;gap:6px;margin:0;padding:4px 10px 6px;color:#778b96;font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.agenda-picker-group h4 span{padding:1px 7px;border-radius:999px;background:#eef3f5;color:#5c7681;font-size:10px;letter-spacing:0}
+.agenda-picker-item{box-sizing:border-box;display:grid;grid-template-columns:40px minmax(0,1fr) 22px;align-items:center;gap:12px;width:100%;min-height:58px;padding:8px 10px;border:0;border-radius:14px;background:transparent;color:#213b49;text-align:left;cursor:pointer}
+.agenda-picker-item:hover{background:#f2f8f8}
+.agenda-picker-item:focus-visible{outline:3px solid #1b9990;outline-offset:-1px}
+.agenda-picker-item[aria-pressed=true]{background:#e8f7f4}
+.agenda-picker-avatar{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:13px;background:#e3eef3;color:#1b4f66;font-size:14px;font-weight:850;letter-spacing:.02em}
+.agenda-picker-item[aria-pressed=true] .agenda-picker-avatar{background:#137f79;color:#fff}
+.agenda-picker-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.agenda-picker-copy strong{font-size:15px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-picker-copy small{font-size:12px;color:#5f7784;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-picker-check{color:#0b7770;font-size:17px;font-weight:900;text-align:center}
+.agenda-picker-empty{margin:14px 0;text-align:center;color:#6b8290;font-size:13px}
+@media screen and (max-width:900px){
+ dialog.agenda-picker{inset:auto 0 0;width:100%;max-height:min(84dvh,720px);margin:0;border-radius:22px 22px 0 0}
+ dialog.agenda-picker[open]{animation:agenda-picker-up .22s cubic-bezier(.2,.8,.2,1)}
+ @keyframes agenda-picker-up{from{transform:translateY(40%);opacity:.5}to{transform:none;opacity:1}}
+ .agenda-picker-panel{padding:8px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+ .agenda-picker-grip{display:block;align-self:center;width:42px;height:5px;margin:0 0 12px;border-radius:5px;background:#d3e0e6}
+}
+
+/* Cancelados: mostra de qual agenda é a lista e permite trocar. */
+.cancelled-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cancelled-owner-btn{display:flex;align-items:center;gap:12px;min-width:min(320px,100%);max-width:100%;min-height:58px;padding:9px 40px 9px 10px;position:relative;border:1px solid #b8dde3;border-radius:14px;background:linear-gradient(135deg,#fff,#f7fcfd);color:#18384a;text-align:left;cursor:pointer;box-shadow:0 6px 18px rgba(18,55,79,.08)}
+.cancelled-owner-btn:hover{border-color:#61c6c8}
+.cancelled-owner-btn:focus-visible{outline:3px solid #1b9990;outline-offset:2px}
+.cancelled-owner-copy{display:flex;flex-direction:column;min-width:0}
+.cancelled-owner-copy small{font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#12857f}
+.cancelled-owner-copy strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cancelled-owner-copy .crm{color:#5f7784;font-weight:650}
+.cancelled-owner-arrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#1b9990;font-size:18px;font-weight:900}
+@media screen and (max-width:900px){
+ .cancelled-owner-btn{width:100%}
+ /* Agenda no celular: sem faixa vazia entre o card do médico e o calendário. */
+ .rn-agenda #agendaView>.toolbar{padding-bottom:0;margin-bottom:8px;background:none}
+ .rn-agenda #agendaView>.toolbar .filters{display:contents}
+ .rn-agenda #mobileCalendar{margin-top:0}
+}
