@@ -7,6 +7,7 @@ import AgendaSectionLinks from "@/components/agenda-section-menu";
 import BillingSectionLinks from "@/components/billing-section-menu";
 import HubLogout from "@/app/hub/hub-logout";
 import type { ModuleName } from "@/lib/navigation";
+import { attachMenuSwipe } from "@/components/menu-swipe";
 
 type MobileLink = { id: ModuleName; href: string; label: string };
 const icons = { agenda: CalendarDays, billing: Wallet, denials: ShieldAlert, doctors: Stethoscope, organization: Building2, settings: Settings };
@@ -20,6 +21,7 @@ export default function MobileNavigation({ links, active, name, role }: {
   role: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const swipeRef = useRef<ReturnType<typeof attachMenuSwipe> | null>(null);
   const [open, setOpen] = useState(false);
   const otherModules = links.filter(link => link.id !== active);
 
@@ -30,11 +32,26 @@ export default function MobileNavigation({ links, active, name, role }: {
     return () => { document.body.style.overflow = previousOverflow; };
   }, [open]);
 
+  // Deslizar o dedo: para a esquerda abre o menu em qualquer tela; para a direita fecha.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const phone = window.matchMedia("(max-width:900px)");
+    const swipe = attachMenuSwipe(dialog, {
+      enabled: () => phone.matches,
+      onOpen: () => { if (!dialog.open) dialog.showModal(); setOpen(true); },
+      onClose: () => { dialog.close(); setOpen(false); },
+    });
+    swipeRef.current = swipe;
+    return () => { swipe.detach(); swipeRef.current = null; };
+  }, []);
+
   function openMenu() {
     if (!dialogRef.current?.open) dialogRef.current?.showModal();
     setOpen(true);
   }
   function closeMenu() {
+    if (dialogRef.current?.open && swipeRef.current) { swipeRef.current.slideOut(); return; }
     dialogRef.current?.close();
     setOpen(false);
   }
