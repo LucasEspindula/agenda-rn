@@ -52,6 +52,16 @@ export function fakeAgenda(initial,{start='2026-11-03T12:00:00.000Z'}={}){
    if(name==='load_agenda_state')return {data:{state:state(),revision:iso()},error:null};
    // Mesma regra de public.load_agenda_window: consultas e histórico a partir de p_since.
    if(name==='load_agenda_window'){const full=state(),since=p.p_since;if(!since)return {data:{state:full,revision:iso()},error:null};const ids=new Set([...full.appointments,...full.cancelledAppointments].filter(a=>a.date>=since).map(a=>a.id));return {data:{state:{...full,appointments:full.appointments.filter(a=>a.date>=since),cancelledAppointments:full.cancelledAppointments.filter(a=>a.date>=since),patientHistory:(full.patientHistory||[]).filter(h=>String(h.at)>=since||ids.has(h.appointmentId))},revision:iso()},error:null}}
+   // Mesma regra de public.load_agenda_delta: linhas alteradas desde p_after (2 s de folga) e a ordem
+   // completa dos ids. O histórico do falso não tem data de gravação, então vai sempre inteiro.
+   if(name==='load_agenda_delta'){
+    const win=(await db.rpc('load_agenda_window',{p_actor:p.p_actor,p_since:p.p_since})).data;calls.pop();
+    const after=Date.parse(p.p_after)-2000,changed=entity=>new Set(versions.filter(v=>v.entity===entity&&v.revision>after).map(v=>v.id));
+    const keep=(list,entity)=>{const ids=changed(entity);return win.state[list].filter(r=>ids.has(r.id))};
+    const order=Object.fromEntries(['hospitals','patients','appointments','cancelledAppointments','patientHistory'].map(l=>[l,win.state[l].map(r=>r.id)]));
+    return {data:{revision:win.revision,delta:true,order,state:{...win.state,hospitals:keep('hospitals','hospitals'),patients:keep('patients','patients'),
+     appointments:keep('appointments','appointments'),cancelledAppointments:keep('cancelledAppointments','appointments')}},error:null};
+   }
    if(name==='agenda_revision')return {data:iso(),error:null};
    if(name==='agenda_row_bases'){const at=Date.parse(p.p_revision);return {data:p.p_keys.map(({entity,id})=>{const base=versions.filter(v=>v.entity===entity&&v.id===id&&v.revision<=at).at(-1);return {entity,id,currentVersion:rows[entity].get(id)?.version??null,baseVersion:base?.version??null,base:base?.data??null}}),error:null}}
    if(name==='apply_agenda_changes')return apply(p.p_ops,p);

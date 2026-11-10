@@ -11,7 +11,7 @@ export function loadTs(path,mocks={},cache=new Map()) {
  const exports={};cache.set(file,exports);
  const source=readFileSync(file,'utf8');
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{
-  exports,Request,Response,Headers,URL,Buffer,TextEncoder,TextDecoder,Uint8Array,ReadableStream,AbortController,crypto:webcrypto,atob,btoa,process,setTimeout,clearTimeout,
+  exports,Request,Response,Headers,URL,Buffer,TextEncoder,TextDecoder,Uint8Array,ReadableStream,DecompressionStream,CompressionStream,AbortController,crypto:webcrypto,atob,btoa,process,setTimeout,clearTimeout,
   require(name){if(name in mocks)return mocks[name];if(name==='server-only'||name.endsWith('.css'))return {};if(name.startsWith('@/')||name.startsWith('.'))return loadTs(resolve(name.startsWith('@/')?name.slice(2):dirname(file)+'/'+name)+'.ts',mocks,cache);return nodeRequire(name)}
  });return exports;
 }

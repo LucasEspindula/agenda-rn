@@ -20,7 +20,12 @@ export async function readJson(request: Request, maximum = 64 * 1024): Promise<R
   if (!/^application\/json(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) throw new HttpError(415, 'Envie JSON.');
   const length = Number(request.headers.get('content-length') || 0);
   if (!Number.isFinite(length) || length > maximum) throw new HttpError(413, 'Solicitação muito grande.');
-  const reader = request.body?.getReader();
+  // Corpo grande (a agenda salva) pode vir compactado em gzip pelo navegador. O limite vale para o
+  // tamanho já descompactado, então um arquivo-bomba é cortado no mesmo ponto que um JSON gigante.
+  const encoding = (request.headers.get('content-encoding') || '').trim().toLowerCase();
+  if (encoding && encoding !== 'identity' && encoding !== 'gzip') throw new HttpError(415, 'Envie JSON.');
+  const body = encoding === 'gzip' && request.body ? request.body.pipeThrough(new DecompressionStream('gzip')) : request.body;
+  const reader = body?.getReader();
   if (!reader) throw new HttpError(400, 'JSON inválido.');
   const chunks: Uint8Array[] = []; let size = 0;
   try {
