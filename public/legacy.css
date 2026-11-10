@@ -896,3 +896,60 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 .patient-privacy h4{margin:0 0 4px;font-size:14px;color:#7a3b10}
 .patient-privacy p{margin:0 0 10px;font-size:12px;color:#6b5a4c}
 .privacy-error{color:#b42318;font-size:12px;min-height:1em}
+
+/* Celular: barra fixa de ações da agenda (substitui as abas inferiores). "Novo agendamento" é a ação
+   principal, à direita, ao alcance do polegar; "Bloquear horário" aparece só para quem pode bloquear. */
+.rn-agenda .mobile-action-bar{display:none}
+@media screen and (max-width:900px){
+ .rn-agenda .mobile-action-bar{
+   box-sizing:border-box;
+   position:fixed;
+   inset:auto 0 0;
+   z-index:55;
+   display:flex;
+   gap:10px;
+   padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));
+   border-top:1px solid #dae5ec;
+   background:#fffffff2;
+   -webkit-backdrop-filter:blur(8px);
+   backdrop-filter:blur(8px);
+   box-shadow:0 -5px 24px #143b4a16;
+ }
+ .rn-agenda .mobile-action-bar:not(:has(>button:not(.hidden))){display:none}
+ .rn-agenda .mobile-action-bar>button{
+   flex:1 1 0;
+   min-width:0;
+   min-height:50px;
+   margin:0;
+   padding:0 8px;
+   border-radius:14px;
+   font-size:13.5px;
+   font-weight:750;
+   line-height:1.2;
+   white-space:nowrap;
+   overflow:hidden;
+   text-overflow:ellipsis;
+ }
+ .rn-agenda .mobile-action-bar>#newAppointmentBtn{box-shadow:0 6px 16px #1b999033}
+ .rn-agenda .mobile-action-bar>#newBlockBtn{background:#fff;border:1px solid #c9d9e1;color:#244657}
+ .rn-agenda:has(#mobileActionBar>button:not(.hidden)){padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+ body:has(.rn-agenda .modal:not(.hidden)) .rn-agenda .mobile-action-bar,
+ body:has(dialog[open]) .rn-agenda .mobile-action-bar{visibility:hidden}
+ /* Cancelados fica no menu do cabeçalho. */
+ .rn-agenda #cancelledPageBtn{display:none!important}
+ /* Folga no fim da lista para o sino flutuante não cobrir o último atendimento. */
+ .rn-agenda .agenda-shell .main:has(#agendaView.active #mobileCalendar):has(#agendaNotifications:not(.hidden)){padding-bottom:84px}
+ /* Hospital fixo à direita da linha de horário, com mais contraste. */
+ .rn-agenda .mobile-appointment-content .appointment-head{justify-content:space-between}
+ .rn-agenda .mobile-appointment-content .appointment-hospital{
+   margin-left:auto!important;
+   padding:2px 8px;
+   border-radius:6px;
+   background:#e6f1f5;
+   color:#1b4f66;
+   font-size:11px;
+   font-weight:800;
+   letter-spacing:.05em;
+   text-align:right;
+ }
+}

@@ -607,7 +607,7 @@
     box-sizing:border-box;
     position:fixed;
     right:16px;
-    bottom:calc(86px + env(safe-area-inset-bottom,0px));
+    bottom:calc(20px + env(safe-area-inset-bottom,0px));
     z-index:58;
     display:grid;
     place-items:center;
@@ -676,7 +676,7 @@
   /* The last cards and their action buttons must scroll completely above
      the fixed 56px button and the bottom app navigation. */
   .rn-hub main.billing-main:has(button.billing-mobile-fab){
-    padding-bottom:calc(178px + env(safe-area-inset-bottom,0px))!important;
+    padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))!important;
   }
 }
 

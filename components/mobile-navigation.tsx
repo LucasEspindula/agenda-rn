@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X } from "lucide-react";
 import OrganizationSwitcher from "@/components/organization-switcher";
+import AgendaSectionLinks from "@/components/agenda-section-menu";
+import BillingSectionLinks from "@/components/billing-section-menu";
 import HubLogout from "@/app/hub/hub-logout";
 import type { ModuleName } from "@/lib/navigation";
 
 type MobileLink = { id: ModuleName; href: string; label: string };
 const icons = { agenda: CalendarDays, billing: Wallet, denials: ShieldAlert, doctors: Stethoscope, organization: Building2, settings: Settings };
-const shortLabels: Record<ModuleName, string> = {
-  agenda: "Agenda", billing: "Faturamento", denials: "Glosas", doctors: "Cadastros", organization: "Organização", settings: "Ajustes",
-};
 
+// Menu único do celular: abre pelo botão do cabeçalho azul e reúne as seções da área atual,
+// os demais módulos autorizados, a organização, a conta e a saída.
 export default function MobileNavigation({ links, active, name, role }: {
   links: MobileLink[];
   active?: ModuleName;
@@ -20,8 +21,7 @@ export default function MobileNavigation({ links, active, name, role }: {
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
-  const tabs = links.slice(0, 3);
-  const overflowLinks = links.filter(link => !tabs.some(tab => tab.id === link.id));
+  const otherModules = links.filter(link => link.id !== active);
 
   useEffect(() => {
     if (!open) return;
@@ -40,22 +40,12 @@ export default function MobileNavigation({ links, active, name, role }: {
   }
 
   return <>
-    <nav className="mobile-app-tabs no-print" aria-label="Navegação principal do celular">
-      {tabs.map(link => {
-        const Icon = icons[link.id];
-        return <a key={link.id} href={link.href} className="mobile-app-tab" aria-current={active === link.id ? "page" : undefined}>
-          <Icon size={21} aria-hidden="true" strokeWidth={active === link.id ? 2.35 : 1.8} />
-          <span>{shortLabels[link.id]}</span>
-        </a>;
-      })}
-      <button className="mobile-app-tab mobile-app-more" type="button" onClick={openMenu}
-        aria-haspopup="dialog" aria-expanded={open} aria-label="Abrir menu de navegação">
-        <Menu size={22} aria-hidden="true" />
-        <span>Menu</span>
-      </button>
-    </nav>
+    <button className="mobile-menu-trigger no-print" type="button" onClick={openMenu}
+      aria-haspopup="dialog" aria-expanded={open} aria-label="Abrir menu" title="Menu">
+      <Menu size={23} aria-hidden="true" />
+    </button>
 
-    <dialog ref={dialogRef} className="mobile-app-menu no-print" aria-label="Menu de navegação"
+    <dialog ref={dialogRef} className="mobile-app-menu no-print" aria-label="Menu"
       onClose={() => setOpen(false)}
       onClick={event => { if (event.target === dialogRef.current) closeMenu(); }}>
       <div className="mobile-app-menu-panel">
@@ -68,15 +58,18 @@ export default function MobileNavigation({ links, active, name, role }: {
           <div><strong>{name}</strong><small>{role === "general_manager" ? "Gerente geral" : role === "doctor" ? "Médico" : role === "secretary" ? "Secretaria" : "Usuário"}</small></div>
         </div>
         {open && <div className="mobile-app-org"><OrganizationSwitcher /></div>}
-        <nav className="mobile-app-menu-links" aria-label="Todas as áreas autorizadas">
-          {overflowLinks.map(link => {
+        {active === "agenda" && <AgendaSectionLinks role={role} onNavigate={closeMenu} />}
+        {(active === "billing" || active === "denials") && <BillingSectionLinks onNavigate={closeMenu} />}
+        {(otherModules.length > 0 || role === "general_manager") && <nav className="mobile-app-menu-links" aria-label="Outras áreas autorizadas">
+          <span className="mobile-app-menu-caption">ÁREAS</span>
+          {otherModules.map(link => {
             const Icon = icons[link.id];
-            return <a key={link.id} href={link.href} aria-current={active === link.id ? "page" : undefined}>
+            return <a key={link.id} href={link.href}>
               <Icon size={20} aria-hidden="true"/><span>{link.label}</span><ChevronRight size={17} aria-hidden="true"/>
             </a>;
           })}
           {role === "general_manager" && <a href="/organizacao" aria-current={active === "organization" || active === "settings" ? "page" : undefined}><Settings size={20} aria-hidden="true"/><span>Configurações</span><ChevronRight size={17} aria-hidden="true"/></a>}
-        </nav>
+        </nav>}
         <div className="mobile-app-menu-footer"><span>Encerrar sessão</span><HubLogout/></div>
         <p className="mobile-app-legal"><a href="/termos">Termos de uso</a> · <a href="/privacidade">Privacidade</a></p>
       </div>

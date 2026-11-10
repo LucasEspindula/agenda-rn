@@ -8,7 +8,9 @@ test("mobile navigation reuses authorized module links and native menu controls"
   const header = file("components/site-header.tsx");
   const mobile = file("components/mobile-navigation.tsx");
   assert.match(header, /MobileNavigation links=\{moduleLinks\(session\)\}/);
-  assert.match(mobile, /links\.slice\(0, 3\)/);
+  assert.match(mobile, /otherModules = links\.filter\(link => link\.id !== active\)/);
+  assert.match(mobile, /className="mobile-menu-trigger no-print"/);
+  assert.doesNotMatch(mobile, /mobile-app-tabs/);
   assert.match(mobile, /<dialog /);
   assert.match(mobile, /\.showModal\(\)/);
   assert.match(mobile, /aria-haspopup="dialog"/);
@@ -23,9 +25,8 @@ test("finance remains available on mobile with role-gated links and a compact se
   assert.match(css, /\.billing-panel[^}]*overflow-x:auto|\.billing-panel[^}]*overflow-x:clip|\.billing-panel[^}]*max-width:100%/);
   assert.match(nav, /denialsEnabled&&<a href="\/billing\/glosas"/);
   assert.match(nav, /closingEnabled&&<a href="\/billing\/fechamento"/);
-  assert.match(shell, /\.mobile-app-tabs/);
+  assert.match(shell, /\.mobile-app-menu\{position:fixed;inset:0 0 0 auto/);
   assert.match(shell, /safe-area-inset-bottom/);
-  assert.doesNotMatch(shell, /\.mobile-app-tabs\{display:none!important/);
 });
 
 test("patient edit action is visible on phones while mobile agenda remains the large calendar plus procedures", () => {
@@ -81,4 +82,17 @@ test("mobile Agenda top spacing is compact without altering the calendar's compo
  assert.match(css,/\.rn-agenda #agendaView>\.toolbar\{gap:6px\}/);
  assert.match(app,/class="mobile-month-grid"/);
  assert.match(app,/class="mobile-day-list"/);
+});
+
+test("mobile agenda: action bar with real buttons, Cancelados in the menu, bell clearance and hospital on the right", () => {
+  const css = file("public/legacy.css");
+  const runtime = file("public/legacy-app.js");
+  assert.match(runtime, /function placeAgendaActions\(\)\{/);
+  assert.match(runtime, /if\(phone\.matches\)\{bar\.append\(block,create\)\}/, "block on the left, new appointment (primary) on the right");
+  assert.match(runtime, /phone\.addEventListener\("change",place\)/, "buttons go back to the filters on desktop");
+  assert.match(css, /\.rn-agenda \.mobile-action-bar\{[\s\S]*?position:fixed;[\s\S]*?inset:auto 0 0;/);
+  assert.match(css, /\.rn-agenda \.mobile-action-bar:not\(:has\(>button:not\(\.hidden\)\)\)\{display:none\}/, "hidden when the role or view has no action");
+  assert.match(css, /\.rn-agenda #cancelledPageBtn\{display:none!important\}/);
+  assert.match(css, /:has\(#agendaNotifications:not\(\.hidden\)\)\{padding-bottom:84px\}/);
+  assert.match(css, /\.rn-agenda \.mobile-appointment-content \.appointment-hospital\{[\s\S]*?margin-left:auto!important;/);
 });

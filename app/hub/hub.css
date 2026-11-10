@@ -12,9 +12,10 @@
 
 
 /* Mobile shell: compact top bar, primary bottom tabs and a native accessible menu sheet. */
-.mobile-app-tabs,.mobile-app-menu{display:none}
+/* Celular: um só menu, aberto pelo botão do cabeçalho azul, como gaveta lateral. */
+.mobile-menu-trigger,.mobile-app-menu{display:none}
 @media(max-width:900px){
-  .rn-hub{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  .rn-hub{padding-bottom:env(safe-area-inset-bottom,0px)}
   .rn-hub .hub-header{display:flex;align-items:center;flex-wrap:nowrap;min-height:60px;gap:10px;padding:10px 16px}
   .rn-hub .hub-header .hub-nav,.rn-hub .hub-header .hub-account{display:none}
   .rn-hub .hub-brand{min-width:0;gap:10px}
@@ -22,147 +23,39 @@
   .rn-hub .hub-brand strong{font-size:16px;line-height:1.2}
   .rn-hub .hub-brand span{font-size:10px;margin-top:1px}
   .rn-hub .hub-content{padding:24px 16px}
-  .mobile-app-tabs{box-sizing:border-box;position:fixed;inset:auto 0 0;z-index:55;display:flex;align-items:stretch;gap:4px;min-height:68px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid #dae5ec;background:#fff;box-shadow:0 -5px 24px #143b4a16}
-  .mobile-app-tabs .mobile-app-tab{display:flex;flex:1 1 0;min-width:0;min-height:54px;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 4px;border:0;border-radius:12px;background:transparent;color:#5b7281;text-decoration:none;font:600 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
-  .mobile-app-tabs .mobile-app-tab span{display:block;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .mobile-app-tabs .mobile-app-tab[aria-current=page]{background:#e8f7f4;color:#117972;font-weight:750}
-  .mobile-app-tabs .mobile-app-tab:focus-visible,.mobile-app-menu button:focus-visible,.mobile-app-menu a:focus-visible{outline:3px solid #1b9990;outline-offset:2px}
-  body:has(.modal:not(.hidden)) .mobile-app-tabs,body:has(.billing-modal-backdrop:not(.hidden):not([hidden])) .mobile-app-tabs,body:has(dialog[open]) .mobile-app-tabs{visibility:hidden}
-  .mobile-app-menu{position:fixed;inset:auto 0 0;box-sizing:border-box;width:100%;max-width:none;max-height:min(88dvh,800px);margin:0;padding:0;border:0;border-radius:22px 22px 0 0;background:#fff;color:#213b49;box-shadow:0 -16px 50px #071c2f50}
-  .mobile-app-menu[open]{display:block}
+  .mobile-menu-trigger{box-sizing:border-box;display:grid;place-items:center;flex:0 0 46px;width:46px;height:46px;margin-left:auto;padding:0;border:1px solid #ffffff38;border-radius:12px;background:#ffffff17;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .mobile-menu-trigger[aria-expanded=true]{background:#ffffff2b;border-color:#87d8d0}
+  .mobile-menu-trigger:focus-visible{outline:3px solid #72e0d8;outline-offset:2px}
+  .mobile-app-menu{position:fixed;inset:0 0 0 auto;box-sizing:border-box;width:min(360px,88vw);max-width:none;height:100dvh;max-height:none;margin:0;padding:0;border:0;border-radius:20px 0 0 20px;background:#fff;color:#213b49;box-shadow:-16px 0 50px #071c2f50}
+  .mobile-app-menu[open]{display:block;animation:mobile-menu-in .18s ease-out}
+  @keyframes mobile-menu-in{from{transform:translateX(24px);opacity:.4}to{transform:none;opacity:1}}
   .mobile-app-menu::backdrop{background:#071b2ac0}
-  .mobile-app-menu-panel{display:flex;flex-direction:column;max-height:min(88dvh,800px);overflow-y:auto;overscroll-behavior:contain;padding:22px 18px calc(20px + env(safe-area-inset-bottom,0px))}
-  .mobile-app-menu-head{display:flex;align-items:start;justify-content:space-between;gap:14px;padding:0 4px 16px}
+  .mobile-app-menu button:focus-visible,.mobile-app-menu a:focus-visible{outline:3px solid #1b9990;outline-offset:2px}
+  .mobile-app-menu-panel{box-sizing:border-box;display:flex;flex-direction:column;height:100%;overflow-y:auto;overscroll-behavior:contain;padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px))}
+  .mobile-app-menu-head{display:flex;align-items:start;justify-content:space-between;gap:14px;padding:0 4px 14px}
   .mobile-app-eyebrow{color:#12857f;font-size:10px;font-weight:850;letter-spacing:.1em}
   .mobile-app-menu-head h2{margin:3px 0 0;font-size:23px;color:#193d50}
   .mobile-app-menu-close{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;border-radius:12px;background:#eef3f5;color:#375668}
-  .mobile-app-account{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:#eef7f6}
-  .mobile-app-account-avatar{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border-radius:14px;background:#137f79;color:#fff;font-size:17px;font-weight:850}
+  .mobile-app-account{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:#eef7f6}
+  .mobile-app-account-avatar{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:13px;background:#137f79;color:#fff;font-size:17px;font-weight:850}
   .mobile-app-account div{min-width:0}
   .mobile-app-account strong,.mobile-app-account small{display:block;overflow-wrap:anywhere}
   .mobile-app-account strong{font-size:14px}
   .mobile-app-account small{margin-top:3px;color:#5c7681;font-size:12px}
-  .mobile-app-menu-links{display:grid;gap:3px;margin:18px 0}
-  .mobile-app-menu-links a{display:grid;grid-template-columns:24px minmax(0,1fr) 18px;align-items:center;gap:13px;min-height:52px;padding:10px 13px;border-radius:12px;color:#2c4c5e;font-size:14px;font-weight:650;text-decoration:none}
-  .mobile-app-menu-links a svg:last-child{color:#849ba5}
-  .mobile-app-menu-links a[aria-current=page]{background:#e8f7f4;color:#0b7770}
-  .mobile-app-menu-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 12px 0;border-top:1px solid #e3ebef;color:#516a76;font-size:13px;font-weight:650}
+  .mobile-app-menu-links{display:grid;gap:2px;margin:14px 0 4px}
+  .mobile-app-menu-caption{padding:4px 13px 6px;color:#778b96;font-size:10px;font-weight:850;letter-spacing:.08em}
+  .mobile-app-menu-links a,.mobile-app-menu-links button{box-sizing:border-box;display:grid;grid-template-columns:24px minmax(0,1fr) 18px;align-items:center;gap:13px;width:100%;min-height:48px;padding:10px 13px;border:0;border-radius:12px;background:transparent;color:#2c4c5e;font:650 14px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left;text-decoration:none;cursor:pointer}
+  .mobile-app-menu-links a span,.mobile-app-menu-links button span{min-width:0;overflow-wrap:anywhere}
+  .mobile-app-menu-links a svg:last-child,.mobile-app-menu-links button svg:last-child{color:#849ba5}
+  .mobile-app-menu-links a:hover,.mobile-app-menu-links button:hover{background:#f0f7f7}
+  .mobile-app-menu-links a[aria-current=page],.mobile-app-menu-links button[aria-current=page]{background:#e8f7f4;color:#0b7770;font-weight:780}
+  .mobile-app-menu-links+.mobile-app-menu-links{padding-top:10px;border-top:1px solid #e3ebef}
+  .billing-header-loading{font-size:12px;padding:9px 13px;color:#657b86}
+  .mobile-app-menu-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding:14px 12px 0;border-top:1px solid #e3ebef;color:#516a76;font-size:13px;font-weight:650}
   .mobile-app-menu-footer .hub-icon{color:#36586a;border:1px solid #dce7ec;border-radius:10px}
   .mobile-app-menu-footer .hub-icon:hover{background:#edf6f5;color:#087c76}
 }
-@media(max-width:370px){
-  .mobile-app-tabs{padding-inline:4px;gap:1px}
-  .mobile-app-tabs .mobile-app-tab{font-size:10px;padding-inline:2px}
-}
 
-
-/* Agenda section navigation: mobile-only hamburger at the right side of the blue header. */
-.agenda-header-sections{display:none}
-@media screen and (max-width:900px){
-  .rn-hub .hub-header .agenda-header-sections{
-    display:block;
-    position:relative;
-    margin-left:auto;
-    flex:0 0 auto;
-  }
-  .agenda-header-sections>summary{
-    box-sizing:border-box;
-    display:grid;
-    place-items:center;
-    width:46px;
-    height:46px;
-    border:1px solid #ffffff38;
-    border-radius:12px;
-    background:#ffffff17;
-    color:#fff;
-    cursor:pointer;
-    list-style:none;
-    -webkit-tap-highlight-color:transparent;
-  }
-  .agenda-header-sections>summary::-webkit-details-marker{display:none}
-  .agenda-header-sections[open]>summary{background:#ffffff2b;border-color:#87d8d0}
-  .agenda-header-sections>summary:focus-visible,
-  .agenda-header-sections-list button:focus-visible{
-    outline:3px solid #72e0d8;
-    outline-offset:2px;
-  }
-  .agenda-header-sections-list{
-    box-sizing:border-box;
-    position:absolute;
-    top:calc(100% + 9px);
-    right:0;
-    z-index:75;
-    display:grid;
-    gap:4px;
-    width:min(325px,calc(100vw - 24px));
-    max-height:min(68dvh,460px);
-    overflow-y:auto;
-    overscroll-behavior:contain;
-    padding:11px;
-    border:1px solid #dbe7ea;
-    border-radius:15px;
-    background:#fff;
-    color:#244657;
-    box-shadow:0 16px 44px #102b3d44;
-  }
-  .agenda-header-menu-caption{
-    padding:5px 9px 7px;
-    color:#778b96;
-    font-size:10px;
-    font-weight:850;
-    letter-spacing:.08em;
-  }
-  .agenda-header-sections-list button{
-    box-sizing:border-box;
-    display:flex;
-    align-items:center;
-    gap:11px;
-    width:100%;
-    min-height:47px;
-    padding:10px 12px;
-    border:0;
-    border-radius:10px;
-    background:transparent;
-    color:#315368;
-    text-align:left;
-    font:650 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;
-    cursor:pointer;
-  }
-  .agenda-header-sections-list button:hover{background:#f0f7f7}
-  .agenda-header-sections-list button[aria-current=page]{
-    background:#e7f7f4;
-    color:#087871;
-    font-weight:780;
-  }
-  .agenda-header-sections-list button span:nth-child(2){
-    flex:1;
-    min-width:0;
-    overflow-wrap:anywhere;
-  }
-  .agenda-header-current{color:#168e85;font-size:10px}
-}
-
-/* Closed native details never display their popover, even with author-level display rules. */
-.agenda-header-sections:not([open])>.agenda-header-sections-list{display:none}
-
-
-/* Billing uses the identical blue-header sandwich layout as the Agenda. */
-@media screen and (max-width:900px){
- .rn-hub .hub-header .billing-header-sections{display:block;position:relative;margin-left:auto;flex:0 0 auto}
- .rn-hub .billing-header-sections .billing-header-link{
-   box-sizing:border-box;display:flex;align-items:center;gap:11px;
-   width:100%;min-height:47px;padding:10px 12px;border:0;border-radius:10px;
-   background:transparent;color:#315368;text-decoration:none;text-align:left;
-   font:650 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;
-   overflow-wrap:anywhere;
- }
- .rn-hub .billing-header-sections .billing-header-link:hover{background:#f0f7f7}
- .rn-hub .billing-header-sections .billing-header-link[aria-current=page]{background:#e7f7f4;color:#087871;font-weight:780}
- .rn-hub .billing-header-sections .billing-header-link svg{flex:0 0 19px}
- .rn-hub .billing-header-sections .billing-header-link span{flex:1;min-width:0}
- .rn-hub .billing-header-sections .billing-header-link:focus-visible{outline:3px solid #72e0d8;outline-offset:2px}
- .rn-hub .billing-header-loading{font-size:12px;padding:9px;color:#657b86}
-}
 
 /* Organização ativa (2B-M2a): seletor no cabeçalho e criação pelo titular da conta. */
 .org-switcher{position:relative;display:flex;align-items:center;gap:6px;margin-left:auto;margin-right:12px;color:#d9e6ee}

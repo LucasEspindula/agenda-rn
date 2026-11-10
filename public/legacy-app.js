@@ -640,6 +640,20 @@ function initWorkflowUI(){
  $("cancelledPageBtn").onclick=()=>showView("cancelled");
  $("systemDialogConfirm").onclick=()=>finishAppDialog(true);qsa("[data-dialog-cancel]").forEach(b=>b.onclick=()=>finishAppDialog(false));
  $("cancelReasonSelect").onchange=()=>$("cancelReasonOtherLabel").classList.toggle("hidden",$("cancelReasonSelect").value!=="Outro");
+ placeAgendaActions();
+}
+// Celular: "Novo agendamento" e "Bloquear horário" ficam numa barra fixa embaixo; no computador voltam para a barra de filtros.
+// Os botões são os mesmos, então permissões, ocultação por tela e bloqueio por data continuam valendo.
+function placeAgendaActions(){
+ const phone=window.matchMedia("(max-width:900px)");
+ let bar=$("mobileActionBar");
+ if(!bar){document.querySelector(".agenda-shell").insertAdjacentHTML("beforeend",'<div id="mobileActionBar" class="mobile-action-bar no-print" role="toolbar" aria-label="Ações da agenda"></div>');bar=$("mobileActionBar")}
+ const place=()=>{
+  const filters=document.querySelector(".filters"),block=$("newBlockBtn"),create=$("newAppointmentBtn");
+  if(phone.matches){bar.append(block,create)}
+  else{filters.insertBefore(block,$("agendaNotifications"));filters.insertBefore(create,$("agendaNotifications"))}
+ };
+ place();phone.addEventListener("change",place);
 }
 function workflowRoleLabel(role){return role==="general_manager"?"Gerência":role?roleLabel(role):""}
 function workflowAuthorship(r,requesterRole="Médico"){const deciderRole=workflowRoleLabel(r.deciderRole);return `<div class="workflow-authorship"><div><strong>Solicitante:</strong> ${esc(doctorName(r.requesterName||"Médico"))} · ${requesterRole}</div><small>Enviada em: ${workflowDate(r.createdAt)}</small>${r.deciderName?`<div><strong>Decidido por:</strong> ${esc(r.deciderName)}${deciderRole?` · ${esc(deciderRole)}`:""}</div><small>Decidida em: ${workflowDate(r.decidedAt)}</small>`:""}</div>`}

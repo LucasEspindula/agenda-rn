@@ -16,11 +16,10 @@ test('patched Zod major and npm lock metadata are aligned for npm ci', () => {
   assert.ok(Object.entries(lock.packages).filter(([path]) => path.endsWith('/zod')).every(([,value]) => Number(value.version.split('.')[0]) >= 4));
 });
 
-test('mobile overflow menu has no duplicated primary navigation items', () => {
+test('single mobile menu lists other modules without repeating the current one', () => {
   const component = source('components/mobile-navigation.tsx');
-  assert.match(component, /const tabs = links\.slice\(0, 3\)/);
-  assert.match(component, /overflowLinks = links\.filter\(link => !tabs\.some\(tab => tab\.id === link\.id\)\)/);
-  assert.match(component, /overflowLinks\.map\(link =>/);
+  assert.match(component, /const otherModules = links\.filter\(link => link\.id !== active\)/);
+  assert.match(component, /otherModules\.map\(link =>/);
   assert.match(component, /<dialog /);
   assert.match(component, /role === "general_manager"/);
 });
