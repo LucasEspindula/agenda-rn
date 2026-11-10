@@ -263,3 +263,42 @@ test('inline agenda builder returns exactly the same agenda as the per-row funct
   assert.deepEqual(grants,{a:false,b:false,c:true});
  }finally{await db.close()}
 });
+
+test('incremental agenda read returns only changed rows, full id order, and merges into the same agenda as a full read',async()=>{
+ const db=await fixture();
+ try{
+  for(const f of ['20261106210000_agenda_period_window','20261114120000_agenda_state_inline_json','20261115120000_agenda_state_delta'])
+   await db.exec(readFileSync(new URL(`../supabase/migrations/${f}.sql`,import.meta.url),'utf8'));
+  const {mergeAgendaDelta}=await import('./load-ts.mjs').then(m=>m.loadTs('lib/agenda/delta.ts'));
+  const plain=v=>JSON.parse(JSON.stringify(v));
+  const full=async since=>(await db.query('select public.load_agenda_window(1,$1) as s',[since])).rows[0].s;
+  const delta=async(since,after)=>(await db.query('select public.load_agenda_delta(1,$1,$2) as s',[since,after])).rows[0].s;
+  // Folga de 2 s: as linhas gravadas há mais tempo que isso não voltam.
+  await db.exec(`set session_replication_role=replica;update public.patients set updated_at=updated_at-interval '1 hour';update public.appointments set updated_at=updated_at-interval '1 hour';
+   update public.hospitals set updated_at=updated_at-interval '1 hour';update public.patient_history_events set updated_at=updated_at-interval '1 hour';
+   update public.appointment_reschedules set updated_at=updated_at-interval '1 hour';set session_replication_role=origin`);
+  const base=await full(null),baseWin=await full('2026-06-01');
+  const quiet=await delta(null,(await full(null)).revision);
+  assert.equal(quiet.delta,true);
+  assert.deepEqual([quiet.state.appointments.length,quiet.state.patients.length,quiet.state.hospitals.length,quiet.state.patientHistory.length,quiet.state.cancelledAppointments.length],[0,0,0,0,0]);
+  assert.deepEqual(quiet.order.appointments,base.state.appointments.map(a=>a.id));
+  assert.equal(quiet.state.professionals.length,base.state.professionals.length,'profissionais vêm sempre inteiros');
+  const r0=(await full(null)).revision;
+  const NEW='b6000000-0000-4000-8000-000000000006',HNEW='e6000000-0000-4000-8000-000000000006';
+  await apply(db,1,[{op:'upsert_appointment',id:NEW,data:appointment(NEW,{date:'2026-12-14',time:'08:00'}),expectedVersion:null,cancelled:false},
+   {op:'append_history',id:HNEW,data:{id:HNEW,patientId:P1,appointmentId:NEW,type:'Agendamento criado',text:'novo',at:'2026-11-09T09:00:00.000Z'}},
+   {op:'upsert_patient',id:P2,data:patient(P2,{doctorId:CLINIC,name:'Paciente Clínica',phone:'84999990000'}),expectedVersion:await version(db,'patients',P2)}]);
+  const after=await full(null),afterWin=await full('2026-06-01');
+  const d=await delta(null,r0);
+  assert.deepEqual(d.state.appointments.map(a=>a.id),[NEW]);
+  assert.deepEqual(d.state.patients.map(p=>p.id),[P2]);
+  assert.deepEqual(d.state.patientHistory.map(h=>h.id),[HNEW]);
+  assert.equal(d.revision,after.revision);
+  assert.deepEqual(plain(mergeAgendaDelta({state:{...base.state},revision:r0},d)),plain(after));
+  assert.deepEqual(plain(mergeAgendaDelta({state:{...baseWin.state},revision:r0},await delta('2026-06-01',r0))),plain(afterWin));
+  await rejects(db.query('select public.load_agenda_delta(1,null,null)'),/Revisão de partida obrigatória/);
+  const grants=(await db.query(`select has_function_privilege('anon','public.load_agenda_delta(bigint,date,timestamptz)','execute') a,has_function_privilege('authenticated','public.load_agenda_delta(bigint,date,timestamptz)','execute') b,
+   has_function_privilege('service_role','public.load_agenda_delta(bigint,date,timestamptz)','execute') c`)).rows[0];
+  assert.deepEqual(grants,{a:false,b:false,c:true});
+ }finally{await db.close()}
+});

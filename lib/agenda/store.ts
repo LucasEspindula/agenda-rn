@@ -2,6 +2,7 @@ import "server-only";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { HttpError } from "@/lib/security/http";
 import { agendaOps, changedKeys, type AgendaOp, type Base, type Key, type State } from "./diff";
+import { mergeAgendaDelta } from "./delta";
 
 export type AgendaSnapshot = { state: State; revision: string };
 
@@ -24,19 +25,23 @@ export async function loadAgendaState(actorId: number, org?: string): Promise<Ag
 // esperam a mesma consulta. A revisão é conferida no banco a cada chamada (agenda_revision com
 // p_org também confere o vínculo do usuário com a organização), e o filtro por papel continua
 // sendo aplicado depois, por usuário. Sem organização explícita, não há cache.
+// Revisão nova (ou cache vencido): em vez de remontar tudo, pede ao banco só o que mudou desde a
+// revisão em memória (load_agenda_delta) e aplica por cima. A cada FULL_RELOAD_MS, ou se o
+// incremental falhar ou vier incompleto, relê a agenda inteira.
 const SNAPSHOT_TTL_MS = 30_000;
 const SNAPSHOT_MAX = 24;
-type CachedSnapshot = { revision: number; text: string; at: number };
+const FULL_RELOAD_MS = 10 * 60_000;
+type CachedSnapshot = { revision: number; text: string; at: number; fullAt: number };
 const snapshotCache = new Map<string, CachedSnapshot>();
 const snapshotLoads = new Map<string, Promise<AgendaSnapshot>>();
 const revisionTime = (value: unknown) => { const t = Date.parse(String(value ?? "")); return Number.isFinite(t) ? t : NaN; };
-function rememberSnapshot(key: string, snapshot: AgendaSnapshot) {
+function rememberSnapshot(key: string, snapshot: AgendaSnapshot, fullAt: number) {
   const revision = revisionTime(snapshot.revision);
   if (!Number.isFinite(revision)) return;
   const previous = snapshotCache.get(key);
   if (previous && previous.revision > revision) return;
   snapshotCache.delete(key);
-  snapshotCache.set(key, { revision, text: JSON.stringify(snapshot), at: Date.now() });
+  snapshotCache.set(key, { revision, text: JSON.stringify(snapshot), at: Date.now(), fullAt });
   while (snapshotCache.size > SNAPSHOT_MAX) snapshotCache.delete(snapshotCache.keys().next().value as string);
 }
 // Cada chamador recebe sua própria cópia: rotas alteram o estado antes de gravar.
@@ -52,7 +57,10 @@ async function cachedSnapshot(org: string | undefined, scope: string, actorId: n
     // Só aproveita a leitura em andamento se ela já enxerga a revisão vista acima.
     if (snapshot && revisionTime(snapshot.revision) >= current) return JSON.parse(JSON.stringify(snapshot)) as AgendaSnapshot;
   }
-  const pending = load().then(snapshot => { rememberSnapshot(key, snapshot); return snapshot; });
+  const base = hit && Date.now() - hit.fullAt < FULL_RELOAD_MS ? hit : null;
+  const since = scope === "all" ? null : scope;
+  const pending = (base ? refreshSnapshot(base, since, actorId, org, load) : load().then(snapshot => ({ snapshot, fullAt: Date.now() })))
+    .then(({ snapshot, fullAt }) => { rememberSnapshot(key, snapshot, fullAt); return snapshot; });
   snapshotLoads.set(key, pending);
   try {
     const snapshot = await pending;
@@ -60,6 +68,23 @@ async function cachedSnapshot(org: string | undefined, scope: string, actorId: n
   } finally {
     if (snapshotLoads.get(key) === pending) snapshotLoads.delete(key);
   }
+}
+
+async function refreshSnapshot(base: CachedSnapshot, since: string | null, actorId: number, org: string, load: () => Promise<AgendaSnapshot>) {
+  try {
+    const delta = await loadAgendaDelta(actorId, since, new Date(base.revision).toISOString(), org);
+    const merged = mergeAgendaDelta(JSON.parse(base.text) as AgendaSnapshot, delta);
+    if (merged) return { snapshot: merged as AgendaSnapshot, fullAt: base.fullAt };
+  } catch {
+    // Incremental indisponível: segue para a leitura completa, que reporta o erro se houver.
+  }
+  return { snapshot: await load(), fullAt: Date.now() };
+}
+
+async function loadAgendaDelta(actorId: number, since: string | null, after: string, org: string): Promise<unknown> {
+  const { data, error } = await getSupabaseAdmin().rpc("load_agenda_delta", withOrg({ p_actor: actorId, p_since: since, p_after: after }, org));
+  dbError(error, "Read agenda changes");
+  return data;
 }
 
 // Janela padrão enviada ao navegador: 90 dias para trás (fuso de São Paulo) e todo o futuro.

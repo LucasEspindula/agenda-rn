@@ -28,7 +28,7 @@ const Storage={
  save(d){this.pending=JSON.stringify(d);if(!this.saving)this.inFlight=this.flush();return this.inFlight},
  async flush(){
   this.saving=true;
-  try{while(this.pending){const body=this.pending;this.pending=null;const response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json","if-match":window.AgendaRevision||"new"},body}),result=await response.json();if(!response.ok)throw Error(result.error||"Não foi possível salvar no servidor.");if(result.revision)window.AgendaRevision=result.revision;}return true}
+  try{while(this.pending){const body=this.pending;this.pending=null;const packed=await agendaRequestBody(body),response=await fetch("/api/state",{method:"PUT",headers:{"content-type":"application/json","if-match":window.AgendaRevision||"new",...packed.headers},body:packed.body}),result=await response.json();if(!response.ok)throw Error(result.error||"Não foi possível salvar no servidor.");if(result.revision)window.AgendaRevision=result.revision;}return true}
   catch(error){this.pending=null;await appNotice("Alteração não salva",error.message+" A agenda será recarregada. Confira os dados antes de repetir a alteração.");const response=await fetch(agendaStateUrl(),{cache:"no-store"});if(response.ok){const snapshot=await response.json();window.AgendaRevision=snapshot.revision;rememberAgendaWindow(snapshot);state=Storage.migrate(snapshot.state);closeModals();renderAll()}return false}
   finally{this.saving=false;window.AgendaSyncAfterSave?.()}
  }
@@ -41,6 +41,8 @@ let remoteAgendaUpdatePending=false,remoteAgendaRevision=null,agendaSyncInFlight
 const AGENDA_SYNC_FAST=4000,AGENDA_SYNC_IDLE_MAX=15000;
 // Agenda por período: o servidor envia consultas e histórico a partir de AgendaWindowSince
 // (padrão: 90 dias para trás + futuro). Ao navegar para antes disso, o período é ampliado.
+// Salvamento mais leve: a agenda inteira vai compactada em gzip (cerca de 1/8 do tamanho) quando o navegador sabe compactar.
+async function agendaRequestBody(json){if(json.length<8192||typeof CompressionStream!=="function")return {body:json,headers:{}};try{const body=await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer();return {body,headers:{"content-encoding":"gzip"}}}catch{return {body:json,headers:{}}}}
 function agendaStateUrl(){const since=window.AgendaWindowSince;return since?`/api/state?since=${encodeURIComponent(since)}`:"/api/state"}
 function rememberAgendaWindow(snapshot){if(snapshot?.window?.since)window.AgendaWindowSince=snapshot.window.since}
 function agendaWindowCovers(day){const since=window.AgendaWindowSince;return !since||since==="all"||String(day)>=since}

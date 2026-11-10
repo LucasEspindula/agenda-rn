@@ -26,14 +26,57 @@ test('same revision: the agenda is built once and reused, but the revision is ch
  assert.equal(loads('agenda_revision'),2);
 });
 
-test('a new revision is always read from the database',async()=>{
+test('a new revision is always read from the database, asking only for what changed',async()=>{
  const {agenda,store,loads}=setup();
  await store.loadAgendaState(1,'org-1');
  await upsert(agenda,{id:'b',doctorId:'one',patientId:'p1',status:'scheduled',date:'2026-12-08',time:'09:00',duration:30,procedure:'Retorno'});
  const after=await store.loadAgendaState(1,'org-1');
- assert.equal(loads('load_agenda_state'),2);
+ assert.equal(loads('load_agenda_state'),1);
+ assert.equal(loads('load_agenda_delta'),1);
+ const delta=agenda.calls.find(c=>c.name==='load_agenda_delta');
+ assert.equal(delta.p.p_since,null);assert.equal(delta.p.p_org,'org-1');assert.ok(delta.p.p_after);
  assert.ok(after.state.appointments.some(a=>a.id==='b'));
  assert.equal(after.revision,agenda.revision());
+ assert.deepEqual(JSON.parse(JSON.stringify(after.state)),JSON.parse(JSON.stringify(agenda.state())));
+});
+
+test('incremental refresh keeps the agenda identical to a full read through edits, cancellations and removals',async()=>{
+ const {agenda,store}=setup();
+ const since='2026-08-01';
+ await store.loadAgendaWindow(1,since,'org-1');
+ await upsert(agenda,{id:'b',doctorId:'one',patientId:'p1',status:'scheduled',date:'2026-12-08',time:'09:00',duration:30,procedure:'Retorno'});
+ await store.loadAgendaWindow(1,since,'org-1');
+ await agenda.db.rpc('apply_agenda_changes',{p_ops:[{op:'upsert_appointment',data:{id:'a',doctorId:'one',patientId:'p1',status:'scheduled',date:'2026-12-07',time:'10:00',duration:60,procedure:'Consulta',cancelledAt:'2026-11-05T10:00:00.000Z',cancelReason:'Viagem'},expectedVersion:1,cancelled:true},
+  {op:'upsert_patient',data:{id:'p2',doctorId:'one',name:'Paciente Dois'},expectedVersion:null},{op:'upsert_hospital',data:{id:'h1',name:'Hospital',abbreviation:'H'},expectedVersion:null}]});
+ await store.loadAgendaWindow(1,since,'org-1');
+ await agenda.db.rpc('apply_agenda_changes',{p_ops:[{op:'archive_appointment',id:'b',expectedVersion:1}]});
+ const got=await store.loadAgendaWindow(1,since,'org-1');
+ assert.ok(!got.state.appointments.some(a=>a.id==='b'));
+ assert.deepEqual([...got.state.cancelledAppointments.map(a=>a.id)],['a']);
+ const full=(await agenda.db.rpc('load_agenda_window',{p_actor:1,p_since:since})).data;
+ assert.deepEqual(JSON.parse(JSON.stringify(got)),JSON.parse(JSON.stringify(full)));
+ assert.equal(agenda.calls.filter(c=>c.name==='load_agenda_window').length,2,'só a primeira leitura e a conferência acima são completas');
+ assert.equal(agenda.calls.filter(c=>c.name==='load_agenda_delta').length,3);
+});
+
+test('an incomplete or failed incremental read falls back to a full read',async()=>{
+ const {agenda,store,loads}=setup();
+ await store.loadAgendaState(1,'org-1');
+ const rpc=agenda.db.rpc;let mode='missing';
+ agenda.db.rpc=async(name,p)=>{
+  if(name==='load_agenda_delta'&&mode==='missing'){const r=await rpc(name,p);r.data.order.appointments.push('desconhecido');return r}
+  if(name==='load_agenda_delta'&&mode==='error'){agenda.calls.push({name});return {data:null,error:{message:'function public.load_agenda_delta does not exist'}}}
+  return rpc(name,p);
+ };
+ await upsert(agenda,{id:'b',doctorId:'one',patientId:'p1',status:'scheduled',date:'2026-12-08',time:'09:00',duration:30,procedure:'Retorno'});
+ const first=await store.loadAgendaState(1,'org-1');
+ assert.equal(loads('load_agenda_state'),2);
+ assert.ok(first.state.appointments.some(a=>a.id==='b'));
+ mode='error';
+ await upsert(agenda,{id:'c',doctorId:'one',patientId:'p1',status:'scheduled',date:'2026-12-09',time:'09:00',duration:30,procedure:'Retorno'});
+ const second=await store.loadAgendaState(1,'org-1');
+ assert.equal(loads('load_agenda_state'),3);
+ assert.ok(second.state.appointments.some(a=>a.id==='c'));
 });
 
 test('simultaneous reads share a single query',async()=>{
@@ -75,4 +118,7 @@ test('the cache is bounded and expires, so a stale agenda never lingers',()=>{
  assert.match(source,/SNAPSHOT_TTL_MS = 30_000/);
  assert.match(source,/while \(snapshotCache\.size > SNAPSHOT_MAX\)/);
  assert.match(source,/hit\.revision === current && Date\.now\(\) - hit\.at < SNAPSHOT_TTL_MS/);
+ // O incremental parte da agenda em memória por no máximo 10 min; depois disso relê tudo.
+ assert.match(source,/FULL_RELOAD_MS = 10 \* 60_000/);
+ assert.match(source,/hit && Date\.now\(\) - hit\.fullAt < FULL_RELOAD_MS \? hit : null/);
 });
