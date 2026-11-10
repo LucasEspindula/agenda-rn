@@ -102,3 +102,17 @@ test('a short swipe that snaps back closes before clearing the drag position (no
  assert.equal(h.menu.closes,1,'closed exactly once even with both transitionend and the fallback timer');
  assert.equal(h.menu.styleAtClose,'translateX(330px)','still off-screen at the moment it closes');
 });
+
+test('a new touch finishes a closing drawer first, so a quick reopen never mixes with the old close',()=>{
+ const h=swipeHarness();
+ h.drag(340,120);h.finish();
+ h.drag(120,330);               // fecha; o assentamento ainda não terminou
+ assert.equal(h.menu.open,true,'still sliding out');
+ h.drag(340,120);               // reabre logo em seguida
+ assert.equal(h.menu.closes,1,'the pending close completed when the new touch started');
+ assert.equal(h.menu.open,true);
+ assert.equal(h.style.animation,'none');
+ h.finish();
+ assert.equal(h.menu.open,true,'the late timer of the old close does not close the reopened menu');
+ assert.equal(h.menu.closes,1);
+});

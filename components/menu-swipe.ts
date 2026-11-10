@@ -40,6 +40,8 @@ function otherOverlayOpen(menu: HTMLDialogElement) {
 export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enabled }: Options) {
   let mode: Mode | null = null, decided = false, dragging = false;
   let x0 = 0, y0 = 0, t0 = 0, dx = 0, width = 0;
+  // Movimento de assentamento ainda em curso (abrir/fechar após soltar o dedo).
+  let pending: (() => void) | null = null;
 
   const place = (offset: number) => {
     menu.style.transform = `translateX(${Math.max(0, Math.min(width, offset))}px)`;
@@ -58,11 +60,13 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
     const done = () => {
       if (finished) return;
       finished = true;
+      pending = null;
       menu.removeEventListener("transitionend", done);
       // Fechar antes de limpar a posição: senão a gaveta reaparece aberta por um quadro.
       if (!open) onClose();
       reset();
     };
+    pending = done;
     menu.addEventListener("transitionend", done);
     window.setTimeout(done, 260);
   };
@@ -72,6 +76,8 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
 
   const start = (event: TouchEvent) => {
     mode = null; decided = false; dragging = false;
+    // Um novo toque conclui na hora o movimento anterior, para os dois não se misturarem.
+    pending?.();
     if (!enabled() || event.touches.length !== 1) return;
     if (menu.open) mode = "close";
     else if (!otherOverlayOpen(menu) && !blocked(event.target)) mode = "open";
