@@ -899,6 +899,7 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
 
 /* Celular: barra fixa de ações da agenda (substitui as abas inferiores). "Novo agendamento" é a ação
    principal, à direita, ao alcance do polegar; "Bloquear horário" aparece só para quem pode bloquear. */
+.rn-agenda .mobile-action-bar{display:none}
 @media screen and (max-width:900px){
  .rn-agenda .mobile-action-bar{
    box-sizing:border-box;
@@ -920,16 +921,16 @@ body.billing-paused .native-finance,body.billing-paused #nativeFinance,body.bill
    min-width:0;
    min-height:50px;
    margin:0;
-   padding:0 12px;
+   padding:0 8px;
    border-radius:14px;
-   font-size:14px;
+   font-size:13.5px;
    font-weight:750;
    line-height:1.2;
    white-space:nowrap;
    overflow:hidden;
    text-overflow:ellipsis;
  }
- .rn-agenda .mobile-action-bar>#newAppointmentBtn{flex-grow:1.35;box-shadow:0 6px 16px #1b999033}
+ .rn-agenda .mobile-action-bar>#newAppointmentBtn{box-shadow:0 6px 16px #1b999033}
  .rn-agenda .mobile-action-bar>#newBlockBtn{background:#fff;border:1px solid #c9d9e1;color:#244657}
  .rn-agenda:has(#mobileActionBar>button:not(.hidden)){padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
  body:has(.rn-agenda .modal:not(.hidden)) .rn-agenda .mobile-action-bar,
