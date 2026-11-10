@@ -40,25 +40,43 @@ function otherOverlayOpen(menu: HTMLDialogElement) {
 export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enabled }: Options) {
   let mode: Mode | null = null, decided = false, dragging = false;
   let x0 = 0, y0 = 0, t0 = 0, dx = 0, width = 0;
+  // Movimento de assentamento ainda em curso (abrir/fechar após soltar o dedo).
+  let pending: (() => void) | null = null;
 
   const place = (offset: number) => {
     menu.style.transform = `translateX(${Math.max(0, Math.min(width, offset))}px)`;
     menu.style.setProperty("--menu-progress", String(1 - Math.max(0, Math.min(width, offset)) / width));
   };
+  // Limpa só a posição do arrasto. A animação de entrada é decidida por quem abre: o gesto a
+  // desliga (a gaveta já vem acompanhando o dedo) e o botão do cabeçalho a liga. Religá-la ao
+  // soltar o dedo, ou no evento "close" (assíncrono, pode chegar após uma reabertura), fazia o
+  // navegador tocá-la de novo: a "piscada".
   const reset = () => {
-    menu.style.transition = ""; menu.style.transform = ""; menu.style.animation = "";
+    menu.style.transition = ""; menu.style.transform = "";
     menu.style.removeProperty("--menu-progress");
   };
   const settle = (open: boolean) => {
     menu.style.transition = "transform .2s cubic-bezier(.2,.8,.2,1)";
     place(open ? 0 : width);
-    const done = () => { menu.removeEventListener("transitionend", done); reset(); if (!open) onClose(); };
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      pending = null;
+      menu.removeEventListener("transitionend", done);
+      // Fechar antes de limpar a posição: senão a gaveta reaparece aberta por um quadro.
+      if (!open) onClose();
+      reset();
+    };
+    pending = done;
     menu.addEventListener("transitionend", done);
     window.setTimeout(done, 260);
   };
 
   const start = (event: TouchEvent) => {
     mode = null; decided = false; dragging = false;
+    // Um novo toque conclui na hora o movimento anterior, para os dois não se misturarem.
+    pending?.();
     if (!enabled() || event.touches.length !== 1) return;
     if (menu.open) mode = "close";
     else if (!otherOverlayOpen(menu) && !blocked(event.target)) mode = "open";

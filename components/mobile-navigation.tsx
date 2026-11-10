@@ -47,6 +47,8 @@ export default function MobileNavigation({ links, active, name, role }: {
   }, []);
 
   function openMenu() {
+    // Pelo botão a gaveta entra com a animação normal, mesmo após um gesto.
+    if (dialogRef.current && !dialogRef.current.open) dialogRef.current.style.animation = "";
     if (!dialogRef.current?.open) dialogRef.current?.showModal();
     setOpen(true);
   }
