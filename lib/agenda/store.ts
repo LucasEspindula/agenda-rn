@@ -10,10 +10,56 @@ export type AgendaSnapshot = { state: State; revision: string };
 const withOrg = <T extends Record<string, unknown>>(args: T, org?: string) => (org ? { ...args, p_org: org } : args);
 
 export async function loadAgendaState(actorId: number, org?: string): Promise<AgendaSnapshot> {
-  const { data, error } = await getSupabaseAdmin().rpc("load_agenda_state", withOrg({ p_actor: actorId }, org));
-  dbError(error, "Read agenda");
-  if (!data?.state) throw new HttpError(409, "Agenda indisponível.");
-  return data as AgendaSnapshot;
+  return cachedSnapshot(org, "all", actorId, async () => {
+    const { data, error } = await getSupabaseAdmin().rpc("load_agenda_state", withOrg({ p_actor: actorId }, org));
+    dbError(error, "Read agenda");
+    if (!data?.state) throw new HttpError(409, "Agenda indisponível.");
+    return data as AgendaSnapshot;
+  });
+}
+
+// Cache por revisão: montar a agenda é a consulta mais cara do banco e, com várias abas abertas,
+// cada alteração fazia todas recarregarem o mesmo resultado. Agora a primeira aba de uma revisão
+// lê do banco; as demais reaproveitam enquanto a revisão for a mesma. Leituras simultâneas
+// esperam a mesma consulta. A revisão é conferida no banco a cada chamada (agenda_revision com
+// p_org também confere o vínculo do usuário com a organização), e o filtro por papel continua
+// sendo aplicado depois, por usuário. Sem organização explícita, não há cache.
+const SNAPSHOT_TTL_MS = 30_000;
+const SNAPSHOT_MAX = 24;
+type CachedSnapshot = { revision: number; text: string; at: number };
+const snapshotCache = new Map<string, CachedSnapshot>();
+const snapshotLoads = new Map<string, Promise<AgendaSnapshot>>();
+const revisionTime = (value: unknown) => { const t = Date.parse(String(value ?? "")); return Number.isFinite(t) ? t : NaN; };
+function rememberSnapshot(key: string, snapshot: AgendaSnapshot) {
+  const revision = revisionTime(snapshot.revision);
+  if (!Number.isFinite(revision)) return;
+  const previous = snapshotCache.get(key);
+  if (previous && previous.revision > revision) return;
+  snapshotCache.delete(key);
+  snapshotCache.set(key, { revision, text: JSON.stringify(snapshot), at: Date.now() });
+  while (snapshotCache.size > SNAPSHOT_MAX) snapshotCache.delete(snapshotCache.keys().next().value as string);
+}
+// Cada chamador recebe sua própria cópia: rotas alteram o estado antes de gravar.
+async function cachedSnapshot(org: string | undefined, scope: string, actorId: number, load: () => Promise<AgendaSnapshot>): Promise<AgendaSnapshot> {
+  if (!org) return load();
+  const key = `${org}|${scope}`;
+  const current = revisionTime(await agendaRevision(actorId, org));
+  const hit = snapshotCache.get(key);
+  if (hit && hit.revision === current && Date.now() - hit.at < SNAPSHOT_TTL_MS) return JSON.parse(hit.text) as AgendaSnapshot;
+  const shared = snapshotLoads.get(key);
+  if (shared) {
+    const snapshot = await shared.catch(() => null);
+    // Só aproveita a leitura em andamento se ela já enxerga a revisão vista acima.
+    if (snapshot && revisionTime(snapshot.revision) >= current) return JSON.parse(JSON.stringify(snapshot)) as AgendaSnapshot;
+  }
+  const pending = load().then(snapshot => { rememberSnapshot(key, snapshot); return snapshot; });
+  snapshotLoads.set(key, pending);
+  try {
+    const snapshot = await pending;
+    return JSON.parse(JSON.stringify(snapshot)) as AgendaSnapshot;
+  } finally {
+    if (snapshotLoads.get(key) === pending) snapshotLoads.delete(key);
+  }
 }
 
 // Janela padrão enviada ao navegador: 90 dias para trás (fuso de São Paulo) e todo o futuro.
@@ -32,10 +78,12 @@ export function parseAgendaSince(value: string | null, now = new Date()): string
 
 // Agenda para o navegador a partir de `since` (null = completa).
 export async function loadAgendaWindow(actorId: number, since: string | null, org?: string): Promise<AgendaSnapshot> {
-  const { data, error } = await getSupabaseAdmin().rpc("load_agenda_window", withOrg({ p_actor: actorId, p_since: since }, org));
-  dbError(error, "Read agenda");
-  if (!data?.state) throw new HttpError(409, "Agenda indisponível.");
-  return data as AgendaSnapshot;
+  return cachedSnapshot(org, since ?? "all", actorId, async () => {
+    const { data, error } = await getSupabaseAdmin().rpc("load_agenda_window", withOrg({ p_actor: actorId, p_since: since }, org));
+    dbError(error, "Read agenda");
+    if (!data?.state) throw new HttpError(409, "Agenda indisponível.");
+    return data as AgendaSnapshot;
+  });
 }
 
 export async function agendaRevision(actorId: number, org?: string): Promise<string | null> {
