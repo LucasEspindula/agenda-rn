@@ -63,7 +63,7 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
       pending = null;
       menu.removeEventListener("transitionend", done);
       // Fechar antes de limpar a posição: senão a gaveta reaparece aberta por um quadro.
-      if (!open) onClose();
+      if (!open) { onClose(); restoreAnimation(); }
       reset();
     };
     pending = done;
@@ -71,7 +71,8 @@ export function attachMenuSwipe(menu: HTMLDialogElement, { onOpen, onClose, enab
     window.setTimeout(done, 260);
   };
   // A animação de entrada volta a valer só depois que o menu fecha (para o botão do cabeçalho).
-  const restoreAnimation = () => { menu.style.animation = ""; };
+  // O evento "close" cobre o Esc; os fechamentos pelo gesto e pelo X religam direto, sem depender dele.
+  function restoreAnimation() { menu.style.animation = ""; }
   menu.addEventListener("close", restoreAnimation);
 
   const start = (event: TouchEvent) => {

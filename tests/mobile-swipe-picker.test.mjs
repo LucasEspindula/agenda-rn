@@ -65,7 +65,7 @@ function swipeHarness(){
  const menu={open:false,style,offsetWidth:330,closes:0,styleAtClose:null,
   getBoundingClientRect:()=>({width:330}),
   showModal(){this.open=true},
-  close(){this.styleAtClose=style.transform;this.open=false;this.closes++;(menuListeners.close||[]).forEach(f=>f())},
+  close(){this.styleAtClose=style.transform;this.open=false;this.closes++},  // o navegador dispara "close" depois, de forma assíncrona
   addEventListener(t,f){(menuListeners[t]||=[]).push(f)},removeEventListener(t,f){menuListeners[t]=(menuListeners[t]||[]).filter(x=>x!==f)}};
  class Element{matches(){return false}}
  const target=Object.assign(new Element(),{parentElement:null});
@@ -89,8 +89,9 @@ test('opening by swipe does not replay the entry animation when the finger lifts
  h.finish();
  assert.equal(h.style.animation,'none','still off after settling open, so the browser does not replay it');
  assert.equal(h.style.transform,'','drag position cleared');
- h.menu.close();
- assert.equal(h.style.animation,'','entry animation restored after closing, for the header button');
+ h.drag(120,330);h.finish();
+ assert.equal(h.menu.open,false);
+ assert.equal(h.style.animation,'','entry animation restored by the swipe close itself, without waiting for the async close event');
 });
 
 test('a short swipe that snaps back closes before clearing the drag position (no one-frame open drawer)',()=>{
