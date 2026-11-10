@@ -53,15 +53,15 @@ test('routes: managers only, explicit confirmation, storage cleanup, secret-prot
  assert.match(anon,/isManager\(session\.account\.role\)/);assert.match(anon,/confirm: z\.literal\("ANONIMIZAR"\)/);
  assert.match(anon,/storage\.from\(BUCKET\)\.remove\(paths\)/);assert.match(anon,/secureMutation\(anonymize\)/);
  assert.match(exp,/isManager\(session\.account\.role\)/);assert.match(exp,/content-disposition/);assert.match(exp,/private, no-store/);
- assert.deepEqual(JSON.parse(read('vercel.json')).crons,[{path:'/api/cron/maintenance',schedule:'0 6 * * *'}]);
+ assert.deepEqual(JSON.parse(read('vercel.json')).crons,[{path:'/api/cron/maintenance',schedule:'0 6 * * *'},{path:'/api/cron/monitor',schedule:'30 6 * * *'}]);
  const db={rpc:async()=>({data:{sessions:0},error:null})};
  const prev=process.env.CRON_SECRET;
  try{
   delete process.env.CRON_SECRET;
-  let cron=loadTs('app/api/cron/maintenance/route.ts',{'@/lib/supabase-admin':{getSupabaseAdmin:()=>db}});
+  let cron=loadTs('app/api/cron/maintenance/route.ts',{'@/lib/supabase-admin':{getSupabaseAdmin:()=>db},'@/lib/monitor/report':{reportIncident:async()=>null}});
   assert.equal((await cron.GET(new Request('https://x.test/api/cron/maintenance'))).status,503,'fail-closed without secret');
   process.env.CRON_SECRET='segredo-de-teste-123';
-  cron=loadTs('app/api/cron/maintenance/route.ts',{'@/lib/supabase-admin':{getSupabaseAdmin:()=>db}});
+  cron=loadTs('app/api/cron/maintenance/route.ts',{'@/lib/supabase-admin':{getSupabaseAdmin:()=>db},'@/lib/monitor/report':{reportIncident:async()=>null}});
   assert.equal((await cron.GET(new Request('https://x.test/api/cron/maintenance',{headers:{authorization:'Bearer errado'}}))).status,401);
   assert.equal((await cron.GET(new Request('https://x.test/api/cron/maintenance',{headers:{authorization:'Bearer segredo-de-teste-123'}}))).status,200);
  }finally{if(prev===undefined)delete process.env.CRON_SECRET;else process.env.CRON_SECRET=prev}

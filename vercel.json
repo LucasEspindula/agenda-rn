@@ -3,5 +3,8 @@
   "framework": "nextjs",
   "outputDirectory": ".next",
   "regions": ["gru1"],
-  "crons": [{ "path": "/api/cron/maintenance", "schedule": "0 6 * * *" }]
+  "crons": [
+    { "path": "/api/cron/maintenance", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/monitor", "schedule": "30 6 * * *" }
+  ]
 }

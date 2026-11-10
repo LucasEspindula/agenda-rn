@@ -50,6 +50,11 @@ export function secureMutation(handler: (request: Request) => Promise<Response>)
       response.headers.set('Cache-Control', 'private, no-store');
       return response;
     } catch (error) {
+      // Falhas inesperadas (e HttpError 5xx) vão para o monitoramento; erros de validação não.
+      if (!(error instanceof HttpError) || error.status >= 500) {
+        const { reportError } = await import('@/lib/monitor/report');
+        await reportError(error, { source: 'server', route: new URL(request.url).pathname, method: request.method, severity: error instanceof HttpError ? 'warning' : 'error' });
+      }
       return Response.json({ error: error instanceof HttpError ? error.message : 'Não foi possível concluir a operação.' },
         { status: error instanceof HttpError ? error.status : 500, headers: { 'Cache-Control': 'private, no-store' } });
     }

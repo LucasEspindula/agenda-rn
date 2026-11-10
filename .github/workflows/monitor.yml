@@ -1,0 +1,44 @@
+name: Monitor RN Integra
+# A cada 15 minutos: confere se o sistema está no ar e roda o assistente de monitoramento
+# (verifica, conserta o que for seguro, avisa). Se algo crítico continuar, este job falha e o
+# GitHub manda e-mail para quem cuida do repositório.
+# Configuração (GitHub → Settings → Secrets and variables → Actions):
+#   secret   CRON_SECRET  — o mesmo valor configurado na Vercel
+#   variable MONITOR_URL  — endereço de produção, ex.: https://app.seudominio.com.br
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Disponibilidade e verificações
+        env:
+          MONITOR_URL: ${{ vars.MONITOR_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$MONITOR_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning::Monitor não configurado (MONITOR_URL e CRON_SECRET)."; exit 0
+          fi
+          # 1. O sistema responde? Três tentativas antes de considerar fora do ar.
+          up=0
+          for i in 1 2 3; do
+            code=$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$MONITOR_URL/api/health" || echo 000)
+            if [ "$code" = "200" ]; then up=1; break; fi
+            echo "health tentativa $i: HTTP $code"; sleep 20
+          done
+          if [ "$up" != "1" ]; then echo "::error::Sistema fora do ar ou banco indisponível (/api/health)."; exit 1; fi
+          # 2. Rodada do assistente. Só contagens vão para o log (o repositório é público).
+          code=$(curl -s -m 90 -o result.json -w '%{http_code}' -H "Authorization: Bearer $CRON_SECRET" "$MONITOR_URL/api/cron/monitor" || echo 000)
+          summary=$(jq -c '{ok, counts, repaired: (.repaired|length), resolved}' result.json 2>/dev/null || echo '{}')
+          echo "monitor: HTTP $code $summary"
+          echo "### Monitor: HTTP $code" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`$summary\`" >> "$GITHUB_STEP_SUMMARY"
+          rm -f result.json
+          if [ "$code" != "200" ]; then echo "::error::O monitor encontrou problema crítico ou não rodou (HTTP $code). Ver alertas e docs/runbook-incidentes.md."; exit 1; fi
