@@ -7,14 +7,14 @@ test('billing mobile section dropdown reuses authorized page navigation, same sh
  const site=read('components/site-header.tsx');
  const menu=read('components/billing-section-menu.tsx');
  const css=read('app/hub/hub.css');
+ const mobile=read('components/mobile-navigation.tsx');
  assert.match(site,/active==='billing'\|\|active==='denials'/);
- assert.match(site,/<BillingSectionMenu\/>/);
- assert.match(menu,/className="agenda-header-sections billing-header-sections"/);
+ assert.match(mobile,/\(active === "billing" \|\| active === "denials"\) && <BillingSectionLinks onNavigate=\{closeMenu\} \/>/);
+ assert.match(menu,/className="mobile-app-menu-links mobile-app-sections billing-header-sections"/);
  assert.match(menu,/\.billing-subnav \.billing-subnav-nav/);
  assert.match(menu,/aria-current/);
  assert.match(menu,/item\.button\?\.click\(\)/);
- assert.match(menu,/onKeyDown=\{e=>\{if\(e\.key==="Escape"/);
- assert.match(css,/\.billing-header-sections \.billing-header-link/);
+ assert.match(css,/\.mobile-app-menu-links a,\.mobile-app-menu-links button\{/);
  assert.match(read('app/billing/billing.css'),/\.rn-hub \.billing-subnav\{display:none!important\}/);
 });
 

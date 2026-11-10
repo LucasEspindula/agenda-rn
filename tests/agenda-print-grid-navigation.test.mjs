@@ -9,11 +9,13 @@ test("blue mobile Agenda header exposes its own section menu with no duplicate w
  const menu=source("components/agenda-section-menu.tsx");
  const hubCss=source("app/hub/hub.css");
  const legacyCss=source("public/legacy.css");
- assert.match(header,/active==='agenda'&&<AgendaSectionMenu role=\{account\.role\}\/>/);
- assert.match(menu,/<details className="agenda-header-sections"/);
- assert.match(menu,/<summary title="Áreas da Agenda" aria-label="Abrir menu de seções da Agenda">/);
- assert.match(hubCss,/\.hub-header \.agenda-header-sections\{[\s\S]*?margin-left:auto/);
- assert.match(hubCss,/\.agenda-header-sections:not\(\[open\]\)>\.agenda-header-sections-list\{display:none\}/);
+ const mobile=source("components/mobile-navigation.tsx");
+ assert.match(header,/<MobileNavigation links=\{moduleLinks\(session\)\}[^>]*\/>\s*<\/header>/,"single menu trigger lives in the blue header");
+ assert.doesNotMatch(header,/AgendaSectionMenu|BillingSectionMenu/);
+ assert.match(mobile,/active === "agenda" && <AgendaSectionLinks role=\{role\} onNavigate=\{closeMenu\} \/>/);
+ assert.match(menu,/<nav className="mobile-app-menu-links mobile-app-sections" aria-label="Seções da Agenda">/);
+ assert.match(hubCss,/\.mobile-menu-trigger\{[\s\S]*?margin-left:auto/);
+ assert.doesNotMatch(hubCss,/\.mobile-app-tabs/,"no second menu in a bottom tab bar");
  assert.match(legacyCss,/@media screen and \(max-width:900px\)\{\s*\.rn-agenda \.agenda-shell>\.agenda-subnav\{display:none!important\}/);
  assert.match(source("app/dashboard/legacy-body.ts"),/class="agenda-nav"/);
 });
@@ -26,7 +28,8 @@ test("Agenda hamburger reuses real view handlers and respects role-specific sect
  assert.match(menu,/!el\.classList\.contains\("hidden"\)/);
  assert.match(menu,/source\.click\(\)/);
  assert.match(menu,/new MutationObserver\(sync\)/);
- assert.match(menu,/event\.key==="Escape"/);
+ assert.match(menu,/document\.getElementById\("cancelledPageBtn"\)/,"Cancelados reuses the real button");
+ assert.match(menu,/cancelled: "Cancelados"/);
  assert.match(app,/qsa\("\.agenda-nav-item"\)\.forEach\(b=>b\.onclick=\(\)=>showView\(b\.dataset\.view\)\)/);
  assert.match(app,/function showView\(view\)\{/);
 });

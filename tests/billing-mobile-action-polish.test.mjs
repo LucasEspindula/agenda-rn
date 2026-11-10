@@ -53,7 +53,7 @@ test("mobile floating additions reuse real actions for expenses, denials and rec
  const expense=read("app/billing/company-finance.tsx");
  const denial=read("app/billing/denial-manager.tsx");
  const billing=read("app/billing/billing-client.tsx");
- assert.match(css,/button\.billing-mobile-fab\{[\s\S]*?position:fixed;[\s\S]*?right:16px;[\s\S]*?bottom:calc\(86px \+ env\(safe-area-inset-bottom,0px\)\);[\s\S]*?border-radius:50%;/);
+ assert.match(css,/button\.billing-mobile-fab\{[\s\S]*?position:fixed;[\s\S]*?right:16px;[\s\S]*?bottom:calc\(20px \+ env\(safe-area-inset-bottom,0px\)\);[\s\S]*?border-radius:50%;/);
  assert.match(expense,/className="billing-icon-action billing-mobile-fab" aria-label="Nova despesa"/);
  assert.match(expense,/onClick=\{\(\)=>open\(\)\}><span className="billing-fab-icon"/);
  assert.match(denial,/className="billing-primary billing-mobile-fab" aria-label="Registrar glosa"/);
@@ -102,9 +102,8 @@ test("all floating billing create buttons use real Plus vector icons instead of 
 
 test("billing mobile screens with floating add reserve space below the final card",()=>{
  const css=read("app/billing/billing.css");
- assert.match(css,/main\.billing-main:has\(button\.billing-mobile-fab\)\{\s*padding-bottom:calc\(178px \+ env\(safe-area-inset-bottom,0px\)\)!important;/);
- assert.match(css,/bottom:calc\(86px \+ env\(safe-area-inset-bottom,0px\)\)/);
- assert.match(read("app/hub/hub.css"),/padding-bottom:calc\(76px \+ env\(safe-area-inset-bottom,0px\)\)/);
+ assert.match(css,/main\.billing-main:has\(button\.billing-mobile-fab\)\{\s*padding-bottom:calc\(112px \+ env\(safe-area-inset-bottom,0px\)\)!important;/);
+ assert.match(css,/bottom:calc\(20px \+ env\(safe-area-inset-bottom,0px\)\)/,"no bottom tab bar on billing pages any more");
 });
 
 test("mobile invoice request menu reuses the native bottom-anchored action sheet",()=>{
@@ -124,6 +123,6 @@ test("Atendimentos uses the shared bottom-right Plus only on the mobile records 
  assert.match(source,/tab === "invoices" \? editInvoice\(\) : setManual\(true\)/);
  assert.match(source,/<span className="billing-fab-icon" aria-hidden="true"><Plus size=\{27\}\/><\/span>/);
  assert.match(source,/<span className="billing-fab-label">\+<\/span>/);
- assert.match(css,/\.rn-hub \.billing-main button\.billing-mobile-fab,[\s\S]*?position:fixed;[\s\S]*?right:16px;[\s\S]*?bottom:calc\(86px \+ env\(safe-area-inset-bottom,0px\)\)/);
+ assert.match(css,/\.rn-hub \.billing-main button\.billing-mobile-fab,[\s\S]*?position:fixed;[\s\S]*?right:16px;[\s\S]*?bottom:calc\(20px \+ env\(safe-area-inset-bottom,0px\)\)/);
 });
 
