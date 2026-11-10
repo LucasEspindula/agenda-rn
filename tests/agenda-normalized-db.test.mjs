@@ -237,3 +237,29 @@ test('period window: browser gets appointments and history from the start date, 
   assert.deepEqual(grants,{a:false,b:false});
  }finally{await db.close()}
 });
+
+test('inline agenda builder returns exactly the same agenda as the per-row functions, and stays private',async()=>{
+ const db=await fixture();
+ try{
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261106210000_agenda_period_window.sql',import.meta.url),'utf8'));
+  const OLD='b4000000-0000-4000-8000-000000000004',CANC='b5000000-0000-4000-8000-000000000005',HOLD='e4000000-0000-4000-8000-000000000004';
+  await apply(db,1,[{op:'upsert_appointment',id:OLD,data:appointment(OLD,{date:'2026-01-10',time:'09:00',notes:'antigo',rescheduleReason:'Agenda cheia'}),expectedVersion:null,cancelled:false},
+   {op:'upsert_appointment',id:CANC,data:appointment(CANC,{date:'2026-12-11',time:'14:30',cancelledAt:'2026-11-05T10:00:00.000Z',cancelReason:'Viagem'}),expectedVersion:null,cancelled:true},
+   {op:'append_history',id:HOLD,data:{id:HOLD,patientId:P1,appointmentId:OLD,type:'Agendamento criado',text:'antigo',at:'2026-01-02T09:00:00.000Z'}},
+   {op:'upsert_block',id:uuid(901),data:{id:uuid(901),professionalId:SURGEON,hospitalId:null,date:'2026-12-12',start:'13:00',end:'14:30',reason:'Cirurgia'},expectedVersion:null},
+   {op:'upsert_rule',id:uuid(902),data:{id:uuid(902),professionalId:SURGEON,hospitalId:null,name:'Manhãs',severity:'warn',weekday:'1',occurrence:'',start:'08:00',end:'12:00',maxPatients:4,procedureContains:'',preferredTimes:'08:00,09:30',forbiddenTimes:'11:00',blockAllDay:false,enabled:true},expectedVersion:null}]);
+  const read=async()=>({full:(await db.query('select public.load_agenda_state(1) as s')).rows[0].s,
+   win:(await db.query(`select public.load_agenda_window(1,'2026-06-01') as s`)).rows[0].s,all:(await db.query('select public.load_agenda_window(1,null) as s')).rows[0].s});
+  const before=await read();
+  await db.exec(readFileSync(new URL('../supabase/migrations/20261114120000_agenda_state_inline_json.sql',import.meta.url),'utf8'));
+  const after=await read();
+  assert.deepEqual(after.full,before.full,'agenda completa idêntica');
+  assert.deepEqual(after.win,before.win,'janela idêntica');
+  assert.deepEqual(after.all,before.full,'janela sem data = agenda completa');
+  assert.ok(after.full.state.appointments.some(a=>a.id===OLD)&&!after.win.state.appointments.some(a=>a.id===OLD));
+  await rejects(db.query('select public.load_agenda_state(999)'),/Acesso à organização negado/);
+  const grants=(await db.query(`select has_function_privilege('anon','public.agenda_state_json(uuid,date)','execute') a,has_function_privilege('authenticated','public.agenda_state_json(uuid,date)','execute') b,
+   has_function_privilege('service_role','public.agenda_state_json(uuid,date)','execute') c`)).rows[0];
+  assert.deepEqual(grants,{a:false,b:false,c:true});
+ }finally{await db.close()}
+});
