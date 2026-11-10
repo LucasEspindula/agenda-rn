@@ -54,3 +54,51 @@ test('Cancelados shows and switches the agenda; phone agenda has no empty band u
  assert.match(css,/\.rn-agenda #agendaView>\.toolbar\{padding-bottom:0;margin-bottom:8px;background:none\}/);
  assert.match(css,/\.rn-agenda #agendaView>\.toolbar \.filters\{display:contents\}/);
 });
+
+// Reproduz o gesto com um DOM mínimo: arrastar para abrir, soltar e conferir que a animação
+// de entrada não é religada (era isso que fazia o menu "piscar" ao terminar de abrir).
+import ts from 'typescript';
+import vm from 'node:vm';
+function swipeHarness(){
+ const docListeners={},menuListeners={},timers=[];
+ const style={transform:'',transition:'',animation:'',props:{},setProperty(k,v){this.props[k]=v},removeProperty(k){delete this.props[k]}};
+ const menu={open:false,style,offsetWidth:330,closes:0,styleAtClose:null,
+  getBoundingClientRect:()=>({width:330}),
+  showModal(){this.open=true},
+  close(){this.styleAtClose=style.transform;this.open=false;this.closes++;(menuListeners.close||[]).forEach(f=>f())},
+  addEventListener(t,f){(menuListeners[t]||=[]).push(f)},removeEventListener(t,f){menuListeners[t]=(menuListeners[t]||[]).filter(x=>x!==f)}};
+ class Element{matches(){return false}}
+ const target=Object.assign(new Element(),{parentElement:null});
+ let now=0;
+ const context={exports:{},document:{body:{},addEventListener:(t,f)=>{(docListeners[t]||=[]).push(f)},removeEventListener(){},querySelectorAll:()=>[],querySelector:()=>null},
+  window:{setTimeout:(f)=>timers.push(f)},performance:{now:()=>now},getComputedStyle:()=>({overflowX:'visible'}),Element};
+ const code=ts.transpileModule(read('components/menu-swipe.ts'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ vm.runInNewContext(code,context);
+ const api=context.exports.attachMenuSwipe(menu,{enabled:()=>true,onOpen:()=>menu.showModal(),onClose:()=>menu.close()});
+ const fire=(type,x)=>(docListeners[type]||[]).forEach(f=>f({target,touches:type==='touchend'?[]:[{clientX:x,clientY:400}],preventDefault(){}}));
+ const drag=(from,to,ms=300)=>{fire('touchstart',from);for(let i=1;i<=6;i++){now+=ms/6;fire('touchmove',from+(to-from)*i/6)}fire('touchend',to)};
+ const finish=()=>{(menuListeners.transitionend||[]).slice().forEach(f=>f());timers.splice(0).forEach(f=>f())};
+ return {menu,style,drag,finish,api};
+}
+
+test('opening by swipe does not replay the entry animation when the finger lifts (no flash)',()=>{
+ const h=swipeHarness();
+ h.drag(340,120);
+ assert.equal(h.menu.open,true);
+ assert.equal(h.style.animation,'none','entry animation is off while dragging');
+ h.finish();
+ assert.equal(h.style.animation,'none','still off after settling open, so the browser does not replay it');
+ assert.equal(h.style.transform,'','drag position cleared');
+ h.menu.close();
+ assert.equal(h.style.animation,'','entry animation restored after closing, for the header button');
+});
+
+test('a short swipe that snaps back closes before clearing the drag position (no one-frame open drawer)',()=>{
+ const h=swipeHarness();
+ h.drag(340,310,600);
+ assert.equal(h.menu.open,true,'drawer is out while the finger is down');
+ h.finish();
+ assert.equal(h.menu.open,false);
+ assert.equal(h.menu.closes,1,'closed exactly once even with both transitionend and the fallback timer');
+ assert.equal(h.menu.styleAtClose,'translateX(330px)','still off-screen at the moment it closes');
+});
