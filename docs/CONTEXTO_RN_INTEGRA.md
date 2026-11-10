@@ -293,6 +293,8 @@ As versões diferem porque o banco registra o momento da aplicação; ao compara
 
 | 09/11/2026 | Configurações na engrenagem (Médicos, Equipe, Organização); hospital em texto livre | PR #95 / `7052ac9` / sem migration / CI verde, preview testado, produção conferida | Pendências de lançamento (seção 6B) e faturamento M2c |
 
+| 10/11/2026 | Monitoramento (base do assistente): captura de erros do servidor e do navegador sem dados pessoais, verificações a cada 15 min com conserto automático, catálogo de erros conhecidos, avisos por webhook/e-mail, `docs/runbook-incidentes.md` e `CLAUDE.md` | PR do branch `feat/monitoramento` / migração `monitoring` aplicada / 661 testes / preview testado | Configurar `MONITOR_URL` + `CRON_SECRET` no GitHub e um canal de aviso na Vercel |
+
 ## 8. Protocolo para o assistente em futuros chats
 
 > Estamos continuando o **RN Integra**. Leia `docs/CONTEXTO_RN_INTEGRA.md` no GitHub `LucasEspindula/agenda-rn`, verifique `main`, PRs recentes, Supabase produção e Vercel. Preserve decisões e dados. Diga objetivamente a etapa atual, pendências e próximos riscos. Antes de implementar algo novo, examine o código real. Ao terminar, registre a nova referência e atualize este arquivo. Não presuma que testes antigos tenham sido reexecutados nem que o multiempresa esteja liberado.

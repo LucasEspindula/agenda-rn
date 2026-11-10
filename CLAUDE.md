@@ -38,7 +38,7 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
 - **Fins de linha:** vários arquivos usam CRLF (por exemplo `lib/security/http.ts` e algumas migrações). Edite preservando o fim de linha; nos regex de teste, use `\r?\n`.
 - **Migrações:** ficam em `supabase/migrations/AAAAMMDDHHMMSS_nome.sql`. **Sempre pedir confirmação antes de aplicar no banco real.** Toda tabela nova recebe RLS ligada e `revoke` de `anon` e `authenticated`; as funções usam `set search_path=''` e são liberadas só para `service_role`.
 - **Banco de produção:** hoje só tem dados de teste, e o usuário autorizou testar nele. Os previews usam o mesmo banco. Antes do lançamento ele será zerado, sempre com confirmação.
-- **Testar o preview logado:** criar uma sessão temporária em `public.sessions`, gravando apenas `token_hash = encode(sha256(convert_to(token,'UTF8')),'base64')`. Pôr o token no cookie `agenda_rn_session` do link de preview (obtido com `get_access_to_vercel_url`) e **apagar a sessão no fim**. Nunca pedir nem usar senhas.
+- **Testar o preview logado:** criar uma sessão temporária em `public.sessions`, gravando apenas `token_hash = encode(sha256(convert_to(token,'UTF8')),'base64')`. O token precisa ter **73 caracteres: dois UUIDs unidos por `-`**; qualquer outro formato é recusado (`app/authz.ts`). Pôr o token no cookie `agenda_rn_session` do link de preview (obtido com `get_access_to_vercel_url`) e **apagar a sessão no fim**. Nunca pedir nem usar senhas.
 - **PRs e merges:** sem a CLI `gh`. Usar o navegador ou a API pública. Corpo da PR em português.
 - **Ações destrutivas** (apagar dados, zerar banco, Storage) pedem confirmação explícita.
 - **Nunca** colocar senhas, chaves ou dados de pacientes no chat, no repositório ou em logs.
