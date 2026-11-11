@@ -61,3 +61,10 @@ test('impressão da agenda usa a organização da sessão (quem tem duas organiz
 test('PDF verificado da cirurgia fica sob org/<organização>/ no Storage',()=>{
  assert.match(read('app/api/documents/route.ts'),/const storedPath = `org\/\$\{session\.organization\.id\}\/\$\{surgery\.id\}\/\$\{randomUUID\(\)\}\.verified\.pdf`;/);
 });
+
+test('médico exclui o próprio bloqueio; bloqueio de outra agenda e o criado depois da leitura ficam',()=>{
+ const s=fixture();s.scheduleBlocks.push({...block,id:'b9',professionalId:'two'});
+ const p=visible(s,principal('doctor'));p.scheduleBlocks=p.scheduleBlocks.filter(b=>b.id!=='b1');
+ const next=policy.mergeState(s,p,principal('doctor'));
+ assert.equal(next.scheduleBlocks.map(b=>b.id).join(','),'b9');
+});

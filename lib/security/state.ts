@@ -117,7 +117,11 @@ export function mergeState(current: State | null, proposed: State, p: Principal)
   }
   if (!current) throw new HttpError(403, 'Somente a gerência inicializa a agenda.');
   if (p.account.role === 'doctor') {
-    const scheduleBlocks = mergeOwned(current.scheduleBlocks || [], proposed.scheduleBlocks, b => p.agendaIds.includes(b.professionalId));
+    // Exclusão é por ausência: o servidor envia todos os bloqueios (sem janela de datas) e o rebase
+    // já devolveu os criados por outra pessoa depois da leitura. Antes, o médico não conseguia excluir.
+    const sentBlocks = new Set(proposed.scheduleBlocks.map((b: Row) => b.id));
+    const scheduleBlocks = mergeOwned(current.scheduleBlocks || [], proposed.scheduleBlocks, b => p.agendaIds.includes(b.professionalId))
+      .filter(b => !p.agendaIds.includes(b.professionalId) || sentBlocks.has(b.id));
     for (const b of proposed.scheduleBlocks) if (!date.test(b.date) || !time.test(b.start) || !time.test(b.end) || b.start >= b.end || typeof b.reason !== 'string' || !b.reason.trim()) throw new HttpError(400, 'Bloqueio inválido.');
     return { ...current, scheduleBlocks };
   }
