@@ -1563,10 +1563,11 @@ function renderDailySummary(s){
  const entry=i=>{const body=`<strong>${esc(i.title)}</strong><span>${esc(i.detail)}</span>`;
   if(i.appointmentId)return `<button type="button" class="daily-summary-item" data-summary-appointment="${esc(i.appointmentId)}" data-summary-professional="${esc(i.professionalId||"")}">${body}</button>`;
   return doctor?`<div class="daily-summary-item static">${body}</div>`:`<button type="button" class="daily-summary-item" data-summary-request="${esc(i.requestId)}">${body}</button>`};
- const groups=s.reminders.map(r=>`<section class="daily-summary-group ${esc(r.kind)}"><h3>${esc(r.label)} <span>${r.count}</span></h3><p>${esc(r.hint)}</p><div class="daily-summary-items">${r.items.map(entry).join("")}${r.count>r.items.length?`<small>e mais ${r.count-r.items.length}</small>`:""}</div></section>`).join("");
+ // Compacto: cada lembrete é uma linha com o total; a lista abre ao tocar.
+ const groups=s.reminders.map(r=>`<details class="daily-summary-group ${esc(r.kind)}"><summary><span>${esc(r.label)}</span><b>${r.count}</b></summary><p>${esc(r.hint)}</p><div class="daily-summary-items">${r.items.map(entry).join("")}${r.count>r.items.length?`<small>e mais ${r.count-r.items.length}</small>`:""}</div></details>`).join("");
  // Médico: a agenda de hoje no lugar das pendências.
  if(doctor){const today=s.todayList||[];$("dailySummaryCounts").textContent=`Hoje: ${plural(s.agenda.today,"atendimento","atendimentos")} · Amanhã: ${plural(s.agenda.tomorrow,"atendimento","atendimentos")}`;
-  $("dailySummaryBody").innerHTML=professionals+(today.length?`<div class="daily-summary-groups"><section class="daily-summary-group today"><h3>Sua agenda de hoje <span>${today.length}</span></h3><div class="daily-summary-items">${today.map(entry).join("")}</div></section></div>`:'<p class="daily-summary-empty">Nenhum atendimento hoje.</p>')}
+  $("dailySummaryBody").innerHTML=professionals+(today.length?`<div class="daily-summary-groups"><details class="daily-summary-group today" open><summary><span>Sua agenda de hoje</span><b>${today.length}</b></summary><div class="daily-summary-items">${today.map(entry).join("")}</div></details></div>`:'<p class="daily-summary-empty">Nenhum atendimento hoje.</p>')}
  else $("dailySummaryBody").innerHTML=professionals+(groups?`<div class="daily-summary-groups">${groups}</div>`:'<p class="daily-summary-empty">Tudo em dia: nenhum lembrete para agora.</p>');
  applyDailySummaryCollapse();$("dailySummary").classList.remove("hidden");
  qsa("[data-summary-appointment]").forEach(b=>b.onclick=()=>openSummaryAppointment(b.dataset.summaryAppointment,b.dataset.summaryProfessional));
