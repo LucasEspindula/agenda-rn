@@ -1019,3 +1019,14 @@ dialog.agenda-picker::backdrop{background:#071b2a99}
  .rn-agenda #agendaView>.toolbar .filters{display:contents}
  .rn-agenda #mobileCalendar{margin-top:0}
 }
+/* Assistente da agenda: resumo do dia */
+.daily-summary{margin:0 0 14px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:14px;box-shadow:0 4px 14px rgba(18,55,79,.06)}
+.daily-summary-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.daily-summary-head strong{display:block;font-size:15px}.daily-summary-head strong::first-letter{text-transform:uppercase}.daily-summary-head span{display:block;margin-top:3px;color:var(--muted);font-size:12px}.daily-summary-head button{flex:0 0 auto;padding:7px 12px;font-size:12px}
+.daily-summary-profs{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.daily-summary-profs span{padding:5px 10px;border-radius:999px;background:#eef5f6;color:#254e63;font-size:11px}
+.daily-summary-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px}
+.daily-summary-group{padding:10px 11px;border:1px solid #efd69a;border-radius:11px;background:#fff7e9}.daily-summary-group.conflict{border-color:#f2b8b8;background:#fff3f3}.daily-summary-group.stale_suggestion{border-color:#c9dcef;background:#f3f8fd}
+.daily-summary-group h3{display:flex;align-items:center;justify-content:space-between;margin:0;font-size:13px;color:#5b4210}.daily-summary-group.conflict h3{color:#8a1f1f}.daily-summary-group.stale_suggestion h3{color:#1f4566}.daily-summary-group h3 span{min-width:22px;padding:1px 7px;border-radius:999px;background:rgba(0,0,0,.07);font-size:11px;text-align:center}
+.daily-summary-group p{margin:3px 0 6px;color:var(--muted);font-size:11px}.daily-summary-items{display:grid;gap:2px}.daily-summary-items small{padding:4px 8px;color:var(--muted);font-size:11px}
+.daily-summary-item{display:block;width:100%;padding:6px 8px;border:0;border-radius:8px;background:transparent;color:var(--text);font-size:12px;line-height:1.4;text-align:left}button.daily-summary-item{cursor:pointer}button.daily-summary-item:hover{background:rgba(0,0,0,.05)}.daily-summary-item strong,.daily-summary-item span{display:block}.daily-summary-item span{color:var(--muted);font-size:11px}
+.daily-summary-group.today{border-color:#cfe3e6;background:#f4fafb}.daily-summary-group.today h3{color:#254e63}.daily-summary-empty{margin:10px 0 0;color:var(--muted);font-size:13px}
+@media (max-width:900px){.daily-summary{margin:0 0 12px;padding:12px}.daily-summary-groups{grid-template-columns:1fr}}
