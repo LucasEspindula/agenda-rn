@@ -98,7 +98,8 @@ function mergeOwned(current: Row[], proposed: Row[], editable: (row: Row) => boo
     }
     if (!editable(row)) throw new HttpError(403, 'Agenda sem permissão.');
     // Shared appointments must not gain a new unauthorized professional by changing ownership.
-    for (const key of ['doctorId','anesthetistId']) if (old && old[key] !== row[key]) throw new HttpError(403, 'Transferência de agenda exige a gerência.');
+    // "" e null significam "sem profissional" (o banco devolve null; a tela envia "").
+    for (const key of ['doctorId','anesthetistId']) if (old && (old[key] || null) !== (row[key] || null)) throw new HttpError(403, 'Transferência de agenda exige a gerência.');
     accepted.push(row);
   }
   return [...retained,...accepted];

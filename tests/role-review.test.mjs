@@ -68,3 +68,16 @@ test('médico exclui o próprio bloqueio; bloqueio de outra agenda e o criado de
  const next=policy.mergeState(s,p,principal('doctor'));
  assert.equal(next.scheduleBlocks.map(b=>b.id).join(','),'b9');
 });
+
+test('secretária salva detalhes de atendimento sem anestesista ("" na tela, null no banco)',()=>{
+ const s=fixture();s.appointments[0].anesthetistId=null;
+ const p=visible(s,principal('secretary'));const a=p.appointments.find(x=>x.id==='a');a.anesthetistId='';a.procedureValue=1500;
+ const next=policy.mergeState(s,p,principal('secretary'));
+ assert.equal(next.appointments.find(x=>x.id==='a').procedureValue,1500);
+ const q=visible(s,principal('secretary'));q.appointments.find(x=>x.id==='a').anesthetistId='two';
+ assert.throws(()=>policy.mergeState(s,q,principal('secretary')),e=>e.status===403);
+});
+
+test('resumo do dia não quebra a primeira renderização da agenda (variáveis com var)',()=>{
+ assert.match(read('public/legacy-app.js'),/\nvar dailySummaryRevision=null,dailySummaryAt=0,dailySummaryBusy=false,dailySummaryHidden=false;/);
+});

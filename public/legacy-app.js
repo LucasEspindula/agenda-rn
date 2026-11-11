@@ -1551,7 +1551,8 @@ function mountDocumentPanel(host,appointmentId,patientId){if(window.mountSurgery
 // Assistente da agenda: resumo do dia e lembretes de cada papel (GET /api/agenda/summary).
 // Recalculado quando a agenda muda (revisão) ou a cada 5 min. Recolher vale enquanto a página
 // estiver aberta: a agenda não grava nada no navegador.
-let dailySummaryRevision=null,dailySummaryAt=0,dailySummaryBusy=false,dailySummaryHidden=false;
+// "var" (e não "let"): renderCalendar() roda antes desta linha na carga da página.
+var dailySummaryRevision=null,dailySummaryAt=0,dailySummaryBusy=false,dailySummaryHidden=false;
 function dailySummaryCollapsed(){return dailySummaryHidden}
 function setDailySummaryCollapsed(value){dailySummaryHidden=!!value}
 function applyDailySummaryCollapse(){const collapsed=dailySummaryCollapsed();$("dailySummaryBody").classList.toggle("hidden",collapsed);$("dailySummaryToggle").textContent=collapsed?"Mostrar":"Ocultar";$("dailySummaryToggle").setAttribute("aria-expanded",String(!collapsed))}
