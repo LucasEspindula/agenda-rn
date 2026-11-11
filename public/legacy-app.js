@@ -473,7 +473,6 @@ function setAgendaOwnerState(owner){
 // Altura de 1 hora na grade (px), igual a --hour-height no legacy.css: cabe o cartão de 30 min completo.
 const HOUR_HEIGHT=132;
 function renderCalendar(){
- if(typeof refreshDailySummary==="function")refreshDailySummary();
  const owner=selectedProf();setAgendaOwnerState(owner);if(!owner)return;
  renderMobileCalendar();
  mountAgendaOwnerSelector(owner);
@@ -1516,6 +1515,16 @@ if(window.AgendaDoctorId){$("professionalFilter").value=window.AgendaDoctorId;re
 window.addEventListener("rn-directory-changed",e=>{window.AgendaRevision=e.detail.revision;state=Storage.migrate(e.detail.state);renderAll()});
 showView(window.AgendaInitialView||'agenda');
 startAgendaSync();
+// Links do Hub: ?professional=<agenda>&date=AAAA-MM-DD&appointment=<id> ou ?view=requests. Depois limpa a URL.
+(function openFromHubLink(){
+ const q=new URLSearchParams(location.search),prof=q.get("professional"),date=q.get("date"),appt=q.get("appointment"),filter=$("professionalFilter");
+ if(!prof&&!date&&!appt&&!q.get("view"))return;
+ if(prof&&filter&&[...filter.options].some(o=>o.value===prof)&&filter.value!==prof){filter.value=prof;renderAll()}
+ if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){currentDate=calendarMode==="week"?startOfWeek(parseDate(date)):parseDate(date);mobileSelectedDate=date;mobileMonth=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);renderCalendar()}
+ if(q.get("view")==="requests")showView("requests");
+ if(appt){if(state.appointments.some(a=>a.id===appt))openAppointment(appt);else appNotice("Agendamento indisponível","A agenda mudou desde o Hub. Confira o horário na agenda.")}
+ history.replaceState(null,"",location.pathname+"?agenda=1");
+})();
 if(location.hash==='#settings'&&window.AgendaInitialView!=='settings'&&(window.AgendaAuth||{}).role==='general_manager')window.location.replace('/organizacao?aba=equipe');
 
 const menuSizeObserver=new ResizeObserver(entries=>{document.documentElement.style.setProperty("--desktop-nav-height",`${entries[0].target.getBoundingClientRect().height}px`)});
@@ -1548,48 +1557,5 @@ setInterval(()=>{
 function mountDocumentPanel(host,appointmentId,patientId){if(window.mountSurgeryDocuments)return window.mountSurgeryDocuments(host,appointmentId,patientId);host.textContent="Carregando documentos…";if(!window.documentsScriptPromise)window.documentsScriptPromise=new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="/surgery-documents.js?v=1";s.onload=resolve;s.onerror=()=>{window.documentsScriptPromise=null;reject(new Error("Falha ao carregar documentos."))};document.body.append(s)});window.documentsScriptPromise.then(()=>{if(host.isConnected)window.mountSurgeryDocuments(host,appointmentId,patientId)}).catch(()=>{host.textContent="Não foi possível carregar os documentos. Feche e abra os detalhes novamente."})}
 
 
-// Assistente da agenda: resumo do dia e lembretes de cada papel (GET /api/agenda/summary).
-// Recalculado quando a agenda muda (revisão) ou a cada 5 min. Recolher vale enquanto a página
-// estiver aberta: a agenda não grava nada no navegador.
-// "var" (e não "let"): renderCalendar() roda antes desta linha na carga da página.
-var dailySummaryRevision=null,dailySummaryAt=0,dailySummaryBusy=false,dailySummaryHidden=false;
-function dailySummaryCollapsed(){return dailySummaryHidden}
-function setDailySummaryCollapsed(value){dailySummaryHidden=!!value}
-function applyDailySummaryCollapse(){const collapsed=dailySummaryCollapsed();$("dailySummaryBody").classList.toggle("hidden",collapsed);$("dailySummaryToggle").textContent=collapsed?"Mostrar":"Ocultar";$("dailySummaryToggle").setAttribute("aria-expanded",String(!collapsed))}
-async function refreshDailySummary(force=false){
- const box=$("dailySummary");if(!box||dailySummaryBusy)return;
- const revision=window.AgendaRevision||null;
- if(!force&&revision===dailySummaryRevision&&Date.now()-dailySummaryAt<300000)return;
- dailySummaryBusy=true;
- try{const response=await fetch("/api/agenda/summary",{cache:"no-store"});if(!response.ok){box.classList.add("hidden");return}renderDailySummary(await response.json());dailySummaryRevision=revision;dailySummaryAt=Date.now()}
- catch{}finally{dailySummaryBusy=false}
-}
-function renderDailySummary(s){
- const doctor=(window.AgendaAuth||{}).role==="doctor",plural=(n,one,many)=>`${n} ${n===1?one:many}`,total=s.reminders.reduce((sum,r)=>sum+r.count,0);
- $("dailySummaryTitle").textContent="Resumo de hoje, "+parseDate(s.date).toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
- $("dailySummaryCounts").textContent=`Hoje: ${plural(s.agenda.today,"atendimento","atendimentos")} · Amanhã: ${plural(s.agenda.tomorrow,"atendimento","atendimentos")} · ${total?plural(total,"lembrete","lembretes"):"nenhum lembrete"}`;
- const professionals=s.agenda.professionals.length>1?`<div class="daily-summary-profs">${s.agenda.professionals.map(p=>`<span>${esc(p.name)}: <strong>${p.today}</strong> hoje · ${p.tomorrow} amanhã</span>`).join("")}</div>`:"";
- const entry=i=>{const body=`<strong>${esc(i.title)}</strong><span>${esc(i.detail)}</span>`;
-  if(i.appointmentId)return `<button type="button" class="daily-summary-item" data-summary-appointment="${esc(i.appointmentId)}" data-summary-professional="${esc(i.professionalId||"")}">${body}</button>`;
-  return doctor?`<div class="daily-summary-item static">${body}</div>`:`<button type="button" class="daily-summary-item" data-summary-request="${esc(i.requestId)}">${body}</button>`};
- // Compacto: cada lembrete é uma linha com o total; a lista abre ao tocar.
- const groups=s.reminders.map(r=>`<details class="daily-summary-group ${esc(r.kind)}"><summary><span>${esc(r.label)}</span><b>${r.count}</b></summary><p>${esc(r.hint)}</p><div class="daily-summary-items">${r.items.map(entry).join("")}${r.count>r.items.length?`<small>e mais ${r.count-r.items.length}</small>`:""}</div></details>`).join("");
- // Médico: a agenda de hoje no lugar das pendências.
- if(doctor){const today=s.todayList||[];$("dailySummaryCounts").textContent=`Hoje: ${plural(s.agenda.today,"atendimento","atendimentos")} · Amanhã: ${plural(s.agenda.tomorrow,"atendimento","atendimentos")}`;
-  $("dailySummaryBody").innerHTML=professionals+(today.length?`<div class="daily-summary-groups"><details class="daily-summary-group today" open><summary><span>Sua agenda de hoje</span><b>${today.length}</b></summary><div class="daily-summary-items">${today.map(entry).join("")}</div></details></div>`:'<p class="daily-summary-empty">Nenhum atendimento hoje.</p>')}
- else $("dailySummaryBody").innerHTML=professionals+(groups?`<div class="daily-summary-groups">${groups}</div>`:'<p class="daily-summary-empty">Tudo em dia: nenhum lembrete para agora.</p>');
- applyDailySummaryCollapse();$("dailySummary").classList.remove("hidden");
- qsa("[data-summary-appointment]").forEach(b=>b.onclick=()=>openSummaryAppointment(b.dataset.summaryAppointment,b.dataset.summaryProfessional));
- qsa("[data-summary-request]").forEach(b=>b.onclick=()=>showView("requests"));
-}
-function openSummaryAppointment(id,professionalId){
- const filter=$("professionalFilter");
- if(professionalId&&filter&&[...filter.options].some(o=>o.value===professionalId)&&filter.value!==professionalId){filter.value=professionalId;renderCalendar()}
- if(!state.appointments.some(a=>a.id===id))return appNotice("Agendamento indisponível","A agenda mudou. Atualize a página e tente de novo.");
- openAppointment(id);
-}
-$("dailySummaryToggle").onclick=()=>{setDailySummaryCollapsed(!dailySummaryCollapsed());applyDailySummaryCollapse()};
-window.addEventListener("focus",()=>refreshDailySummary());
-refreshDailySummary(true);
 
 window.addEventListener("pageshow",event=>{if(event.persisted)window.location.reload()});
