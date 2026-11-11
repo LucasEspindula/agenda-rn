@@ -16,7 +16,7 @@
 
 - Produto: **RN Integra** (nome vigente em toda a interface; antigo Agenda RN).
 - Repositório privado: `LucasEspindula/agenda-rn`; branch principal: `main`.
-- Supabase produção: `nagddicinjszfrtwgjbu`; referência histórica de Preview: `vmpvngjppnouqfzahezr` (rever antes de usar).
+- Supabase produção: `nagddicinjszfrtwgjbu`; Supabase dos previews: `funqdoiubwskmhefbvjz` ("Agenda RN Preview", desde 11/11/2026; o antigo `vmpvngjppnouqfzahezr` foi apagado).
 - Vercel: projeto `agenda-rn`; equipe `team_FBTsVaBXUxWhfN3bwm5g9142`.
 - Objetivo: evoluir o sistema existente para SaaS multiempresa comercializável, **sem expor dados entre organizações**.
 - Estratégia: preservar estabilidade e compatibilidade do cliente existente (RN Gestão), migrar gradualmente, sem criar novos tenants até concluir o isolamento.
@@ -216,7 +216,7 @@ Critérios mínimos para avanço:
 - Dados de teste migrados sem perda: 3 pacientes, 9 consultas (2 canceladas), 35 eventos, 4 bloqueios, 1 regra, 2 hospitais; 2 sugestões pendentes negadas ("migração A1").
 - `app_state` **congelado** (trigger rejeita escrita; `commit_agenda_change` desativada). Remoção prevista na A2.
 - Concorrência por registro: merge de três vias com `agenda_row_versions` + `row_version`; 409 só quando o mesmo registro foi alterado por outra pessoa.
-- Previews da Vercel usam o **mesmo Supabase de produção** (`NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SECRET_KEY` compartilhados).
+- Previews da Vercel usavam o **mesmo Supabase de produção** nessa época; desde 11/11/2026 usam banco próprio (ver seção 2).
 - **Publicada em 03/11/2026:** [PR #83](https://github.com/LucasEspindula/agenda-rn/pull/83) mergeada com squash na `main`, commit `17f6a597e2a3e9eaf887a2dc40c6a720c5949b09` (árvore idêntica à do preview testado). CI da PR: 5 checks com sucesso, 1 pulado. Validação local: build, **606/606 testes**, lint (0 erros) e tsc. Vercel produção **READY**: `dpl_9cpWgZZpsbBwJxFZfwHjguCnEXnU` (alias `agenda-rn.vercel.app`); conferido em produção: `/api/billing` e `/billing` → 503 "Faturamento em reconstrução.", `/api/state` exige login.
 - **Verificação no navegador (preview `a60efd6`, desktop e mobile):** cadastro de paciente RN (responsável obrigatório), criar/editar/cancelar consulta, bloqueio de dia inteiro (mobile mostra aviso e desabilita "+ Novo agendamento"; servidor responde 409), duas sessões simultâneas (registros diferentes salvam juntos; mesmo registro → 409 sem perda) e menus sem faturamento.
 - **Corrigido durante a verificação:** edição de consulta bloqueada pelo bloco financeiro com faturamento pausado (agora ignorado via `window.AgendaBillingPaused`); seletor "Médico responsável" duplicado e obrigatório no cadastro de paciente (bug anterior à A1, impedia salvar); alinhamento do checkbox RN.
@@ -256,7 +256,7 @@ As versões diferem porque o banco registra o momento da aplicação; ao compara
 - O titular da conta não pode ser removido da organização; ninguém remove o próprio acesso.
 - Senhas nunca são definidas pela gerência para outras pessoas em fluxos novos: convite por e-mail.
 - Arquivos novos no Storage sempre em `org/<organization_id>/…` (documentos de cirurgia e comprovantes). Restam 9 objetos de teste no caminho antigo (8 comprovantes em `financial-documents`, 1 PDF órfão em `surgery-documents`); o banco bloqueia exclusão direta, então saem pelo painel/API de Storage na limpeza antes do lançamento.
-- Previews usam o mesmo Supabase de produção; login no preview só no endereço do próprio deployment.
+- Previews usam banco próprio (`funqdoiubwskmhefbvjz`) desde 11/11/2026; login no preview só no endereço do próprio deployment.
 
 **Pendências para o lançamento (lado do responsável):** `CRON_SECRET`; domínio e envio de e-mail (`RESEND_API_KEY`, `EMAIL_FROM`, `APP_ORIGIN`, `PUBLIC_SIGNUP_ENABLED`); revisão jurídica de Termos/Privacidade e DPO; Supabase Pro (backups); **zerar banco e Storage** antes de abrir. **Técnico:** reconstrução do faturamento (M2c) com entidades recebedoras do médico; remoção de `app_state` (A2).
 
@@ -294,6 +294,7 @@ As versões diferem porque o banco registra o momento da aplicação; ao compara
 | 09/11/2026 | Configurações na engrenagem (Médicos, Equipe, Organização); hospital em texto livre | PR #95 / `7052ac9` / sem migration / CI verde, preview testado, produção conferida | Pendências de lançamento (seção 6B) e faturamento M2c |
 
 | 10/11/2026 | Monitoramento (base do assistente): captura de erros do servidor e do navegador sem dados pessoais, verificações a cada 15 min com conserto automático, catálogo de erros conhecidos, avisos por webhook/e-mail, `docs/runbook-incidentes.md` e `CLAUDE.md` | PR do branch `feat/monitoramento` / migração `monitoring` aplicada / 661 testes / preview testado | Configurar `MONITOR_URL` + `CRON_SECRET` no GitHub e um canal de aviso na Vercel |
+| 11/11/2026 | Desempenho da agenda (cache por revisão, sincronização incremental, salvamento compactado) e banco separado para os previews | PRs #103–#104 / `b4a18f7` / migration `agenda_state_delta` (produção e preview) / preview testado nos 4 papéis | Toda migração nova vai para os dois bancos |
 
 ## 8. Protocolo para o assistente em futuros chats
 
