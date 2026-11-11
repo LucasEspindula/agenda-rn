@@ -99,7 +99,7 @@ async function handlePATCH(request: Request) {
   const original = Buffer.from(await file.arrayBuffer());
   const compressed = await compressPdf(original);
   // Publish a fresh server-written object; the client's upload URL never addresses a ready PDF.
-  const storedPath = `${surgery.id}/${randomUUID()}.verified.pdf`;
+  const storedPath = `org/${session.organization.id}/${surgery.id}/${randomUUID()}.verified.pdf`;
   {
    const {error: uploadError}=await db.storage.from(BUCKET).upload(storedPath,compressed.bytes,{contentType:'application/pdf',upsert:false});
    if(uploadError) throw uploadError;

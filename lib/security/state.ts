@@ -1,5 +1,6 @@
 import {validCPF,normalizeCPF} from '../cpf';
 import { HttpError } from './http';
+import { canonical } from '../agenda/diff';
 // Legacy agenda payload is heterogeneous; validateStateChange validates writes.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Row = Record<string, any>;
@@ -121,6 +122,13 @@ export function mergeState(current: State | null, proposed: State, p: Principal)
     return { ...current, scheduleBlocks };
   }
   if (p.account.role !== 'secretary') throw new HttpError(403, 'Papel inválido.');
+  // Bloqueios e regras são da gerência e do médico. Sem esta checagem a edição da secretária
+  // era descartada em silêncio (o envio respondia ok e o bloqueio voltava na sincronização).
+  for (const entity of ['scheduleBlocks','schedulingRules'] as const) {
+    const known = new Map((current[entity] || []).map((row: Row) => [row.id,row]));
+    if (proposed[entity].some((row: Row) => { const old = known.get(row.id); return !old || canonical(entity,old) !== canonical(entity,row); }))
+      throw new HttpError(403, 'Bloqueios e regras da agenda são definidos pela gerência ou pelo médico.');
+  }
   const all = [...(current.appointments || []),...(current.cancelledAppointments || [])];
   const sent = new Set([...proposed.appointments,...proposed.cancelledAppointments].map((a: Row) => a.id));
   const appointments = mergeOwned(current.appointments || [],proposed.appointments,a=>canReadAppointment(p,a),all,sent);

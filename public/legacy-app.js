@@ -1373,10 +1373,16 @@ function openBlock(id=null,preset={}){
  }else{
    $("blockDate").value=preset.date||ds(new Date());$("blockStart").value=preset.start||"08:00";$("blockEnd").value=preset.end||"09:00";
  }
+ // Bloqueios são da gerência e do médico; a secretária só consulta (o servidor recusa a edição).
+ const editable=canEditBlocks();
+ if(!editable&&!id)return appNotice("Sem permissão","Bloqueios são criados pela gerência ou pelo médico.");
+ ["blockDate","blockStart","blockEnd","blockReason"].forEach(k=>$(k).disabled=!editable);
+ $("saveBlockBtn").classList.toggle("hidden",!editable);if(!editable){$("deleteBlockBtn").classList.add("hidden");$("blockModalTitle").textContent="Bloqueio"}
  openModal("blockModal")
 }
+function canEditBlocks(){const role=(window.AgendaAuth||{}).role;return role==="general_manager"||role==="doctor"}
 $("blockForm").onsubmit=async e=>{
- e.preventDefault();const form=e.currentTarget;if(form.dataset.saving)return;
+ e.preventDefault();const form=e.currentTarget;if(form.dataset.saving||!canEditBlocks())return;
  const owner=selectedProf();if(!owner)return appNotice("Profissional necessário","Selecione um profissional.");
  if($("blockDate").value<ds(new Date()))return appNotice("Data inválida","Não é possível criar bloqueio em data passada.");
  if(mins($("blockStart").value)>=mins($("blockEnd").value))return appNotice("Horário inválido","O horário final deve ser posterior ao inicial.");
@@ -1391,7 +1397,7 @@ $("blockForm").onsubmit=async e=>{
   if(await persist()===false)return;closeModals();toast("Bloqueio salvo.")
  }finally{delete form.dataset.saving}
 };
-$("deleteBlockBtn").onclick=async()=>{const id=$("blockId").value;if(id&&await appConfirm("Excluir bloqueio","Este horário voltará a ficar disponível.","Excluir",true)){state.scheduleBlocks=state.scheduleBlocks.filter(x=>x.id!==id);if(await persist()===false)return;closeModals();toast("Bloqueio excluído.")}};
+$("deleteBlockBtn").onclick=async()=>{const id=$("blockId").value;if(id&&canEditBlocks()&&await appConfirm("Excluir bloqueio","Este horário voltará a ficar disponível.","Excluir",true)){state.scheduleBlocks=state.scheduleBlocks.filter(x=>x.id!==id);if(await persist()===false)return;closeModals();toast("Bloqueio excluído.")}};
 
 function syncRuleBlockAllDay(){const allDay=$("ruleBlockAllDay").checked,severity=$("ruleSeverity");if(allDay)severity.value="block";severity.disabled=allDay}
 function openRule(id=null){

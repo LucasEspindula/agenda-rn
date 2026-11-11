@@ -124,7 +124,7 @@ export const legacyBody = `<div class="agenda-shell">
    </div>
    <p class="inline-note">O bloqueio manual vale para o profissional em qualquer hospital.</p>
    <div class="form-grid"><label>Motivo<input id="blockReason" required placeholder="Ex.: Congresso, indisponível, reunião..."></label></div>
-   <div class="modal-actions"><button id="deleteBlockBtn" type="button" class="danger-btn hidden">Excluir</button><div class="spacer"></div><button type="button" class="secondary-btn" data-close>Cancelar</button><button type="submit" class="primary-btn">Salvar bloqueio</button></div>
+   <div class="modal-actions"><button id="deleteBlockBtn" type="button" class="danger-btn hidden">Excluir</button><div class="spacer"></div><button type="button" class="secondary-btn" data-close>Cancelar</button><button id="saveBlockBtn" type="submit" class="primary-btn">Salvar bloqueio</button></div>
   </form>
  </div>
 </div>
