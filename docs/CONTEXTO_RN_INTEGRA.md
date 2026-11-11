@@ -256,9 +256,10 @@ As versões diferem porque o banco registra o momento da aplicação; ao compara
 - O titular da conta não pode ser removido da organização; ninguém remove o próprio acesso.
 - Senhas nunca são definidas pela gerência para outras pessoas em fluxos novos: convite por e-mail.
 - Arquivos novos no Storage sempre em `org/<organization_id>/…` (documentos de cirurgia e comprovantes). Restam 9 objetos de teste no caminho antigo (8 comprovantes em `financial-documents`, 1 PDF órfão em `surgery-documents`); o banco bloqueia exclusão direta, então saem pelo painel/API de Storage na limpeza antes do lançamento.
-- Previews usam banco próprio (`funqdoiubwskmhefbvjz`) desde 11/11/2026; login no preview só no endereço do próprio deployment.
+- Previews usam banco próprio (`funqdoiubwskmhefbvjz`) desde 11/11/2026; login no preview só no endereço do próprio deployment. Migração nova: primeiro no preview, testar, depois em produção.
+- O médico não recebe pendências da agenda (confirmar, guias, conflitos, sugestões): isso é da secretaria e da gerência.
 
-**Pendências para o lançamento (lado do responsável):** `CRON_SECRET`; domínio e envio de e-mail (`RESEND_API_KEY`, `EMAIL_FROM`, `APP_ORIGIN`, `PUBLIC_SIGNUP_ENABLED`); revisão jurídica de Termos/Privacidade e DPO; Supabase Pro (backups); **zerar banco e Storage** antes de abrir. **Técnico:** reconstrução do faturamento (M2c) com entidades recebedoras do médico; remoção de `app_state` (A2).
+**Pendências para o lançamento (lado do responsável):** `CRON_SECRET`; domínio e envio de e-mail (`RESEND_API_KEY`, `EMAIL_FROM`, `APP_ORIGIN`, `PUBLIC_SIGNUP_ENABLED`); revisão jurídica de Termos/Privacidade e DPO; Supabase Pro (backups); **zerar banco e Storage** antes de abrir. **Técnico:** teste de restauração de backup; e-mail da agenda para médicos e anestesistas (agenda de amanhã às 20h do dia anterior e prévia da semana às 20h de sexta; depende do Resend); reconstrução do faturamento (M2c) com entidades recebedoras do médico; remoção de `app_state` (A2).
 
 ## 7. Log de continuidade
 
@@ -295,6 +296,7 @@ As versões diferem porque o banco registra o momento da aplicação; ao compara
 
 | 10/11/2026 | Monitoramento (base do assistente): captura de erros do servidor e do navegador sem dados pessoais, verificações a cada 15 min com conserto automático, catálogo de erros conhecidos, avisos por webhook/e-mail, `docs/runbook-incidentes.md` e `CLAUDE.md` | PR do branch `feat/monitoramento` / migração `monitoring` aplicada / 661 testes / preview testado | Configurar `MONITOR_URL` + `CRON_SECRET` no GitHub e um canal de aviso na Vercel |
 | 11/11/2026 | Desempenho da agenda (cache por revisão, sincronização incremental, salvamento compactado) e banco separado para os previews | PRs #103–#104 / `b4a18f7` / migration `agenda_state_delta` (produção e preview) / preview testado nos 4 papéis | Toda migração nova vai para os dois bancos |
+| 11/11/2026 | Revisão do que cada papel vê e faz; teste de carga por rede 4G externa (leituras ~0,3 s, salvamentos ~0,7 s, zero erros); assistente da agenda com resumo do dia e lembretes por papel (médico sem pendências) | PRs #106–#107 / `ef212c3` / sem migration / preview testado nos 4 papéis | E-mail da agenda para médicos (depende do Resend) |
 
 ## 8. Protocolo para o assistente em futuros chats
 

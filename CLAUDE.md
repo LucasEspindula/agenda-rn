@@ -14,9 +14,13 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
   - rotas de mutação usam `secureMutation` (`lib/security/http.ts`), que confere a origem e trata os erros;
   - sessão em `app/authz.ts` (`getSession`);
   - limites de tentativa em `lib/security/rate-limit.ts`.
-- **Monitoramento:** `lib/monitor/`, com roteiro em [`docs/runbook-incidentes.md`](docs/runbook-incidentes.md). É a base do futuro assistente da agenda.
+- **Monitoramento:** `lib/monitor/`, com roteiro em [`docs/runbook-incidentes.md`](docs/runbook-incidentes.md).
   - **Camadas:** corrige sozinho (`repair`), depois diagnostica (`playbook.ts`), e só então chama um dev.
   - **Novos erros:** cada erro novo resolvido vira entrada no playbook.
+- **Assistente da agenda:** card "Resumo do dia" no topo da agenda (`GET /api/agenda/summary`, regras em `lib/agenda/assistant.ts`, sobre a agenda já filtrada por `visibleState`).
+  - gerência e secretária: lembretes de confirmação, guias, conflitos de horário e sugestões paradas (secretária só nas agendas liberadas);
+  - médico: **sem pendências**, só a agenda de hoje dele e das agendas a que tem acesso;
+  - sem CPF nem dados financeiros.
 - **Textos jurídicos:** `lib/legal.ts`, com dados do fornecedor ainda por preencher e o prazo de 48 h para avisar a clínica em caso de incidente.
 
 ## Como trabalhar aqui
@@ -36,7 +40,7 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
   - `tests/load-ts.mjs` carrega TypeScript com mocks de módulos.
   - Muitos testes são “contratos” por regex sobre o código-fonte: ao mudar um trecho coberto, atualize o teste.
 - **Fins de linha:** vários arquivos usam CRLF (por exemplo `lib/security/http.ts` e algumas migrações). Edite preservando o fim de linha; nos regex de teste, use `\r?\n`.
-- **Migrações:** ficam em `supabase/migrations/AAAAMMDDHHMMSS_nome.sql`. **Sempre pedir confirmação antes de aplicar no banco real.** Cada migração vai para **os dois projetos** (produção e preview), com confirmação para cada um. Toda tabela nova recebe RLS ligada e `revoke` de `anon` e `authenticated`; as funções usam `set search_path=''` e são liberadas só para `service_role`.
+- **Migrações:** ficam em `supabase/migrations/AAAAMMDDHHMMSS_nome.sql`. **Sempre pedir confirmação antes de aplicar no banco real.** Cada migração vai para **os dois projetos**, com confirmação para cada um, nesta ordem: **primeiro o preview**, testar no preview da Vercel, **depois produção**. Toda tabela nova recebe RLS ligada e `revoke` de `anon` e `authenticated`; as funções usam `set search_path=''` e são liberadas só para `service_role`.
 - **Banco de produção:** hoje só tem dados de teste, e o usuário autorizou testar nele. Antes do lançamento ele será zerado, sempre com confirmação.
 - **Banco dos previews:** desde 11/11/2026 os previews da Vercel usam um Supabase próprio, `funqdoiubwskmhefbvjz` ("Agenda RN Preview", São Paulo), com o mesmo schema de produção. Dados de exemplo: organização "Clínica Preview" (`00000000-0000-4000-8000-0000000000a1`) e usuários 7 (gerente), 8 (secretária), 9 (médico) e 10 (anestesista), todos `@preview.test` e sem senha.
 - **Testar o preview logado:** criar uma sessão temporária em `public.sessions` **do banco de preview** (usuários 7–10, `organization_id` da Clínica Preview), gravando apenas `token_hash = encode(sha256(convert_to(token,'UTF8')),'base64')`. O token precisa ter **73 caracteres: dois UUIDs unidos por `-`**; qualquer outro formato é recusado (`app/authz.ts`). Pôr o token no cookie `agenda_rn_session` do link de preview (obtido com `get_access_to_vercel_url`) e **apagar a sessão no fim**. Nunca pedir nem usar senhas.
@@ -54,7 +58,5 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
   - zerar banco e Storage antes de abrir.
 - **Técnico:**
   - teste de restauração de backup;
-  - revisão de uso por papel;
-  - teste de carga a partir de outra rede;
-  - assistente da agenda (lembretes e resumo diário);
+  - e-mail da agenda para médicos e anestesistas (depende do Resend): agenda de amanhã às 20h do dia anterior e prévia da semana seguinte às 20h de sexta; secretárias e gerência não recebem;
   - depois: faturamento M2c e remoção de `app_state` (A2).
