@@ -8,8 +8,8 @@ const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('agenda PDF uses the same scheduling entitlement as the agenda API',()=>{
  const report=source('app/api/reports/agenda/route.ts');
  const state=source('app/api/state/route.ts');
- assert.match(report,/import \{canUseAgenda\} from '@\/lib\/doctor-services'/);
- assert.match(report,/if\(!session\|\|!canUseAgenda\(session\)\)return Response\.json\(\{error:'Acesso negado\.'\},\{status:403\}\)/);
+ assert.match(report,/import \{ canUseAgenda \} from "@\/lib\/doctor-services"/);
+ assert.match(report,/if \(!session\?\.account \|\| !canUseAgenda\(session\)\) return Response\.json\(\{ error: "Acesso negado\." \}, \{ status: 403 \}\);/);
  assert.match(state,/!session\?\.account \|\| !canUseAgenda\(session\)/);
 });
 

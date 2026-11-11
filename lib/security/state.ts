@@ -27,6 +27,7 @@ export function validateAppointment(a: Row) {
   if (!a || Array.isArray(a) || typeof a !== "object") throw new HttpError(400, "Agendamento inválido.");
   walk(a);
   if (a.forma_cobranca != null && !['PARTICULAR','CONVENIO'].includes(a.forma_cobranca)) throw new HttpError(400, 'Forma de cobrança inválida.');
+  if (a.procedureValue != null && (typeof a.procedureValue !== 'number' || !Number.isFinite(a.procedureValue) || a.procedureValue < 0 || a.procedureValue > 9999999.99)) throw new HttpError(400, 'Valor do procedimento inválido.');
   if (!validId(a.id) || !date.test(a.date) || !time.test(a.time) || !Number.isInteger(a.duration) || a.duration < 1 || a.duration > 1440 ||
       !['scheduled','confirmed','authorized','analysis','realized'].includes(a.status) || (!a.doctorId && !a.anesthetistId)) throw new HttpError(400, 'Agendamento inválido.');
   for (const key of ['doctorId','anesthetistId','patientId','hospitalId']) if (a[key] && !validId(a[key])) throw new HttpError(400, 'Vínculo inválido.');
@@ -97,7 +98,8 @@ function mergeOwned(current: Row[], proposed: Row[], editable: (row: Row) => boo
     }
     if (!editable(row)) throw new HttpError(403, 'Agenda sem permissão.');
     // Shared appointments must not gain a new unauthorized professional by changing ownership.
-    for (const key of ['doctorId','anesthetistId']) if (old && old[key] !== row[key]) throw new HttpError(403, 'Transferência de agenda exige a gerência.');
+    // "" e null significam "sem profissional" (o banco devolve null; a tela envia "").
+    for (const key of ['doctorId','anesthetistId']) if (old && (old[key] || null) !== (row[key] || null)) throw new HttpError(403, 'Transferência de agenda exige a gerência.');
     accepted.push(row);
   }
   return [...retained,...accepted];

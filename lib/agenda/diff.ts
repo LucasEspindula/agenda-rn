@@ -37,7 +37,8 @@ export function canonical(entity: Entity, row: Row, cancelled = false): string {
         text(row.guideExpiry), !!row.opme, !!row.reports, !!row.exams, text(row.notes), instant(row.statusUpdatedAt), text(row.rescheduleReason), text(row.suggestionReason),
         optional(row.suggestedByName), optional(row.suggestedByEmail),
         (Array.isArray(row.rescheduleHistory) ? row.rescheduleHistory : []).map((r: Row) => [text(r.fromDate), text(r.fromTime), text(r.toDate), text(r.toTime), text(r.reason), text(r.proposedBy), text(r.createdAt)]),
-        cancelled, cancelled ? instant(row.cancelledAt) : null, cancelled ? (text(row.cancelReason) || 'Não informado') : null]);
+        cancelled, cancelled ? instant(row.cancelledAt) : null, cancelled ? (text(row.cancelReason) || 'Não informado') : null,
+        row.procedureValue == null || row.procedureValue === '' ? null : Number(row.procedureValue)]);
     case 'hospitals':
       return JSON.stringify([row.id, text(row.name), text(row.abbreviation)]);
     case 'scheduleBlocks':

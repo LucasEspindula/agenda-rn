@@ -72,6 +72,7 @@ export const legacyBody = `<div class="agenda-shell">
       <label>Procedimento<input id="appointmentProcedure" required placeholder="Ex.: Artroscopia de joelho"></label>
       <label>Hospital<input id="appointmentHospital" list="hospitalOptions" required maxlength="120" autocomplete="off" placeholder="Ex.: HMV"></label><datalist id="hospitalOptions"></datalist>
       <label>Validade da guia<input id="guideExpiry" type="date"></label>
+      <label>Valor do procedimento<input id="appointmentValue" type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00"></label>
       <label>Data<input id="appointmentDate" type="date" required></label>
       <label>Horário<input id="appointmentTime" type="time" required></label>
       <label>Duração<select id="appointmentDuration"><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option><option value="120">120 min</option></select></label>

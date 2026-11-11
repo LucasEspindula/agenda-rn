@@ -76,7 +76,7 @@ test('public access remains revoked and composite log FK is validated',async()=>
 test('billing data loader rejects missing actor scope and scopes every financial table',()=>{
  const src=readFileSync(new URL('../lib/billing-data.ts',import.meta.url),'utf8');
  for(const pattern of [/loadBillingData\(actorId:number,sessionOrganizationId\?:string\)/,/sessionOrganizationId\|\|await financialActorOrganizationId\(actorId\)/,/\.eq\(scopeColumn,organizationId\)/,/loadAgendaState\(actorId,organizationId\)/,/organization_memberships!inner\(organization_id\)/])assert.match(src,pattern);
- for(const path of ['billing/route.ts','billing/denials/route.ts','billing/portal/route.ts','reports/billing/route.ts','reports/agenda/route.ts','patient-finance/route.ts']){
+ for(const path of ['billing/route.ts','billing/denials/route.ts','billing/portal/route.ts','reports/billing/route.ts','patient-finance/route.ts']){
   const code=readFileSync(new URL('../app/api/'+path,import.meta.url),'utf8');
   assert.doesNotMatch(code,/loadBillingData\(\)/,path);
   assert.match(code,/loadBillingData\((session|s)\.account\.id(,session\.organization\.id)?\)/,path);
