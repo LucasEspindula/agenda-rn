@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Building2, CalendarDays, ChevronRight, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, LayoutDashboard, Menu, Settings, ShieldAlert, Stethoscope, Wallet, X } from "lucide-react";
 import OrganizationSwitcher from "@/components/organization-switcher";
 import AgendaSectionLinks from "@/components/agenda-section-menu";
 import BillingSectionLinks from "@/components/billing-section-menu";
@@ -10,7 +10,7 @@ import type { ModuleName } from "@/lib/navigation";
 import { attachMenuSwipe } from "@/components/menu-swipe";
 
 type MobileLink = { id: ModuleName; href: string; label: string };
-const icons = { agenda: CalendarDays, billing: Wallet, denials: ShieldAlert, doctors: Stethoscope, organization: Building2, settings: Settings };
+const icons = { hub: LayoutDashboard, agenda: CalendarDays, billing: Wallet, denials: ShieldAlert, doctors: Stethoscope, organization: Building2, settings: Settings };
 
 // Menu único do celular: abre pelo botão do cabeçalho azul e reúne as seções da área atual,
 // os demais módulos autorizados, a organização, a conta e a saída.

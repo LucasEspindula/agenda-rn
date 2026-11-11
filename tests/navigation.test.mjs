@@ -6,12 +6,12 @@ import {readFileSync} from 'node:fs';
 const {moduleLinks}=loadTs('lib/navigation.ts',{'./billing-paused':{BILLING_PAUSED:false},});
 const session=(role,scheduling=false,billing=false,invoice=false)=>({account:{role,doctorId:role==='doctor'?'d1':null},services:{scheduling_enabled:scheduling,billing_enabled:billing,invoice_enabled:invoice}});
 for(const [name,s,expected] of [
- ['manager',session('general_manager'),['/dashboard?agenda=1','/billing']],
- ['secretary',session('secretary'),['/dashboard?agenda=1']],
- ['doctor agenda',session('doctor',true),['/dashboard?agenda=1']],
- ['doctor agenda and finance',session('doctor',true,true),['/dashboard?agenda=1']],
- ['doctor agenda and NF',session('doctor',true,false,true),['/dashboard?agenda=1','/billing?view=invoices']],
- ['doctor all services',session('doctor',true,true,true),['/dashboard?agenda=1','/billing?view=invoices']],
+ ['manager',session('general_manager'),['/hub','/dashboard?agenda=1','/billing']],
+ ['secretary',session('secretary'),['/hub','/dashboard?agenda=1']],
+ ['doctor agenda',session('doctor',true),['/hub','/dashboard?agenda=1']],
+ ['doctor agenda and finance',session('doctor',true,true),['/hub','/dashboard?agenda=1']],
+ ['doctor agenda and NF',session('doctor',true,false,true),['/hub','/dashboard?agenda=1','/billing?view=invoices']],
+ ['doctor all services',session('doctor',true,true,true),['/hub','/dashboard?agenda=1','/billing?view=invoices']],
  ['doctor finance',session('doctor',false,true),['/billing']],
  ['doctor NF',session('doctor',false,false,true),['/billing?view=invoices']],
  ['doctor no services',session('doctor'),[]],
@@ -37,22 +37,19 @@ test('operational areas survive while redundant medical forms and monthly report
 });
 
 
-test('former Hub URL redirects through the permitted home, including unauthenticated users',async()=>{
+test('Hub sends visitors without agenda access to their permitted home, including unauthenticated users',async()=>{
  const {doctorHome}=loadTs('lib/doctor-services.ts',{'./billing-paused':{BILLING_PAUSED:false},});
  for(const [name,s,target] of [
-  ['manager',session('general_manager'),'/dashboard?agenda=1'],
-  ['secretary',session('secretary'),'/dashboard?agenda=1'],
-  ['doctor agenda',session('doctor',true),'/dashboard?agenda=1'],
   ['doctor finance only',session('doctor',false,true),'/billing'],
   ['doctor without services',session('doctor'),'/no-services'],
   ['not signed in',null,'/']
  ]){
   const page=loadTs('app/hub/page.tsx',{'./billing-paused':{BILLING_PAUSED:false},
    '@/app/authz':{getSession:async()=>s},
-   '@/lib/doctor-services':{doctorHome},
+   '@/lib/doctor-services':{doctorHome,canUseAgenda:()=>false},
    'next/navigation':{redirect:url=>{throw Error('redirect:'+url)}}
   });
-  await assert.rejects(()=>page.default(),error=>error.message==='redirect:'+target,name);
+  await assert.rejects(()=>page.default({searchParams:Promise.resolve({})}),error=>error.message==='redirect:'+target,name);
  }
  const mobile=readFileSync('components/mobile-navigation.tsx','utf8');
  assert.doesNotMatch(mobile,/href="\/hub"/);

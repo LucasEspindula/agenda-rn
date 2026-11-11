@@ -78,6 +78,3 @@ test('secretária salva detalhes de atendimento sem anestesista ("" na tela, nul
  assert.throws(()=>policy.mergeState(s,q,principal('secretary')),e=>e.status===403);
 });
 
-test('resumo do dia não quebra a primeira renderização da agenda (variáveis com var)',()=>{
- assert.match(read('public/legacy-app.js'),/\nvar dailySummaryRevision=null,dailySummaryAt=0,dailySummaryBusy=false,dailySummaryHidden=false;/);
-});

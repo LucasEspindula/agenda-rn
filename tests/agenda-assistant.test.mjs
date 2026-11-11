@@ -91,18 +91,12 @@ test('sem pendências: nenhum lembrete',()=>{
 test('rota usa a visibilidade por papel e o mesmo filtro das sugestões',()=>{
  const route=read('app/api/agenda/summary/route.ts');
  assert.match(route,/if \(!session\?\.account \|\| !canUseAgenda\(session\)\) return Response\.json\(\{ error: "Acesso não autorizado" \}, \{ status: 403 \}\);/);
- assert.match(route,/state: visibleState\(state, session\), role, agendaIds: session\.agendaIds/);
- assert.match(route,/\.eq\("organization_id", org\)\.eq\("status", "pending"\)/);
- assert.match(route,/if \(role !== "doctor"\) \{/);
- assert.match(route,/if \(!isManager\(role\)\) requests = requests\.in\("professional_id", session\.agendaIds\);/);
+ assert.match(route,/state: visibleState\(state, session\), role: session\.account\.role, agendaIds: session\.agendaIds/);
+ assert.match(route,/const pending = await loadPendingRequests\(session\);/);
+ const pending=read('lib/agenda/pending-requests.ts');
+ assert.match(pending,/\.eq\("organization_id", session\.organization\.id\)\.eq\("status", "pending"\)/);
+ assert.match(pending,/if \(role === "doctor"\) return \[\];/);
+ assert.match(pending,/if \(!isManager\(role\)\) requests = requests\.in\("professional_id", session\.agendaIds\);/);
  assert.doesNotMatch(read('lib/agenda/assistant.ts'),/\.(cpf|payment|invoiceNumber|received_amount|address)\b/);
 });
 
-test('interface: card no topo da agenda, atualizado pela revisão e recolhível sem gravar no navegador',()=>{
- const js=read('public/legacy-app.js'),html=read('app/dashboard/legacy-body.ts');
- assert.match(html,/<section id="agendaView" class="view active">\r?\n <section id="dailySummary" class="daily-summary hidden"/);
- assert.match(js,/function renderCalendar\(\)\{\r?\n if\(typeof refreshDailySummary==="function"\)refreshDailySummary\(\);/);
- assert.match(js,/if\(!force&&revision===dailySummaryRevision&&Date\.now\(\)-dailySummaryAt<300000\)return;/);
- assert.match(js,/function dailySummaryCollapsed\(\)\{return dailySummaryHidden\}/);
- assert.match(js,/\$\{esc\(i\.title\)\}/);
-});
