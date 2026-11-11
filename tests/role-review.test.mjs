@@ -55,7 +55,7 @@ test('interface: só gerência e médico editam bloqueio; secretária vê sem sa
 });
 
 test('impressão da agenda usa a organização da sessão (quem tem duas organizações não recebe erro)',()=>{
- assert.match(read('app/api/reports/agenda/route.ts'),/loadBillingData\(session\.account\.id,session\.organization\.id\)/);
+ assert.match(read('app/api/reports/agenda/route.ts'),/loadAgendaWindow\(session\.account\.id, start, session\.organization\.id\)/);
 });
 
 test('PDF verificado da cirurgia fica sob org/<organização>/ no Storage',()=>{

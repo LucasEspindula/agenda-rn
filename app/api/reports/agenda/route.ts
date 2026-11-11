@@ -1,100 +1,42 @@
-import {getSession} from '@/app/authz';
-import {canUseAgenda} from '@/lib/doctor-services';
-import {loadBillingData} from '@/lib/billing-data';
-import {individualReceived} from '@/lib/billing-reports';
-import {isAnesthesiologist} from '@/lib/medical-specialties';
-import {agendaDateLabel,agendaTimeline,appointmentInsurance,appointmentStatusLabel} from '@/lib/agenda-report';
-import {PdfReport,brDate,brDateTime,brl,pdfResponse} from '@/lib/reports/pdf';
+import { getSession, isManager } from "@/app/authz";
+import { canUseAgenda } from "@/lib/doctor-services";
+import { loadAgendaWindow } from "@/lib/agenda/store";
+import { visibleState } from "@/lib/security/state";
+import { PRINT_MODES, agendaPeriod, buildAgendaPrint, type PrintMode } from "@/lib/agenda/print";
+import { renderAgendaPdf } from "@/lib/reports/agenda-pdf";
 
-export const dynamic='force-dynamic';
-type Professional={id:string;name:string;crm?:string;specialty?:string};type Appointment={id:string;doctorId?:string;anesthetistId?:string;date:string;time?:string;patientId:string;procedure?:string;insurance?:string|null;hospitalId?:string;status?:string};type ScheduleBlock={professionalId:string;date:string;start:string;end:string;reason:string};type Patient={id:string;name:string;insurance?:string};type Hospital={id:string;name:string};
-const date=/^\d{4}-\d{2}-\d{2}$/;
-const add=(value:string,days:number)=>{const result=new Date(value+'T12:00:00');result.setDate(result.getDate()+days);return result.toISOString().slice(0,10)};
-const periodFor=(mode:string,day:string)=>{if(mode==='week'){const weekday=new Date(day+'T12:00:00').getDay();return {start:add(day,-weekday),end:add(day,6-weekday)}}if(mode==='month'){const current=new Date(day+'T12:00:00');return {start:day.slice(0,7)+'-01',end:new Date(current.getFullYear(),current.getMonth()+1,0).toISOString().slice(0,10)}}return {start:day,end:day}};
+export const dynamic = "force-dynamic";
+const DATE = /^\d{4}-\d{2}-\d{2}$/, MAX_AGENDAS = 30;
 
-const groupByDay=<T extends {date:string}>(rows:readonly T[]):Array<[string,T[]]>=>{
- const groups=new Map<string,T[]>();
- for(const row of rows){const items=groups.get(row.date)||[];items.push(row);groups.set(row.date,items)}
- return [...groups.entries()].sort(([a],[b])=>a.localeCompare(b));
-};
-export async function GET(request:Request){
- const session=await getSession(),params=new URL(request.url).searchParams;
- const professionalId=params.get('professional_id')||'',mode=params.get('period')||'day',day=params.get('date')||'';
- if(!session||!canUseAgenda(session))return Response.json({error:'Acesso negado.'},{status:403});
- if(!professionalId||!date.test(day)||!['day','week','month'].includes(mode))return Response.json({error:'Parâmetros de impressão inválidos.'},{status:400});
- try{
-  const {state,data}=await loadBillingData(session.account.id,session.organization.id);
-  const snapshot=state as {professionals?:Professional[];patients?:Patient[];hospitals?:Hospital[];appointments?:Appointment[];scheduleBlocks?:ScheduleBlock[]};
-  const professional=snapshot.professionals?.find(item=>item.id===professionalId);
-  if(!professional)return Response.json({error:'Agenda não encontrada.'},{status:404});
-  if(session.account.role!=='general_manager'&&!session.agendaIds.includes(professionalId))return Response.json({error:'Agenda sem acesso.'},{status:403});
-  const period=periodFor(mode,day),anesthesiologist=isAnesthesiologist(professional);
-  const patients=new Map((snapshot.patients||[]).map(item=>[item.id,item] as const));
-  const professionals=new Map((snapshot.professionals||[]).map(item=>[item.id,item] as const));
-  const hospitals=new Map((snapshot.hospitals||[]).map(item=>[item.id,item] as const));
-  const appointments=(snapshot.appointments||[]).filter(item=>(anesthesiologist?item.anesthetistId===professionalId:item.doctorId===professionalId)&&item.status!=='cancelled'&&item.date>=period.start&&item.date<=period.end).sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
-  const blocks=(snapshot.scheduleBlocks||[]).filter(item=>item.professionalId===professionalId&&item.date>=period.start&&item.date<=period.end).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
-  const pdf=await new PdfReport().init();
-  const centerTitle=mode==='week'?'Agenda da semana':mode==='month'?'Agenda do mês':'Agenda do dia';
-  pdf.header('Agenda',professional.name+(professional.crm?' · CRM: '+professional.crm:''),[
-   'Período: '+brDate(period.start)+(period.end!==period.start?' a '+brDate(period.end):'')
-  ],[
-   'Gerado em: '+brDateTime(new Date().toISOString()),
-   'Gerado por: '+session.account.name
-  ],centerTitle);
-  // The financial record is the source of truth; the legacy appointment.payment field is not.
-  // Doctors can print the agenda without being shown payment amounts.
-  const valuesByAppointment=new Map<string,number>();
-  if(session.account.role!=='doctor'){
-   const countedRecords=new Set<string>();
-   for(const row of data.rows){
-    if(!row.appointment_id||!row.record||countedRecords.has(row.record.id))continue;
-    if(row.record.professional_id&&row.record.professional_id!==professionalId)continue;
-    const received=individualReceived(row);
-    if(received==null||!Number.isFinite(received))continue;
-    countedRecords.add(row.record.id);
-    valuesByAppointment.set(row.appointment_id,(valuesByAppointment.get(row.appointment_id)||0)+received);
-   }
+// Agenda em PDF (botão de impressão). Mesmo modelo e layout do PDF enviado por e-mail ao médico.
+// Usa a agenda já filtrada por papel; não carrega dados do faturamento.
+export async function GET(request: Request) {
+  const session = await getSession(), params = new URL(request.url).searchParams;
+  if (!session?.account || !canUseAgenda(session)) return Response.json({ error: "Acesso negado." }, { status: 403 });
+  const mode = (params.get("period") || "day") as PrintMode, day = params.get("date") || "";
+  const ids = [...new Set(params.getAll("professional_id").flatMap((v) => v.split(",")).map((v) => v.trim()).filter(Boolean))];
+  if (!ids.length || ids.length > MAX_AGENDAS || !DATE.test(day) || !PRINT_MODES.includes(mode))
+    return Response.json({ error: "Parâmetros de impressão inválidos." }, { status: 400 });
+  if (!isManager(session.account.role) && ids.some((id) => !session.agendaIds.includes(id)))
+    return Response.json({ error: "Agenda sem acesso." }, { status: 403 });
+  try {
+    const { start } = agendaPeriod(mode, day);
+    const { state } = await loadAgendaWindow(session.account.id, start, session.organization.id);
+    const visible = visibleState(state, session);
+    const known = new Set((visible.professionals || []).map((p: { id: unknown }) => String(p.id)));
+    if (ids.some((id) => !known.has(id))) return Response.json({ error: "Agenda não encontrada." }, { status: 404 });
+    const model = buildAgendaPrint({
+      state: visible, professionalIds: ids, mode, date: day,
+      organization: session.organization.name, generatedBy: session.account.name, now: new Date(),
+    });
+    const source = await renderAgendaPdf(model), bytes = new Uint8Array(source.byteLength);
+    bytes.set(source);
+    const name = `agenda-${model.start}${model.end !== model.start ? "-a-" + model.end : ""}.pdf`;
+    return new Response(bytes, { headers: {
+      "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${name}"`,
+      "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+    } });
+  } catch {
+    return Response.json({ error: "Não foi possível gerar a agenda." }, { status: 503 });
   }
-  const timeline=agendaTimeline(appointments,blocks);
-  pdf.section('Programação',undefined,{reserve:48});
-  for(const [date,entries] of groupByDay(timeline)){
-   pdf.dayHeading(agendaDateLabel(date));
-   const rows=entries.map(entry=>{
-    if(entry.kind==='block')return [
-     entry.block.start+' - '+entry.block.end,
-     'HORÁRIO BLOQUEADO','—',
-     'Motivo: '+(entry.block.reason||'Indisponibilidade do profissional'),
-     '—','—','—','Bloqueado'
-    ];
-    const item=entry.appointment;
-    return [
-     item.time||'—',
-     patients.get(item.patientId)?.name||'Não informado',
-     professionals.get(anesthesiologist?item.doctorId||'':item.anesthetistId||'')?.name||'—',
-     item.procedure||'—',
-     appointmentInsurance(item,patients.get(item.patientId))||'—',
-     hospitals.get(item.hospitalId||'')?.name||'—',
-     brl(valuesByAppointment.get(item.id)),
-     appointmentStatusLabel(item.status)
-    ];
-   });
-   const rowTints=entries.map(entry=>entry.kind==='block'?'blocked' as const:null);
-   pdf.gridTable([
-    {label:'Horário',width:69},{label:'Paciente',width:130},
-    {label:anesthesiologist?'Médico':'Anestesista',width:99},
-    {label:'Procedimento / Motivo',width:144},{label:'Convênio',width:90},
-    {label:'Hospital',width:104},{label:'Valor',width:69,align:'right'},
-    {label:'Status',width:70}
-   ],rows,rowTints);
-  }
-  if(!timeline.length){
-   pdf.ensureSpace(16);
-   pdf.text('Nenhum atendimento ou bloqueio no período selecionado.',pdf.margin,pdf.y,9);
-   pdf.y-=22;
-  }
-  return pdfResponse(pdf,'agenda-'+professionalId+'-'+period.start+'.pdf');
- }catch{
-  return Response.json({error:'Não foi possível gerar a agenda.'},{status:503});
- }
 }

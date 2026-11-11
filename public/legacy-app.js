@@ -323,13 +323,16 @@ function renderProfessionalOptions(){
 }
 function openAgendaPrint(){
  const owner=selectedProf();if(!owner)return;
+ // Agendas que a pessoa enxerga no seletor: o PDF pode juntar todas (o mesmo do e-mail do médico).
+ const agendas=[...($("professionalFilter")?.options||[])].map(o=>o.value).filter(Boolean);
  document.getElementById("agendaPrintDialog")?.remove();
  const dialog=document.createElement("dialog");dialog.id="agendaPrintDialog";dialog.className="agenda-print-dialog";
- dialog.innerHTML=`<form method="dialog" class="print-dialog-content"><span class="print-dialog-eyebrow">Agenda</span><h3>Visualizar agenda</h3><p>${esc(owner.name)}</p><div class="print-dialog-fields"><label>Período<select id="agendaPrintPeriod"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option></select></label><label>Data de referência<input id="agendaPrintDate" type="date" required value="${ds(currentDate)}"></label></div><div class="print-dialog-actions"><button value="cancel" class="secondary-btn">Cancelar</button><button type="button" id="confirmAgendaPrint" class="primary-btn">Visualizar PDF</button></div></form>`;
+ dialog.innerHTML=`<form method="dialog" class="print-dialog-content"><span class="print-dialog-eyebrow">Agenda</span><h3>Visualizar agenda</h3><p>${esc(owner.name)}</p><div class="print-dialog-fields"><label>Período<select id="agendaPrintPeriod"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option></select></label><label>Data de referência<input id="agendaPrintDate" type="date" required value="${ds(currentDate)}"></label>${agendas.length>1?`<label>Agendas<select id="agendaPrintScope"><option value="one">Só esta agenda</option><option value="all">Todas as minhas agendas (${agendas.length})</option></select></label>`:""}</div><div class="print-dialog-actions"><button value="cancel" class="secondary-btn">Cancelar</button><button type="button" id="confirmAgendaPrint" class="primary-btn">Visualizar PDF</button></div></form>`;
  document.body.appendChild(dialog);dialog.showModal();
  $("confirmAgendaPrint").onclick=()=>{
   const input=$("agendaPrintDate");if(!input.reportValidity())return;
-  const params=new URLSearchParams({professional_id:owner.id,period:$("agendaPrintPeriod").value,date:input.value});
+  const params=new URLSearchParams({period:$("agendaPrintPeriod").value,date:input.value});
+  for(const id of $("agendaPrintScope")?.value==="all"?agendas:[owner.id])params.append("professional_id",id);
   window.open("/api/reports/agenda?"+params.toString(),"_blank","noopener,noreferrer");
   dialog.close();
  };

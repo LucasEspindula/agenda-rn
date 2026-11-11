@@ -106,7 +106,7 @@ test('agenda report preserves historical insurance and human status labels',asyn
 test('native PDF routes keep server-side authorization and report guarantees',()=>{
  const billing=read('app/api/reports/billing/route.ts'),agenda=read('app/api/reports/agenda/route.ts'),pdf=read('lib/reports/pdf.ts');
  assert.match(billing,/individualReceived\(row\)/);assert.match(billing,/report\.groups/);assert.match(billing,/report\.cash/);assert.match(billing,/pendingColumns/);assert.match(billing,/ensureSpace/);
- assert.match(agenda,/import \{isAnesthesiologist\} from '@\/lib\/medical-specialties'/);assert.match(agenda,/appointmentInsurance\(item,patients\.get\(item\.patientId\)\)/);assert.match(agenda,/appointmentStatusLabel\(item\.status\)/);assert.doesNotMatch(agenda,/\/anestesi\/i/);
+ assert.match(agenda,/renderAgendaPdf\(model\)/);assert.match(agenda,/visibleState\(state, session\)/);assert.doesNotMatch(agenda,/\/anestesi\/i/);
  assert.match(pdf,/ensureSpace\(height:number\)/);assert.match(pdf,/options:PdfSectionOptions/);assert.match(pdf,/pdfColumnsWidth\(columns\)/);assert.match(pdf,/RangeError/);assert.match(pdf,/'Content-Type':'application\/pdf'/);assert.match(pdf,/'Content-Disposition':'inline; filename/);
  assert.doesNotMatch(pdf,/@ts-nocheck/);assert.doesNotMatch(billing,/@ts-nocheck/);assert.doesNotMatch(agenda,/@ts-nocheck/);
 });
