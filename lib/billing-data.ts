@@ -7,9 +7,11 @@ import {projectFinancialRow} from './billing-projection';
 import {payerKey} from './billing-eligibility';
 import {includeArchivedCancellations} from './billing-cancelled';
 import {formatPatientAddress,type PatientAddressInput} from './patient-address';
-export async function loadBillingData(actorId:number){
+// organizationId: organização da sessão (já conferida por session_context). Sem ela, o banco
+// resolve a organização do usuário e recusa quem tem mais de uma.
+export async function loadBillingData(actorId:number,sessionOrganizationId?:string){
  // Never fetch financial data without validating the actor's active organization on the server.
- const organizationId=await financialActorOrganizationId(actorId);
+ const organizationId=sessionOrganizationId||await financialActorOrganizationId(actorId);
  if(!organizationId)throw new Error('Acesso à organização negado.');
  const db=getSupabaseAdmin();
  // Fetch complete sets: truncating invoice items could wrongly classify a shared NF as private.
@@ -27,7 +29,7 @@ export async function loadBillingData(actorId:number){
  }
  const names=['billing_entities','billing_doctor_entities','billing_records','invoices','invoice_billing_records','doctors','attendances','company_expenses','company_associates','invoice_requests'] as const;
  const attachmentColumns='id,document_type,invoice_id,billing_record_id,original_filename,mime_type,file_size,status,is_current,replaces_attachment_id,replaced_by_attachment_id,deactivated_at,deactivation_reason,created_at,created_by,updated_at,updated_by';
- const [agenda,...results]=await Promise.all([loadAgendaState(actorId),...names.map(t=>allRows(t)),allRows('users','id,name,role,organization_memberships!inner(organization_id)'),allRows('payment_parts'),allRows('financial_attachments',attachmentColumns)]);
+ const [agenda,...results]=await Promise.all([loadAgendaState(actorId,organizationId),...names.map(t=>allRows(t)),allRows('users','id,name,role,organization_memberships!inner(organization_id)'),allRows('payment_parts'),allRows('financial_attachments',attachmentColumns)]);
  if(results.some(r=>r.error))throw new Error('Não foi possível carregar o faturamento.');
  const state=agenda.state;
  const records=results[2].data as Financial[],invoices=results[3].data as Invoice[],items=results[4].data as BillingData['items'];

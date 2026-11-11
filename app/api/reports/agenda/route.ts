@@ -23,7 +23,7 @@ export async function GET(request:Request){
  if(!session||!canUseAgenda(session))return Response.json({error:'Acesso negado.'},{status:403});
  if(!professionalId||!date.test(day)||!['day','week','month'].includes(mode))return Response.json({error:'Parâmetros de impressão inválidos.'},{status:400});
  try{
-  const {state,data}=await loadBillingData(session.account.id);
+  const {state,data}=await loadBillingData(session.account.id,session.organization.id);
   const snapshot=state as {professionals?:Professional[];patients?:Patient[];hospitals?:Hospital[];appointments?:Appointment[];scheduleBlocks?:ScheduleBlock[]};
   const professional=snapshot.professionals?.find(item=>item.id===professionalId);
   if(!professional)return Response.json({error:'Agenda não encontrada.'},{status:404});
