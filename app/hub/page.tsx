@@ -54,7 +54,7 @@ function AgendaCard({ agenda, today, now }: { agenda: HubAgenda; today: string; 
   return <article className={`hub-card${agenda.pendingTotal ? " has-pending" : ""}`} aria-labelledby={`agenda-${agenda.id}`}>
     <header className="hub-card-head">
       <span className={`hub-card-avatar ${agenda.role === "Anestesista" ? "anest" : ""}`} aria-hidden="true">{initials(agenda.name)}</span>
-      <div><h3 id={`agenda-${agenda.id}`}>{agenda.name}</h3><p>{agenda.role}{agenda.specialty && agenda.role !== "Anestesista" ? ` · ${agenda.specialty}` : ""}</p></div>
+      <div><h3 id={`agenda-${agenda.id}`}>{agenda.name}</h3><p>{agenda.role === "Anestesista" ? "Anestesista" : agenda.specialty || "Médico"}</p></div>
       {agenda.pendingTotal > 0 && <span className="hub-card-alert" title="Pendências desta agenda">{agenda.pendingTotal}</span>}
     </header>
     <dl className="hub-card-counts">
