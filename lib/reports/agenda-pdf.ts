@@ -29,6 +29,7 @@ export function pdfSafe(value: string): string {
 }
 const brDateTime = (iso: string) => new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(iso));
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+export const brl = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value).replace(/ /g, " ");
 
 class AgendaPdf {
   private doc!: PDFDocument; private font!: PDFFont; private bold!: PDFFont; private page!: PDFPage;
@@ -152,12 +153,13 @@ class AgendaPdf {
       this.y = top - h - 4; return;
     }
     const status = STATUS[entry.status];
-    const pillW = this.width(entry.statusLabel, 7, this.bold) + 12;
+    const value = entry.value == null ? "" : brl(entry.value);
+    const pillW = Math.max(this.width(entry.statusLabel, 7, this.bold) + 12, value ? this.width(value, 9.5, this.bold) : 0);
     const textW = right - x - pillW - 14;
     const patient = this.wrap(entry.patient, textW, 10.5, this.bold, 2);
-    const procedure = this.wrap(entry.procedure, right - x - 10, 9, this.font, 2);
+    const procedure = this.wrap(entry.procedure, textW, 9, this.font, 2);
     const meta = [entry.hospital, entry.partner, entry.insurance, entry.careType, ...entry.flags].filter(Boolean).join("  ·  ");
-    const metaLines = meta ? this.wrap(meta, right - x - 10, 8, this.font, 2) : [];
+    const metaLines = meta ? this.wrap(meta, textW, 8, this.font, 2) : [];
     const h = Math.max(38, 10 + patient.length * 13 + procedure.length * 11 + metaLines.length * 10 + 6);
     this.ensure(h + 4);
     const top = this.y;
@@ -166,6 +168,7 @@ class AgendaPdf {
     this.text(entry.start || "—", left + 10, top - 17, 13, this.bold, ink);
     if (entry.end) this.text(`até ${entry.end}`, left + 10, top - 29, 8, this.font, muted);
     this.pill(entry.statusLabel, right - 8, top - 6, status.fg, status.bg);
+    if (value) this.text(value, right - 8 - this.width(value, 9.5, this.bold), top - 32, 9.5, this.bold, ink);
     let y = top - 16;
     for (const line of patient) { this.text(line, x, y, 10.5, this.bold, ink); y -= 13; }
     y += 1;

@@ -1,6 +1,7 @@
 // Agenda para impressão: o mesmo modelo serve ao botão de impressão e ao PDF do e-mail
 // (agenda de amanhã às 20h e prévia da semana). Função pura sobre a agenda já filtrada
-// por papel (visibleState). Sem CPF, contatos, observações nem valores financeiros.
+// por papel (visibleState). Sem CPF, contatos nem observações. Leva o valor do procedimento
+// informado no agendamento (os médicos precisam dele); valores do faturamento não entram.
 import { agendaTimeline, appointmentInsurance, appointmentStatusLabel } from "../agenda-report";
 import { isAnesthesiologist } from "../medical-specialties";
 
@@ -11,7 +12,7 @@ export type PrintMode = "day" | "week" | "month";
 export type PrintStatus = "scheduled" | "confirmed" | "authorized" | "analysis" | "realized" | "other";
 export type PrintEntry =
   | { kind: "appointment"; id: string; start: string; end: string; patient: string; procedure: string;
-      partner: string; hospital: string; insurance: string; careType: string; flags: string[]; status: PrintStatus; statusLabel: string }
+      partner: string; hospital: string; insurance: string; careType: string; flags: string[]; value: number | null; status: PrintStatus; statusLabel: string }
   | { kind: "block"; start: string; end: string; reason: string };
 export type PrintDay = { date: string; label: string; appointments: number; entries: PrintEntry[] };
 export type PrintAgenda = {
@@ -96,6 +97,7 @@ export function buildAgendaPrint(input: {
           insurance: appointmentInsurance(a as { insurance?: string | null }, patients.get(String(a.patientId))) || "",
           careType: CARE[String(a.careType)] || "",
           flags: [a.opme && "OPME", a.exams && "Exames", a.reports && "Laudos"].filter(Boolean) as string[],
+          value: a.procedureValue == null || a.procedureValue === "" || !Number.isFinite(Number(a.procedureValue)) ? null : Number(a.procedureValue),
           status: STATUS[String(a.status)] || "other", statusLabel: appointmentStatusLabel(a.status),
         });
       }

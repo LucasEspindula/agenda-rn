@@ -23,7 +23,7 @@ const state=()=>({
  patients:[{id:'p1',name:'Ana Souza',cpf:'00000000000',phone:'51999999999'},{id:'p2',name:'Ŝtefan Ölander'}],
  hospitals:[{id:'h1',name:'Hospital Central'}],
  appointments:[
-  appt('a1','d1','2026-11-12','07:00',{duration:120,anesthetistId:'d3',careType:'inpatient',opme:true,notes:'nota interna',payment:{amount:900}}),
+  appt('a1','d1','2026-11-12','07:00',{duration:120,anesthetistId:'d3',careType:'inpatient',opme:true,notes:'nota interna',payment:{amount:900},procedureValue:1500.5}),
   appt('a2','d1','2026-11-12','10:00',{status:'scheduled',patientId:'p2'}),
   appt('a3','d1','2026-11-13','08:00',{status:'cancelled'}),
   appt('a4','d1','2026-11-20','08:00'),
@@ -47,8 +47,9 @@ test('modelo: horário de término, equipe, bloqueio intercalado e cancelado for
  assert.deepEqual(day.entries.map(e=>e.kind+':'+e.start),['appointment:07:00','block:09:00','appointment:10:00']);
  const first=day.entries[0];
  assert.equal(first.end,'09:00');assert.equal(first.partner,'Anestesista: Dra. Anestesia');
+ assert.equal(first.value,1500.5);assert.equal(day.entries[2].value,null);
  assert.equal(first.careType,'Internado');assert.deepEqual(first.flags,['OPME']);assert.equal(first.statusLabel,'Confirmado');
- // Sem CPF, telefone, observações nem valores.
+ // Sem CPF, telefone, observações nem valores do faturamento (o valor do procedimento entra).
  assert.doesNotMatch(JSON.stringify(m),/00000000000|51999999999|nota interna|900/);
 });
 
@@ -87,4 +88,29 @@ test('tela: o diálogo pode juntar todas as agendas da pessoa no mesmo PDF',()=>
  assert.match(js,/window\.open\("\/api\/reports\/agenda\?"/);
  assert.match(js,/<option value="all">Todas as minhas agendas \(\$\{agendas\.length\}\)<\/option>/);
  assert.match(js,/for\(const id of \$\("agendaPrintScope"\)\?\.value==="all"\?agendas:\[owner\.id\]\)params\.append\("professional_id",id\);/);
+});
+
+test('valor do procedimento: coluna própria, gravado e lido pelo banco, validado e comparado',()=>{
+ const sql=read('supabase/migrations/20261116120000_appointment_procedure_value.sql');
+ assert.match(sql,/add column if not exists procedure_value numeric\(12,2\)/);
+ assert.match(sql,/'procedureValue',a\.procedure_value,/);
+ assert.match(sql,/procedure_value=nullif\(d->>'procedureValue',''\)::numeric\(12,2\)/);
+ assert.match(sql,/raise exception 'apply_agenda_changes: trechos não encontrados'/);
+ const {validateAppointment}=loadTs('lib/security/state.ts');
+ const base={id:'a1',doctorId:'d1',date:'2026-11-12',time:'08:00',duration:60,status:'scheduled'};
+ validateAppointment({...base,procedureValue:1500.5});validateAppointment({...base,procedureValue:null});
+ for(const bad of ["1500",-1,1e8])assert.throws(()=>validateAppointment({...base,procedureValue:bad}),/Valor do procedimento inválido/);
+ assert.throws(()=>validateAppointment({...base,procedureValue:Number.NaN}),/inválido/);
+ const {canonical}=loadTs('lib/agenda/diff.ts');
+ assert.notEqual(canonical('appointments',{...base,procedureValue:100}),canonical('appointments',{...base,procedureValue:200}));
+ assert.equal(canonical('appointments',{...base}),canonical('appointments',{...base,procedureValue:null}));
+});
+
+test('tela: secretária informa o valor; card e detalhe mostram (médico só lê)',()=>{
+ const js=read('public/legacy-app.js'),html=read('app/dashboard/legacy-body.ts');
+ assert.match(html,/<label>Valor do procedimento<input id="appointmentValue" type="text" inputmode="decimal"/);
+ assert.match(js,/guideExpiry:\$\("guideExpiry"\)\.value,procedureValue:newProcedureValue,/);
+ assert.match(js,/id="detailProcedureValue"[^>]*\$\{canAdmin\?"":"disabled"\}>/);
+ assert.match(js,/if\(canEditStatus\)\{try\{procedureValue=procedureValueInput\("detailProcedureValue"\)\}/);
+ assert.match(js,/a\.procedureValue!=null\?` · <b class="appointment-value">\$\{esc\(money\(a\.procedureValue\)\)\}<\/b>`:""/);
 });
