@@ -86,8 +86,8 @@ Os valores ficam na Vercel. **Nunca** os coloque no repositório.
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
 | `SUPABASE_SECRET_KEY` | Chave secreta do Supabase, usada só no servidor |
 | `CRON_SECRET` | Autoriza as rotas de cron e do monitor |
-| `APP_ORIGIN` | Origem canônica dos links nos e-mails |
-| `RESEND_API_KEY`, `EMAIL_FROM` | Envio de e-mails (convites, confirmação, senha) |
+| `APP_ORIGIN` | Endereço oficial do app: base dos links nos e-mails e origem aceita nas mutações. Só em produção; o preview usa o próprio endereço |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Envio de e-mails (convites, confirmação, senha, agenda dos médicos). Hoje só no Preview, com o remetente de teste `onboarding@resend.dev`, que entrega apenas no e-mail da conta do Resend. Produção depois do domínio próprio |
 | `PUBLIC_SIGNUP_ENABLED` | Libera o cadastro público de novas clínicas |
 | `ALERT_WEBHOOK_URL`, `ALERT_EMAIL` | Destino dos alertas do monitor |
 | `RN_PROFESSIONAL_BILLING_ENABLED`, `RN_DENIALS_ENABLED`, `RN_PORTAL_SUBMISSIONS_ENABLED`, `RN_MONTHLY_CLOSING_ENABLED` | Flags dos módulos de faturamento (pausados) |
@@ -134,6 +134,8 @@ docs/                 contexto, roteiro de incidentes, arquitetura e faturamento
 5. Faça o merge com **squash** e apague a branch.
 6. Confira `/api/health` em produção: o campo `version` mostra o SHA curto do deploy.
 
+A `main` é protegida: só recebe mudanças por PR com a CI verde (`test`, `lint`, `types_and_dependencies`) e não aceita push direto, force push nem exclusão.
+
 ## Segurança
 
 - **Mutações:** toda rota de mutação passa por `secureMutation` (`lib/security/http.ts`), que confere a origem e padroniza os erros.
@@ -141,6 +143,9 @@ docs/                 contexto, roteiro de incidentes, arquitetura e faturamento
 - **Tentativas:** os limites ficam no banco (`lib/security/rate-limit.ts`): por conta, por IP e global.
 - **Permissões:** vêm do banco a cada requisição. A secretária só vê as agendas liberadas; o médico, só as dele e as compartilhadas.
 - **LGPD:** há exportação e anonimização de pacientes. Os textos jurídicos ficam em `lib/legal.ts`.
+- **Banco:** RLS ligado em todas as tabelas e nenhuma permissão para `anon`/`authenticated`: o navegador nunca fala com o banco. As funções têm `search_path` vazio e só o servidor (`service_role`) as executa, inclusive as criadas no futuro. A CI confere tudo isso restaurando o esqueleto do banco (`tests/schema-backup.test.mjs`).
+- **Contas:** tudo pertence à empresa. O GitHub entra pela conta Google da empresa e exige 2FA de todos os membros; Vercel, Supabase e Resend entram pelo GitHub da empresa.
+- **Chaves:** ficam na Vercel como *Secret* (nem o painel mostra o valor). A chave do Resend só tem permissão de envio.
 - **Segredos:** nunca entram no repositório, em logs ou em mensagens.
 
 ## Documentação
