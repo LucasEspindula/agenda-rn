@@ -7,7 +7,8 @@ Memória persistente do projeto. Leia antes de qualquer tarefa. O histórico det
 Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_manager` (gerente), `secretary` (secretária), `doctor` (médico/anestesista). Foco atual: **agenda primeiro**. O **faturamento está pausado**: não mexer sem pedido explícito.
 
 - **Stack:** Next.js 16 (App Router) na Vercel, região `gru1`, plano Hobby. Supabase Postgres, projeto `nagddicinjszfrtwgjbu`.
-- **Repositório:** `LucasEspindula/agenda-rn` (público, então nunca commitar segredos). Branch principal `main`, e cada PR é mergeada com squash.
+- **Contas (desde 13/11/2026):** tudo pertence à empresa RN Assessoria. GitHub na organização `rn-integra`; Supabase na organização "RN Integra" (`xtnswwghfqggqesrkqnx`), com produção e preview; Vercel no time "RN Integra" (`team_ZzwM8ykcrLvRvCvL7BXvMgRB`), projeto `prj_XiOYwxCOguNmorHg30FRF3M9lER5`. O time da Vercel ainda está no Hobby: o repositório precisa continuar público até o Pro.
+- **Repositório:** `rn-integra/agenda-rn` (público, então nunca commitar segredos). Branch principal `main`, e cada PR é mergeada com squash.
 - **Agenda legada:** `public/legacy-app.js` e `public/legacy.css` manipulam o DOM diretamente. O `<select id="professionalFilter">` continua sendo a fonte da verdade das agendas visíveis por papel.
 - **Navegação do celular:** `components/mobile-navigation.tsx`, com gaveta lateral e gesto em `components/menu-swipe.ts`.
 - **Segurança:**

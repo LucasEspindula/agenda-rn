@@ -5,7 +5,7 @@
 ## 1. Como retomar o trabalho em um novo chat
 
 1. Ler este arquivo inteiro.
-2. Inspecionar o `main` e as PRs recentes do repositório `LucasEspindula/agenda-rn`; não pressupor que o SHA deste snapshot ainda seja o atual.
+2. Inspecionar o `main` e as PRs recentes do repositório `rn-integra/agenda-rn`; não pressupor que o SHA deste snapshot ainda seja o atual.
 3. Consultar migrações e estado do Supabase de produção `nagddicinjszfrtwgjbu`, e confirmar o deploy em produção do projeto Vercel `agenda-rn`.
 4. Comparar **código + banco + deploy**, diferenciando *proposto*, *mergeado*, *migração aplicada* e *publicado*.
 5. Antes de continuar uma fase, ler suas notas de arquitetura e auditar a implementação anterior. Alterações financeiras, RLS, autorização e migrações exigem testes e revisão cuidadosa.
@@ -15,9 +15,9 @@
 ## 2. Identificação e infraestrutura
 
 - Produto: **RN Integra** (nome vigente em toda a interface; antigo Agenda RN).
-- Repositório privado: `LucasEspindula/agenda-rn`; branch principal: `main`.
+- Repositório público: `rn-integra/agenda-rn` (organização da empresa desde 13/11/2026); branch principal: `main`.
 - Supabase produção: `nagddicinjszfrtwgjbu`; Supabase dos previews: `funqdoiubwskmhefbvjz` ("Agenda RN Preview", desde 11/11/2026; o antigo `vmpvngjppnouqfzahezr` foi apagado).
-- Vercel: projeto `agenda-rn`; equipe `team_FBTsVaBXUxWhfN3bwm5g9142`.
+- Vercel: projeto `agenda-rn` (`prj_XiOYwxCOguNmorHg30FRF3M9lER5`); time "RN Integra" `team_ZzwM8ykcrLvRvCvL7BXvMgRB` (desde 13/11/2026, ainda Hobby). Supabase: organização "RN Integra" `xtnswwghfqggqesrkqnx`.
 - Objetivo: evoluir o sistema existente para SaaS multiempresa comercializável, **sem expor dados entre organizações**.
 - Estratégia: preservar estabilidade e compatibilidade do cliente existente (RN Gestão), migrar gradualmente, sem criar novos tenants até concluir o isolamento.
 - **Desde 06/11/2026:** lançamento para outras clínicas decidido; multiempresa implementado (seção 6B). Banco de produção só tem dados de teste e será zerado antes do lançamento.
