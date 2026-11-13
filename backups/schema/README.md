@@ -20,11 +20,13 @@ npm run db:schema
 
 e faça o commit do arquivo junto com a migração (ou logo depois dela). O git guarda as versões anteriores, então não crie cópias com data no nome.
 
-**Requisitos:**
-- Docker Desktop aberto;
-- login feito uma vez com `npx supabase login` (abre o navegador).
+**Requisito:** um token pessoal do Supabase no `.env.local`, que nunca vai para o git:
 
-O comando usa o `supabase db dump` oficial: liga a CLI ao projeto de produção e grava só a estrutura.
+```
+SUPABASE_ACCESS_TOKEN=sbp_...
+```
+
+Crie o token em supabase.com/dashboard/account/tokens. Não precisa de Docker nem da senha do banco: o script roda uma consulta somente leitura no catálogo do Postgres (`scripts/db-schema.sql`), pela API oficial do Supabase, e grava o SQL que recria a estrutura.
 
 Para comparar com o banco dos previews, rode `npm run db:schema -- preview`. O resultado vai para `.preview-schema.sql`, que fica fora do git.
 

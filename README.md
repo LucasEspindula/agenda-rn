@@ -122,7 +122,7 @@ docs/                 contexto, roteiro de incidentes, arquitetura e faturamento
     ```bash
     npm run db:schema
     ```
-  - O comando precisa do Docker Desktop aberto e do login feito com `npx supabase login`.
+  - O comando não precisa de Docker: lê a estrutura pela API oficial do Supabase, usando um token pessoal guardado no `.env.local`.
   - O passo a passo está em [`backups/schema/README.md`](backups/schema/README.md).
 
 ## Fluxo de trabalho
