@@ -300,6 +300,7 @@ As versões diferem porque o banco registra o momento da aplicação; ao compara
 | 11/11/2026 | PDF da agenda com layout único (impressão e e-mail); resumo de todas as agendas no `/hub` | PRs #108–#110 / `a4256b8` / sem migration | E-mail da agenda para médicos |
 | 13/11/2026 | Contas da empresa (GitHub `rn-integra`, Supabase e Vercel "RN Integra"); limpeza do repositório, README novo e esqueleto do banco por `npm run db:schema`, com restauração testada na CI; `main` protegida por ruleset | PR #111 / `397856d` / sem migration | Funções do banco fechadas |
 | 13/11/2026 | Funções do banco executáveis só pelo `service_role` (eram 20 abertas para `PUBLIC`/`anon`/`authenticated`, nenhuma perigosa), inclusive as futuras | PR #112 / `f86dd78` / migration `functions_service_role_only` (preview e produção) | Resend no Preview e e-mail da agenda |
+| 13/11/2026 | Login: bloqueio progressivo por senha errada (10 em 15 min; 20 em 24 h bloqueiam por até 24 h; redefinir a senha libera), limites por conta e geral contando só falhas, regra única para senhas novas (12+ caracteres, sem senhas comuns nem o e-mail); documentação de segurança no README | PRs #113–#114 / `435be8a` / migration `login_failure_lockout` (preview e produção) / preview testado | E-mail da agenda para médicos |
 
 ## 8. Protocolo para o assistente em futuros chats
 
