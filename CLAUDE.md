@@ -7,7 +7,8 @@ Memória persistente do projeto. Leia antes de qualquer tarefa. O histórico det
 Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_manager` (gerente), `secretary` (secretária), `doctor` (médico/anestesista). Foco atual: **agenda primeiro**. O **faturamento está pausado**: não mexer sem pedido explícito.
 
 - **Stack:** Next.js 16 (App Router) na Vercel, região `gru1`, plano Hobby. Supabase Postgres, projeto `nagddicinjszfrtwgjbu`.
-- **Repositório:** `LucasEspindula/agenda-rn` (público, então nunca commitar segredos). Branch principal `main`, e cada PR é mergeada com squash.
+- **Contas (desde 13/11/2026):** tudo pertence à empresa RN Assessoria. GitHub na organização `rn-integra`; Supabase na organização "RN Integra" (`xtnswwghfqggqesrkqnx`), com produção e preview; Vercel no time "RN Integra" (`team_ZzwM8ykcrLvRvCvL7BXvMgRB`), projeto `prj_XiOYwxCOguNmorHg30FRF3M9lER5`. O time da Vercel ainda está no Hobby: o repositório precisa continuar público até o Pro.
+- **Repositório:** `rn-integra/agenda-rn` (público, então nunca commitar segredos). Branch principal `main`, e cada PR é mergeada com squash.
 - **Agenda legada:** `public/legacy-app.js` e `public/legacy.css` manipulam o DOM diretamente. O `<select id="professionalFilter">` continua sendo a fonte da verdade das agendas visíveis por papel.
 - **Navegação do celular:** `components/mobile-navigation.tsx`, com gaveta lateral e gesto em `components/menu-swipe.ts`.
 - **Segurança:**
@@ -40,7 +41,7 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
   - `tests/load-ts.mjs` carrega TypeScript com mocks de módulos.
   - Muitos testes são “contratos” por regex sobre o código-fonte: ao mudar um trecho coberto, atualize o teste.
 - **Fins de linha:** vários arquivos usam CRLF (por exemplo `lib/security/http.ts` e algumas migrações). Edite preservando o fim de linha; nos regex de teste, use `\r?\n`.
-- **Migrações:** ficam em `supabase/migrations/AAAAMMDDHHMMSS_nome.sql`. **Sempre pedir confirmação antes de aplicar no banco real.** Cada migração vai para **os dois projetos**, com confirmação para cada um, nesta ordem: **primeiro o preview**, testar no preview da Vercel, **depois produção**. Toda tabela nova recebe RLS ligada e `revoke` de `anon` e `authenticated`; as funções usam `set search_path=''` e são liberadas só para `service_role`.
+- **Migrações:** ficam em `supabase/migrations/AAAAMMDDHHMMSS_nome.sql`. **Sempre pedir confirmação antes de aplicar no banco real.** Cada migração vai para **os dois projetos**, com confirmação para cada um, nesta ordem: **primeiro o preview**, testar no preview da Vercel, **depois produção**. Toda tabela nova recebe RLS ligada e `revoke` de `anon` e `authenticated`; as funções usam `set search_path=''` e são liberadas só para `service_role`. **Depois de aplicar em produção, rodar `npm run db:schema`** (sem Docker: usa a API do Supabase com `SUPABASE_ACCESS_TOKEN` no `.env.local`) e commitar `backups/schema/rn-integra-schema.sql`: é o esqueleto do banco para recuperação.
 - **Banco de produção:** hoje só tem dados de teste, e o usuário autorizou testar nele. Antes do lançamento ele será zerado, sempre com confirmação.
 - **Banco dos previews:** desde 11/11/2026 os previews da Vercel usam um Supabase próprio, `funqdoiubwskmhefbvjz` ("Agenda RN Preview", São Paulo), com o mesmo schema de produção. Dados de exemplo: organização "Clínica Preview" (`00000000-0000-4000-8000-0000000000a1`) e usuários 7 (gerente), 8 (secretária), 9 (médico) e 10 (anestesista), todos `@preview.test` e sem senha.
 - **Testar o preview logado:** criar uma sessão temporária em `public.sessions` **do banco de preview** (usuários 7–10, `organization_id` da Clínica Preview), gravando apenas `token_hash = encode(sha256(convert_to(token,'UTF8')),'base64')`. O token precisa ter **73 caracteres: dois UUIDs unidos por `-`**; qualquer outro formato é recusado (`app/authz.ts`). Pôr o token no cookie `agenda_rn_session` do link de preview (obtido com `get_access_to_vercel_url`) e **apagar a sessão no fim**. Nunca pedir nem usar senhas.
@@ -57,6 +58,6 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
   - configurar o monitor (`MONITOR_URL` e `CRON_SECRET` no GitHub; `ALERT_WEBHOOK_URL` ou `ALERT_EMAIL` na Vercel);
   - zerar banco e Storage antes de abrir.
 - **Técnico:**
-  - teste de restauração de backup;
+  - teste de restauração dos **dados** (a estrutura já é restaurada e conferida na CI por `tests/schema-backup.test.mjs`);
   - e-mail da agenda para médicos e anestesistas (depende do Resend): agenda de amanhã às 20h do dia anterior e prévia da semana seguinte às 20h de sexta; secretárias e gerência não recebem;
   - depois: faturamento M2c e remoção de `app_state` (A2).

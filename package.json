@@ -1,23 +1,22 @@
 {
-  "name": "site-creator-vinext-starter",
+  "name": "rn-integra",
   "version": "0.1.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
-    "install:ci": "npm ci",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test:db": "node security/database-test.mjs",
+    "test:db": "node tests/db-security-check.mjs",
+    "db:schema": "node scripts/db-schema.mjs",
     "test:billing-release": "node --test tests/billing-release-migration-contract.test.mjs tests/portal-deadlines.test.mjs tests/portal-submissions-contract.test.mjs tests/denial-totals.test.mjs tests/denial-stage3-contract.test.mjs tests/monthly-closing-math.test.mjs tests/monthly-closing-contract.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
-    "@hookform/resolvers": "^5.7.1",
     "@shadcn/react": "^0.3.0",
     "@supabase/supabase-js": "2.57.4",
     "class-variance-authority": "0.7.1",
