@@ -1,6 +1,6 @@
 -- RN Integra: esqueleto do banco (esquema public, só estrutura, sem dados).
--- Projeto: nagddicinjszfrtwgjbu (production). Gerado em 2026-11-13T18:34:01.243Z por npm run db:schema.
--- Conteúdo: tabelas 55 | funções 152 | gatilhos 91 | restrições 427 | índices 184 | políticas RLS 0 | migrações 83 | última 20261113183349
+-- Projeto: nagddicinjszfrtwgjbu (production). Gerado em 2026-11-13T20:07:22.368Z por npm run db:schema.
+-- Conteúdo: tabelas 55 | funções 154 | gatilhos 91 | restrições 427 | índices 184 | políticas RLS 0 | migrações 84 | última 20261113200701
 -- NÃO executar no banco atual: serve para recriar a estrutura num projeto Supabase novo e vazio.
 
 set check_function_bodies = false;
@@ -1735,6 +1735,15 @@ begin
 end;$function$
 ;
 
+CREATE OR REPLACE FUNCTION public.clear_security_limit(p_key text)
+ RETURNS void
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+  delete from public.security_rate_limits where key = p_key;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.close_billing_month(p_actor bigint, p_entity uuid, p_month text, p_notes text DEFAULT NULL::text)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -3235,6 +3244,17 @@ CREATE OR REPLACE FUNCTION public.record_security_event(p_org uuid, p_actor bigi
 AS $function$
  insert into public.security_events(organization_id,actor_user_id,kind,target,details,ip_hash)
  values(p_org,p_actor,p_kind,left(p_target,200),coalesce(p_details,'{}'::jsonb),left(p_ip_hash,128))
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.refund_security_limit(p_key text)
+ RETURNS void
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+  update public.security_rate_limits
+     set hits = greatest(hits - 1, 0)
+   where key = p_key and expires_at >= clock_timestamp();
 $function$
 ;
 
@@ -6210,6 +6230,7 @@ revoke all on function public.billing_payer_key(value text) from public, anon, a
 revoke all on function public.cancel_invite(p_actor bigint, p_org uuid, p_invite uuid) from public, anon, authenticated;
 revoke all on function public.cancel_manual_attendance(p_actor bigint, p_data jsonb) from public, anon, authenticated;
 revoke all on function public.check_fiscal_integrity() from public, anon, authenticated;
+revoke all on function public.clear_security_limit(p_key text) from public, anon, authenticated;
 revoke all on function public.close_billing_month(p_actor bigint, p_entity uuid, p_month text, p_notes text) from public, anon, authenticated;
 revoke all on function public.commit_agenda_change(p_expected timestamp with time zone, p_payload jsonb, p_revision timestamp with time zone, p_audit jsonb, p_request_id text, p_decision text, p_actor bigint, p_note text, p_notification jsonb) from public, anon, authenticated;
 revoke all on function public.complete_financial_attachment(p_actor bigint, p_id uuid) from public, anon, authenticated;
@@ -6274,6 +6295,7 @@ revoke all on function public.purge_expired_auth() from public, anon, authentica
 revoke all on function public.record_agenda_row_version(p_org uuid, p_entity text, p_id text, p_revision timestamp with time zone) from public, anon, authenticated;
 revoke all on function public.record_monitor_incident(p_fingerprint text, p_environment text, p_source text, p_severity text, p_title text, p_detail text, p_route text, p_org uuid, p_playbook text, p_auto_fix text, p_min_occurrences integer) from public, anon, authenticated;
 revoke all on function public.record_security_event(p_org uuid, p_actor bigint, p_kind text, p_target text, p_details jsonb, p_ip_hash text) from public, anon, authenticated;
+revoke all on function public.refund_security_limit(p_key text) from public, anon, authenticated;
 revoke all on function public.reject_financial_attachment(p_actor bigint, p_id uuid) from public, anon, authenticated;
 revoke all on function public.remove_financial_attachment(p_actor bigint, p_id uuid) from public, anon, authenticated;
 revoke all on function public.renew_email_verification(p_email text, p_token_hash text) from public, anon, authenticated;
@@ -6427,6 +6449,7 @@ grant EXECUTE on function public.billing_payer_key(value text) to service_role;
 grant EXECUTE on function public.cancel_invite(p_actor bigint, p_org uuid, p_invite uuid) to service_role;
 grant EXECUTE on function public.cancel_manual_attendance(p_actor bigint, p_data jsonb) to service_role;
 grant EXECUTE on function public.check_fiscal_integrity() to service_role;
+grant EXECUTE on function public.clear_security_limit(p_key text) to service_role;
 grant EXECUTE on function public.close_billing_month(p_actor bigint, p_entity uuid, p_month text, p_notes text) to service_role;
 grant EXECUTE on function public.commit_agenda_change(p_expected timestamp with time zone, p_payload jsonb, p_revision timestamp with time zone, p_audit jsonb, p_request_id text, p_decision text, p_actor bigint, p_note text, p_notification jsonb) to service_role;
 grant EXECUTE on function public.complete_financial_attachment(p_actor bigint, p_id uuid) to service_role;
@@ -6491,6 +6514,7 @@ grant EXECUTE on function public.purge_expired_auth() to service_role;
 grant EXECUTE on function public.record_agenda_row_version(p_org uuid, p_entity text, p_id text, p_revision timestamp with time zone) to service_role;
 grant EXECUTE on function public.record_monitor_incident(p_fingerprint text, p_environment text, p_source text, p_severity text, p_title text, p_detail text, p_route text, p_org uuid, p_playbook text, p_auto_fix text, p_min_occurrences integer) to service_role;
 grant EXECUTE on function public.record_security_event(p_org uuid, p_actor bigint, p_kind text, p_target text, p_details jsonb, p_ip_hash text) to service_role;
+grant EXECUTE on function public.refund_security_limit(p_key text) to service_role;
 grant EXECUTE on function public.reject_financial_attachment(p_actor bigint, p_id uuid) to service_role;
 grant EXECUTE on function public.remove_financial_attachment(p_actor bigint, p_id uuid) to service_role;
 grant EXECUTE on function public.renew_email_verification(p_email text, p_token_hash text) to service_role;
