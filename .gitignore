@@ -36,7 +36,6 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 /dist/
-/.wrangler/
 /.sites-runtime/
 /outputs/
 /work/
@@ -45,3 +44,6 @@ next-env.d.ts
 # Local audit and Supabase CLI caches
 supabase/.temp/
 *.tsbuildinfo
+
+# Dump do banco de preview (só para comparar com produção)
+backups/schema/.preview-schema.sql

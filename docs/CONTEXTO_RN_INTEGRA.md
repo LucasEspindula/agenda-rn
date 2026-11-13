@@ -210,7 +210,7 @@ Critérios mínimos para avanço:
 - **Faturamento desligado** até a reconstrução: menus ocultos (`lib/billing-paused.ts`), rotas e páginas financeiras respondem 503 "Faturamento em reconstrução." (`proxy.ts`) e as RPCs financeiras acopladas ao antigo `app_state` viraram stubs com o mesmo erro.
 - Todos os dados atuais são de teste.
 
-**Etapa A1 — agenda normalizada (corte direto).** Plano detalhado em `docs/A1-plano.md`.
+**Etapa A1 — agenda normalizada (corte direto).** Concluída; o plano original fica no histórico do git.
 - Migration **aplicada** em 03/11/2026: Supabase `20261103151428 agenda_normalized_a1` (arquivo `supabase/migrations/20261103151428_agenda_normalized_a1.sql`; md5 do texto registrado = md5 do arquivo commitado). Antes, ensaio `BEGIN…ROLLBACK` no banco real aprovado; o primeiro ensaio revelou e permitiu corrigir os defaults de `commit_agenda_change`.
 - Tabelas: `agenda_settings`, `hospitals`, `patients`, `appointments` (ativas e canceladas juntas), `appointment_reschedules`, `patient_history_events` (imutável), `schedule_blocks`, `scheduling_rules`, `agenda_row_versions`. Soft delete (`archived_at`), fim do "apagar por omissão", paciente com dono permanente, RN (`newborn`/`guardian_name`) e CPF único por médico quando não RN.
 - Dados de teste migrados sem perda: 3 pacientes, 9 consultas (2 canceladas), 35 eventos, 4 bloqueios, 1 regra, 2 hospitais; 2 sugestões pendentes negadas ("migração A1").
