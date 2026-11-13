@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/client";
+import { passwordProblem } from "@/lib/security/password-policy";
 import { appOrigin, emails, newEmailToken, requireEmailDelivery, sendMail } from "@/lib/email";
 import { TERMS_VERSION, publicSignupEnabled } from "@/lib/legal";
 
@@ -26,6 +27,8 @@ async function signup(request: Request) {
   const parsed = body.safeParse(await readJson(request, 4096));
   if (!parsed.success) throw new HttpError(400, "Confira os dados. A senha precisa ter de 12 a 128 caracteres e os termos precisam ser aceitos.");
   const data = parsed.data;
+  const problem = passwordProblem(data.password, data.email);
+  if (problem) throw new HttpError(400, problem);
   await consumeLimit("signup-email", data.email, 3, 3600);
   const origin = appOrigin(request), { token, hash } = newEmailToken(), credentials = await hashPassword(data.password);
   const result = await getSupabaseAdmin().rpc("signup_account", {

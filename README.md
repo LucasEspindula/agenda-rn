@@ -138,7 +138,8 @@ docs/                 contexto, roteiro de incidentes, arquitetura e faturamento
 
 - **Mutações:** toda rota de mutação passa por `secureMutation` (`lib/security/http.ts`), que confere a origem e padroniza os erros.
 - **Sessões:** duram 8 horas, são revogadas quando a senha muda e o token tem formato rígido (`app/authz.ts`).
-- **Tentativas:** os limites ficam no banco (`lib/security/rate-limit.ts`): por conta, por IP e global.
+- **Senha errada:** os limites ficam no banco (`lib/security/rate-limit.ts`) e contam só as falhas: 10 erros em 15 minutos fazem a conta esperar, e 20 em 24 horas a bloqueiam por até 24 horas. Redefinir a senha pelo e-mail libera na hora. Por IP, 30 tentativas a cada 5 minutos.
+- **Senhas novas:** de 12 a 128 caracteres, recusando senhas comuns, sequências e o próprio e-mail (`lib/security/password-policy.ts`). Guardadas com PBKDF2 em 600 mil rodadas.
 - **Permissões:** vêm do banco a cada requisição. A secretária só vê as agendas liberadas; o médico, só as dele e as compartilhadas.
 - **LGPD:** há exportação e anonimização de pacientes. Os textos jurídicos ficam em `lib/legal.ts`.
 - **Segredos:** nunca entram no repositório, em logs ou em mensagens.

@@ -3,20 +3,25 @@ import { SESSION_COOKIE, activeMembershipCount, type Role } from "@/app/authz";
 import { hashPassword, hashToken, verifyPassword } from "@/app/passwords";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 import { readJson, secureMutation } from "@/lib/security/http";
-import { consumeLimit } from "@/lib/security/rate-limit";
+import { LOGIN_FAILURE_LIMITS, consumeLimit, refundLimit } from "@/lib/security/rate-limit";
 import { hashEmail, recordSecurityEvent } from "@/lib/security/events";
 
+// Limites de senha errada. Cada tentativa é reservada antes de conferir a senha e devolvida quando ela
+// está certa: os contadores medem só as falhas e tentativas simultâneas não escapam da contagem.
+const LOCK_MESSAGE = "Muitas tentativas com senha errada. A conta fica bloqueada por até 24 horas; para entrar antes, use “Esqueci minha senha”.";
+
 async function login(request: Request) {
-  await consumeLimit("login-global", "all", 300, 60);
   const data = await readJson(request, 4096);
   const refuse = () => Response.json({ error: "E-mail ou senha inválidos." }, { status: 401 });
   if (typeof data.email !== "string" || typeof data.password !== "string" || data.email.length > 254 || data.password.length > 128 || data.password.length < 8) return refuse();
   const email = data.email.trim().toLowerCase(), password = data.password;
   // Toda recusa após a validação básica fica registrada (só o resumo do e-mail, nunca o endereço).
   const invalid = async () => { await recordSecurityEvent("login_failure", request, { target: hashEmail(email) }); return refuse(); };
-  await consumeLimit("login-account", email, 10, 900);
-  // Vercel owns this header. The global/account limits remain effective without it.
+  // Por IP conta toda tentativa (a Vercel controla esse cabeçalho); os limites por conta e o geral contam só falhas.
   if (process.env.VERCEL === "1") await consumeLimit("login-ip", request.headers.get("x-vercel-forwarded-for") || "unknown", 30, 300);
+  await consumeLimit("login-failures-global", "all", 600, 60);
+  for (const { scope, limit, seconds } of LOGIN_FAILURE_LIMITS) await consumeLimit(scope, email, limit, seconds, scope === "login-account-day" ? LOCK_MESSAGE : undefined);
+  const refundAttempt = () => Promise.all([refundLimit("login-failures-global", "all"), ...LOGIN_FAILURE_LIMITS.map(({ scope }) => refundLimit(scope, email))]);
   const db = getSupabaseAdmin();
   const found = await db.from("users").select("id,role,active,password_hash,password_salt,email_verified_at").eq("email", email).maybeSingle();
   dbError(found.error, "Read account"); const account = found.data;
@@ -28,6 +33,7 @@ async function login(request: Request) {
     if (!account.password_hash.startsWith("pbkdf2-sha256$600000$")) await hashPassword(password,undefined,500_000);
     return invalid();
   }
+  await refundAttempt(); // Senha certa: não conta como falha.
   // Vínculo ativo em organização ativa; quem tem várias escolhe depois de entrar.
   const organizations = await activeMembershipCount(db,Number(account.id),account.role as Role);
   if (!organizations) return invalid();
