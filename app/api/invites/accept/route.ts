@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { HttpError, readJson, secureMutation } from "@/lib/security/http";
 import { consumeLimit } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/client";
+import { passwordProblem } from "@/lib/security/password-policy";
 import { hashEmailToken, validEmailToken } from "@/lib/email";
 import { recordSecurityEvent } from "@/lib/security/events";
 
@@ -14,6 +15,8 @@ async function accept(request: Request) {
   const parsed = z.object({ token: z.string(), name: z.string().trim().max(120).optional(), password: z.string().min(12).max(128).optional() }).strict()
     .safeParse(await readJson(request, 2048));
   if (!parsed.success || !validEmailToken(parsed.data.token)) throw new HttpError(400, "Convite inválido. A senha precisa ter de 12 a 128 caracteres.");
+  const problem = parsed.data.password ? passwordProblem(parsed.data.password) : null;
+  if (problem) throw new HttpError(400, problem);
   const session = await getSession();
   const credentials = parsed.data.password ? await hashPassword(parsed.data.password) : null;
   const result = await getSupabaseAdmin().rpc("accept_invite", {

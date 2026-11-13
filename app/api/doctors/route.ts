@@ -2,6 +2,7 @@ import {getSession} from '@/app/authz';
 import {getSupabaseAdmin} from '@/lib/supabase-admin';
 import {HttpError,readJson,secureMutation} from '@/lib/security/http';
 import {hashPassword} from '@/app/passwords';
+import {passwordProblem} from '@/lib/security/password-policy';
 import {canonicalSpecialty} from '@/lib/medical-specialties';
 import {z} from 'zod';
 export const dynamic='force-dynamic';
@@ -26,7 +27,7 @@ export const POST=secureMutation(async request=>{
  if(access!=null){
   const parsed=z.object({id:z.number().positive().optional(),email:z.string().trim().email().max(254),password:z.string().min(12).max(128).optional(),active:z.boolean().optional(),updated_at:z.string().optional(),agendaIds:z.array(z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)).max(500).optional()}).strict().safeParse(access);
   if(!parsed.success||kind!=='doctor')throw new HttpError(400,'Confira e-mail e senha (12 a 128 caracteres).');
-  const {password,...metadata}=parsed.data;account=metadata;credentials=password?await hashPassword(password):null;
+  const {password,...metadata}=parsed.data;const weak=password?passwordProblem(password,metadata.email):null;if(weak)throw new HttpError(400,weak);account=metadata;credentials=password?await hashPassword(password):null;
  }
  const result=await getSupabaseAdmin().rpc('save_doctor_with_access',{p_actor:session.account.id,p_kind:kind,p_data:data,p_access:account,p_credentials:credentials,p_org:session.organization.id});
  if(result.error)throw new HttpError(result.error.code==='P0001'?409:400,result.error.code==='P0001'?result.error.message:'Confira os dados do cadastro.');

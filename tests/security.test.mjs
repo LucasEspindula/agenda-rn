@@ -44,7 +44,7 @@ test('workflow cannot disclose an original appointment by forging its proposed o
 });
 test('unknown login cannot recreate privileged bootstrap account',async()=>{
  const writes=[];const q={select(){return this},eq(){return this},maybeSingle:async()=>({data:null,error:null}),insert(x){writes.push(x);return this}};
- const api=loadTs('app/api/auth/login/route.ts',{'next/headers':{cookies:async()=>({set(){throw Error('must not set cookie')}})},'@/app/authz':{SESSION_COOKIE:'agenda_rn_session'},'@/app/passwords':{hashPassword:async()=>({})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>({from:()=>q}),dbError(){}},'@/lib/security/rate-limit':{consumeLimit:async()=>{}}});
+ const api=loadTs('app/api/auth/login/route.ts',{'next/headers':{cookies:async()=>({set(){throw Error('must not set cookie')}})},'@/app/authz':{SESSION_COOKIE:'agenda_rn_session'},'@/app/passwords':{hashPassword:async()=>({})},'@/lib/supabase-admin':{getSupabaseAdmin:()=>({from:()=>q}),dbError(){}},'@/lib/security/rate-limit':{LOGIN_FAILURE_LIMITS:[],consumeLimit:async()=>{},refundLimit:async()=>{}}});
  const r=await api.POST(new Request('https://example.com/api/auth/login',{method:'POST',headers:{origin:'https://example.com','content-type':'application/json'},body:JSON.stringify({email:'lucasespindula42@gmail.com',password:'not a bootstrap password',is_admin:true})}));
  assert.equal(r.status,401);assert.equal(writes.length,0);
 });

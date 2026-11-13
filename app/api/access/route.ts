@@ -2,6 +2,7 @@ import { z } from "zod";
 import { readJson, secureMutation } from "@/lib/security/http";
 import { getSession, isManager, type Role } from "@/app/authz";
 import { hashPassword } from "@/app/passwords";
+import { passwordProblem } from "@/lib/security/password-policy";
 import { dbError, getSupabaseAdmin } from "@/lib/supabase-admin";
 
 async function managerSession() {
@@ -34,7 +35,9 @@ async function handlePOST(request: Request) {
   const email = data.email?.trim().toLowerCase();
   if (!email || !["general_manager", "secretary", "doctor"].includes(data.role ?? "")) return Response.json({ error: "Dados inválidos" }, { status: 400 });
   const db = getSupabaseAdmin();
-  if (!data.id && (!data.password || data.password.length < 8)) return Response.json({ error: "Informe uma senha inicial com pelo menos 8 caracteres" }, { status: 400 });
+  if (!data.id && !data.password) return Response.json({ error: "Informe uma senha inicial com pelo menos 12 caracteres" }, { status: 400 });
+  const weak = data.password ? passwordProblem(data.password, email) : null;
+  if (weak) return Response.json({ error: weak }, { status: 400 });
   if (data.id === session.account.id && data.role !== "general_manager") return Response.json({ error: "Para sua segurança, outro gerente deve alterar seu nível de acesso." }, { status: 400 });
   const agendas = await db.from("doctors").select("id").eq("organization_id",session.organization.id);
   dbError(agendas.error,"Read agenda identifiers");
