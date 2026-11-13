@@ -28,5 +28,10 @@ test('o esqueleto do banco restaura num Postgres vazio com todas as estruturas',
   assert.equal(await one(`select count(*) n from pg_tables where schemaname='public' and not rowsecurity`), 0);
   assert.equal(await one(`select count(*) n from information_schema.role_table_grants
     where table_schema='public' and grantee in ('anon','authenticated')`), 0);
+  // Nenhuma função executável por PUBLIC, anon ou authenticated: só o servidor (service_role).
+  assert.equal(await one(`select count(*) n from pg_proc p
+    cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where p.pronamespace='public'::regnamespace and p.prokind in ('f','p') and a.privilege_type='EXECUTE'
+      and (a.grantee=0 or a.grantee in (select oid from pg_roles where rolname in ('anon','authenticated')))`), 0);
   await db.close();
 });
