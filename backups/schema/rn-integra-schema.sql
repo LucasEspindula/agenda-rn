@@ -1,6 +1,6 @@
 -- RN Integra: esqueleto do banco (esquema public, só estrutura, sem dados).
--- Projeto: nagddicinjszfrtwgjbu (production). Gerado em 2026-11-13T17:59:31.194Z por npm run db:schema.
--- Conteúdo: tabelas 55 | funções 152 | gatilhos 91 | restrições 427 | índices 184 | políticas RLS 0 | migrações 82 | última 20261111180453
+-- Projeto: nagddicinjszfrtwgjbu (production). Gerado em 2026-11-13T18:34:01.243Z por npm run db:schema.
+-- Conteúdo: tabelas 55 | funções 152 | gatilhos 91 | restrições 427 | índices 184 | políticas RLS 0 | migrações 83 | última 20261113183349
 -- NÃO executar no banco atual: serve para recriar a estrutura num projeto Supabase novo e vazio.
 
 set check_function_bodies = false;
@@ -6393,37 +6393,13 @@ revoke all on table public.users from public, anon, authenticated;
 
 grant EXECUTE on function public.accept_invite(p_token_hash text, p_session_user bigint, p_name text, p_hash text, p_salt text) to service_role;
 grant EXECUTE on function public.actor_organization_id(p_actor bigint) to service_role;
-grant EXECUTE on function public.agenda_appointment_json(a appointments) to public;
-grant EXECUTE on function public.agenda_appointment_json(a appointments) to anon;
-grant EXECUTE on function public.agenda_appointment_json(a appointments) to authenticated;
 grant EXECUTE on function public.agenda_appointment_json(a appointments) to service_role;
-grant EXECUTE on function public.agenda_block_json(b schedule_blocks) to public;
-grant EXECUTE on function public.agenda_block_json(b schedule_blocks) to anon;
-grant EXECUTE on function public.agenda_block_json(b schedule_blocks) to authenticated;
 grant EXECUTE on function public.agenda_block_json(b schedule_blocks) to service_role;
-grant EXECUTE on function public.agenda_hhmi(t time without time zone) to public;
-grant EXECUTE on function public.agenda_hhmi(t time without time zone) to anon;
-grant EXECUTE on function public.agenda_hhmi(t time without time zone) to authenticated;
 grant EXECUTE on function public.agenda_hhmi(t time without time zone) to service_role;
-grant EXECUTE on function public.agenda_history_json(h patient_history_events) to public;
-grant EXECUTE on function public.agenda_history_json(h patient_history_events) to anon;
-grant EXECUTE on function public.agenda_history_json(h patient_history_events) to authenticated;
 grant EXECUTE on function public.agenda_history_json(h patient_history_events) to service_role;
-grant EXECUTE on function public.agenda_hospital_json(h hospitals) to public;
-grant EXECUTE on function public.agenda_hospital_json(h hospitals) to anon;
-grant EXECUTE on function public.agenda_hospital_json(h hospitals) to authenticated;
 grant EXECUTE on function public.agenda_hospital_json(h hospitals) to service_role;
-grant EXECUTE on function public.agenda_iso(t timestamp with time zone) to public;
-grant EXECUTE on function public.agenda_iso(t timestamp with time zone) to anon;
-grant EXECUTE on function public.agenda_iso(t timestamp with time zone) to authenticated;
 grant EXECUTE on function public.agenda_iso(t timestamp with time zone) to service_role;
-grant EXECUTE on function public.agenda_minutes(t time without time zone) to public;
-grant EXECUTE on function public.agenda_minutes(t time without time zone) to anon;
-grant EXECUTE on function public.agenda_minutes(t time without time zone) to authenticated;
 grant EXECUTE on function public.agenda_minutes(t time without time zone) to service_role;
-grant EXECUTE on function public.agenda_patient_json(p patients) to public;
-grant EXECUTE on function public.agenda_patient_json(p patients) to anon;
-grant EXECUTE on function public.agenda_patient_json(p patients) to authenticated;
 grant EXECUTE on function public.agenda_patient_json(p patients) to service_role;
 grant EXECUTE on function public.agenda_revision(p_actor bigint) to service_role;
 grant EXECUTE on function public.agenda_revision(p_actor bigint, p_org uuid) to service_role;
@@ -6433,9 +6409,6 @@ grant EXECUTE on function public.agenda_row_json(p_entity text, p_id text) to se
 grant EXECUTE on function public.agenda_row_json(p_entity text, p_id text, p_org uuid) to service_role;
 grant EXECUTE on function public.agenda_row_version_of(p_entity text, p_id text) to service_role;
 grant EXECUTE on function public.agenda_row_version_of(p_entity text, p_id text, p_org uuid) to service_role;
-grant EXECUTE on function public.agenda_rule_json(r scheduling_rules) to public;
-grant EXECUTE on function public.agenda_rule_json(r scheduling_rules) to anon;
-grant EXECUTE on function public.agenda_rule_json(r scheduling_rules) to authenticated;
 grant EXECUTE on function public.agenda_rule_json(r scheduling_rules) to service_role;
 grant EXECUTE on function public.agenda_state_json(p_org uuid, p_since date, p_after timestamp with time zone) to service_role;
 grant EXECUTE on function public.agenda_sync_signal(p_token_hash text) to service_role;
@@ -6475,49 +6448,19 @@ grant EXECUTE on function public.financial_log_snapshot(v jsonb) to service_role
 grant EXECUTE on function public.financial_operation(p_actor bigint, p_kind text, p_id text) to service_role;
 grant EXECUTE on function public.financial_stamp() to service_role;
 grant EXECUTE on function public.finish_private_payment(p_actor bigint, p_id uuid, p_data jsonb) to service_role;
-grant EXECUTE on function public.freeze_app_state() to public;
-grant EXECUTE on function public.freeze_app_state() to anon;
-grant EXECUTE on function public.freeze_app_state() to authenticated;
 grant EXECUTE on function public.freeze_app_state() to service_role;
 grant EXECUTE on function public.get_billing_month_closing(p_actor bigint, p_entity uuid, p_month text) to service_role;
-grant EXECUTE on function public.guard_agenda_appointment_availability() to public;
-grant EXECUTE on function public.guard_agenda_appointment_availability() to anon;
-grant EXECUTE on function public.guard_agenda_appointment_availability() to authenticated;
 grant EXECUTE on function public.guard_agenda_appointment_availability() to service_role;
-grant EXECUTE on function public.guard_agenda_row() to public;
-grant EXECUTE on function public.guard_agenda_row() to anon;
-grant EXECUTE on function public.guard_agenda_row() to authenticated;
 grant EXECUTE on function public.guard_agenda_row() to service_role;
-grant EXECUTE on function public.guard_agenda_settings_row() to public;
-grant EXECUTE on function public.guard_agenda_settings_row() to anon;
-grant EXECUTE on function public.guard_agenda_settings_row() to authenticated;
 grant EXECUTE on function public.guard_agenda_settings_row() to service_role;
-grant EXECUTE on function public.guard_appointment_availability() to public;
-grant EXECUTE on function public.guard_appointment_availability() to anon;
-grant EXECUTE on function public.guard_appointment_availability() to authenticated;
 grant EXECUTE on function public.guard_appointment_availability() to service_role;
-grant EXECUTE on function public.guard_appointment_issued_invoice() to public;
-grant EXECUTE on function public.guard_appointment_issued_invoice() to anon;
-grant EXECUTE on function public.guard_appointment_issued_invoice() to authenticated;
 grant EXECUTE on function public.guard_appointment_issued_invoice() to service_role;
-grant EXECUTE on function public.guard_appointment_row() to public;
-grant EXECUTE on function public.guard_appointment_row() to anon;
-grant EXECUTE on function public.guard_appointment_row() to authenticated;
 grant EXECUTE on function public.guard_appointment_row() to service_role;
 grant EXECUTE on function public.guard_billing_monthly_closing_immutable() to service_role;
 grant EXECUTE on function public.guard_invoice_appointments() to service_role;
-grant EXECUTE on function public.guard_issued_invoice_agenda_cancellation() to public;
-grant EXECUTE on function public.guard_issued_invoice_agenda_cancellation() to anon;
-grant EXECUTE on function public.guard_issued_invoice_agenda_cancellation() to authenticated;
 grant EXECUTE on function public.guard_issued_invoice_agenda_cancellation() to service_role;
-grant EXECUTE on function public.guard_issued_invoice_attendance_mutation() to public;
-grant EXECUTE on function public.guard_issued_invoice_attendance_mutation() to anon;
-grant EXECUTE on function public.guard_issued_invoice_attendance_mutation() to authenticated;
 grant EXECUTE on function public.guard_issued_invoice_attendance_mutation() to service_role;
 grant EXECUTE on function public.guard_legacy_agenda_organization() to service_role;
-grant EXECUTE on function public.guard_patient_row() to public;
-grant EXECUTE on function public.guard_patient_row() to anon;
-grant EXECUTE on function public.guard_patient_row() to authenticated;
 grant EXECUTE on function public.guard_patient_row() to service_role;
 grant EXECUTE on function public.guard_rn_finance_organization() to service_role;
 grant EXECUTE on function public.guard_security_event() to service_role;
@@ -6587,9 +6530,6 @@ grant EXECUTE on function public.stamp_patient_authorship() to service_role;
 grant EXECUTE on function public.submit_agenda_suggestion(p_request jsonb, p_notification jsonb, p_audit jsonb) to service_role;
 grant EXECUTE on function public.submit_agenda_suggestion(p_request jsonb, p_notification jsonb, p_audit jsonb, p_org uuid) to service_role;
 grant EXECUTE on function public.switch_session_organization(p_token_hash text, p_org uuid) to service_role;
-grant EXECUTE on function public.sync_appointment_attendance() to public;
-grant EXECUTE on function public.sync_appointment_attendance() to anon;
-grant EXECUTE on function public.sync_appointment_attendance() to authenticated;
 grant EXECUTE on function public.sync_appointment_attendance() to service_role;
 grant EXECUTE on function public.sync_financial_attendances() to service_role;
 grant EXECUTE on function public.touch_monitor_heartbeat(p_name text, p_ok boolean, p_details jsonb) to service_role;

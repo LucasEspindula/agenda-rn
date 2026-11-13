@@ -47,3 +47,6 @@ supabase/.temp/
 
 # Dump do banco de preview (só para comparar com produção)
 backups/schema/.preview-schema.sql
+
+# Documentos privados locais (planilha de acessos e o gerador dela). Nunca vão para o git.
+/privado/
