@@ -7,7 +7,7 @@ Memória persistente do projeto. Leia antes de qualquer tarefa. O histórico det
 Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_manager` (gerente), `secretary` (secretária), `doctor` (médico/anestesista). Foco atual: **agenda primeiro**. O **faturamento está pausado**: não mexer sem pedido explícito.
 
 - **Stack:** Next.js 16 (App Router) na Vercel, região `gru1`, plano Hobby. Supabase Postgres, projeto `nagddicinjszfrtwgjbu`.
-- **Contas (desde 13/11/2026):** tudo pertence à empresa RN Assessoria. GitHub na organização `rn-integra`; Supabase na organização "RN Integra" (`xtnswwghfqggqesrkqnx`), com produção e preview; Vercel no time "RN Integra" (`team_ZzwM8ykcrLvRvCvL7BXvMgRB`), projeto `prj_XiOYwxCOguNmorHg30FRF3M9lER5`. O time da Vercel ainda está no Hobby: o repositório precisa continuar público até o Pro.
+- **Contas (desde 13/11/2026):** tudo pertence à empresa RN Assessoria. GitHub na organização `rn-integra`; Supabase na organização "RN Integra" (`xtnswwghfqggqesrkqnx`), com produção e preview; Vercel no time "RN Integra" (`team_ZzwM8ykcrLvRvCvL7BXvMgRB`), projeto `prj_XiOYwxCOguNmorHg30FRF3M9lER5`; Resend com login pelo GitHub da empresa. O time da Vercel ainda está no Hobby: o repositório precisa continuar público até o Pro.
 - **Repositório:** `rn-integra/agenda-rn` (público, então nunca commitar segredos). Branch principal `main`, e cada PR é mergeada com squash.
 - **Agenda legada:** `public/legacy-app.js` e `public/legacy.css` manipulam o DOM diretamente. O `<select id="professionalFilter">` continua sendo a fonte da verdade das agendas visíveis por papel.
 - **Navegação do celular:** `components/mobile-navigation.tsx`, com gaveta lateral e gesto em `components/menu-swipe.ts`.
@@ -53,7 +53,7 @@ Sistema de agendas médicas multiorganização (clínicas). Papéis: `general_ma
 
 - **Lado do responsável:**
   - preencher os dados jurídicos em `lib/legal.ts` e passar pela revisão de um advogado;
-  - domínio e Resend (`RESEND_API_KEY`, `EMAIL_FROM`, `APP_ORIGIN`, depois `PUBLIC_SIGNUP_ENABLED`);
+  - domínio para o Resend: a conta existe e `RESEND_API_KEY` e `EMAIL_FROM` estão **só no Preview**, com o remetente de teste `onboarding@resend.dev` (entrega só no e-mail da conta do Resend); com o domínio, configurar produção (`RESEND_API_KEY`, `EMAIL_FROM`, `APP_ORIGIN`, depois `PUBLIC_SIGNUP_ENABLED`);
   - planos Vercel Pro e Supabase Pro;
   - configurar o monitor (`MONITOR_URL` e `CRON_SECRET` no GitHub; `ALERT_WEBHOOK_URL` ou `ALERT_EMAIL` na Vercel);
   - zerar banco e Storage antes de abrir.
